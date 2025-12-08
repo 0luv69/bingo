@@ -1,0 +1,915 @@
+{% extends 'base.html' %}
+
+{% block title %}Bingo - {{ room.code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bingo-letter {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 700;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+    
+    .bingo-letter-inactive {
+        background: #f1f5f9;
+        color: #94a3b8;
+    }
+    
+    .bingo-letter-active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        animation: popIn 0.3s ease;
+    }
+    
+    @keyframes popIn {
+        0% { transform: scale(0.5); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    
+    .board-cell {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 18px;
+        border-radius: 12px;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+    
+    .board-cell-default {
+        background: #f8fafc;
+        color: #334155;
+        border: 2px solid #e2e8f0;
+    }
+    
+    .board-cell-default:hover {
+        background: #e2e8f0;
+        transform: scale(1.05);
+    }
+    
+    .board-cell-marked {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        border: 2px solid #f59e0b;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+    
+    .board-cell-selectable {
+        border: 2px solid #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+    }
+    
+    .board-cell-selectable:hover {
+        background: #0ea5e9;
+        color: white;
+        transform: scale(1.08);
+    }
+    
+    .board-cell.dragging {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+    
+    .board-cell.drag-over {
+        background: #dbeafe;
+        border: 2px dashed #3b82f6;
+    }
+    
+    .player-card {
+        transition: all 0.3s ease;
+    }
+    
+    .player-card.current-turn {
+        box-shadow: 0 0 0 2px #0ea5e9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col bg-slate-50">
+    
+    <!-- Header -->
+    <header class="py-3 px-4 border-b border-slate-200 bg-white sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">B</span>
+                    </div>
+                    <span class="font-semibold text-slate-800">Bingo</span>
+                </div>
+                <span class="text-slate-300">|</span>
+                <span class="text-sm font-mono text-slate-500">{{ room.code }}</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div id="connection-status" class="badge badge-warning">Connecting...</div>
+                
+                <div id="timer-container" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="timer" class="text-sm font-mono font-medium text-slate-700">60s</span>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
+    
+    <!-- Status Banner -->
+    <div id="status-banner" class="py-3 px-4 text-white text-center transition-all duration-300 {% if room.status == 'setup' %}bg-accent-500{% else %}bg-slate-700{% endif %}">
+        <p id="status-text" class="font-medium">
+            {% if room.status == 'setup' %}
+                Setup Phase — Arrange your board! 
+            {% elif is_my_turn %}
+                Your turn — Click a number on your board
+            {% else %}
+                {{ room.current_turn.name }}'s turn
+            {% endif %}
+        </p>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="flex-1 py-6 px-4">
+        <div class="max-w-4xl mx-auto">
+            
+            <div class="grid lg:grid-cols-3 gap-6">
+                
+                <!-- Left Column: Bingo Board -->
+                <div class="lg:col-span-2">
+                    <div class="card p-6">
+                        
+                        <!-- BINGO Letters Progress -->
+                        <div class="flex items-center justify-center gap-3 mb-6">
+                            <div id="letter-B" class="bingo-letter bingo-letter-inactive">B</div>
+                            <div id="letter-I" class="bingo-letter bingo-letter-inactive">I</div>
+                            <div id="letter-N" class="bingo-letter bingo-letter-inactive">N</div>
+                            <div id="letter-G" class="bingo-letter bingo-letter-inactive">G</div>
+                            <div id="letter-O" class="bingo-letter bingo-letter-inactive">O</div>
+                        </div>
+                        
+                        <!-- 5x5 Bingo Grid -->
+                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-sm mx-auto">
+                            {% for row in current_player.board %}
+                                {% for number in row %}
+                                <div 
+                                    class="board-cell {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}"
+                                    data-number="{{ number }}"
+                                    draggable="true"
+                                >
+                                    {{ number }}
+                                </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Setup Phase Actions -->
+                        <div id="setup-actions" class="mt-6 pt-6 border-t border-slate-100 {% if room.status != 'setup' %}hidden{% endif %}">
+                            <div id="ready-section" class="{% if current_player.is_ready %}hidden{% endif %}">
+                                <div class="flex gap-3 justify-center mb-4">
+                                    <button onclick="shuffleBoard()" class="btn-secondary flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        Shuffle
+                                    </button>
+                                    <button onclick="setReady()" class="btn-primary flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        I'm Ready
+                                    </button>
+                                </div>
+                                <p class="text-xs text-slate-400 text-center">Drag numbers to swap positions</p>
+                            </div>
+                            <div id="ready-confirmed" class="text-center {% if not current_player.is_ready %}hidden{% endif %}">
+                                <div class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="font-medium text-sm">You're ready!</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-2">Waiting for other players...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Called Numbers (During Play) -->
+                        <div id="called-numbers-section" class="mt-6 pt-6 border-t border-slate-100 {% if room.status == 'setup' %}hidden{% endif %}">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-semibold text-slate-700">Called Numbers</h3>
+                                <span id="called-count" class="text-xs text-slate-400">{{ called_numbers|length }}/25</span>
+                            </div>
+                            <div id="called-numbers" class="flex flex-wrap gap-1.5">
+                                {% if called_numbers %}
+                                    {% for num in called_numbers %}
+                                    <span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">{{ num }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <p id="no-calls-msg" class="text-xs text-slate-400">No numbers called yet</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- Right Column: Players -->
+                <div class="space-y-4">
+                    
+                    <!-- Players List -->
+                    <div class="card p-5">
+                        <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
+                        <div id="players-list" class="space-y-2">
+                            {% for player in players %}
+                            <div class="player-card flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50{% else %}bg-slate-50{% endif %} {% if room.current_turn and room.current_turn.id == player.id %}current-turn{% endif %}" data-player-id="{{ player.id }}">
+                                <div class="flex items-center gap-2">
+                                    {% if player.is_host %}
+                                    <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                    </svg>
+                                    {% endif %}
+                                    <span class="text-sm font-medium text-slate-700">
+                                        {{ player.name }}{% if player.id == current_player.id %} (You){% endif %}
+                                    </span>
+                                </div>
+                                
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Leave Game -->
+                    <form method="POST" action="{% url 'leave_room' room.code %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50 hover:border-red-200">
+                            Leave Game
+                        </button>
+                    </form>
+                </div>
+                
+            </div>
+            
+        </div>
+    </main>
+</div>
+
+<!-- Winner Modal -->
+<div id="winner-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="card p-8 max-w-md mx-4 transform transition-all duration-300 scale-95 opacity-0" id="winner-modal-content">
+        <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                </svg>
+            </div>
+            <h2 id="winner-title" class="text-2xl font-bold text-slate-900 mb-2">Game Over!</h2>
+            <p id="winner-message" class="text-slate-500">Congratulations! </p>
+        </div>
+        
+        <!-- Final Scoreboard -->
+        <div class="bg-slate-50 rounded-xl p-4 mb-6">
+            <h3 class="font-semibold text-slate-700 text-sm mb-3">Final Scores</h3>
+            <div id="final-scores" class="space-y-2">
+                <!-- BINGO progress for this player -->
+                <div class="flex gap-1 bingo-progress" data-lines="{{ player.completed_lines }}">
+                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 1 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">B</span>
+                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 2 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">I</span>
+                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 3 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">N</span>
+                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 4 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">G</span>
+                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 5 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">O</span>
+                </div>
+            </div>
+        </div>
+        
+        <a href="{% url 'home' %}" class="btn-primary w-full text-center block">Play Again</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ════════════════════════════════════════════════════════════
+    // CONFIGURATION
+    // ════════════════════════════════════════════════════════════
+    
+    const roomCode = "{{ room.code }}";
+    const currentPlayerId = {{ current_player.id }};
+    let roomStatus = "{{ room.status }}";
+    let isMyTurn = {{ is_my_turn|yesno:"true,false" }};
+    let remainingSeconds = {{ remaining_seconds|default:60 }};
+    let calledNumbers = {{ called_numbers|safe }};
+    let myCompletedLines = {{ current_player.completed_lines }};
+    let isReady = {{ current_player.is_ready|yesno:"true,false" }};
+    
+    // Board data (2D array)
+    let boardData = {{ current_player.board|safe }};
+    
+    let socket = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    let timerInterval = null;
+    
+    // Drag and drop variables
+    let draggedCell = null;
+    
+    // ════════════════════════════════════════════════════════════
+    // WEBSOCKET CONNECTION
+    // ════════════════════════════════════════════════════════════
+    
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
+        
+        console.log('Connecting to WebSocket:', wsUrl);
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function(e) {
+            console.log('WebSocket connected');
+            reconnectAttempts = 0;
+            updateConnectionStatus('connected');
+        };
+        
+        socket.onclose = function(e) {
+            console.log('WebSocket disconnected');
+            updateConnectionStatus('disconnected');
+            
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 2000);
+            }
+        };
+        
+        socket.onerror = function(e) {
+            console.error('WebSocket error:', e);
+            updateConnectionStatus('error');
+        };
+        
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Received:', data);
+            handleMessage(data);
+        };
+    }
+    
+    function sendMessage(type, payload = {}) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type, ...payload }));
+        }
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // MESSAGE HANDLERS
+    // ════════════════════════════════════════════════════════════
+    
+    function handleMessage(data) {
+        switch (data.type) {
+            case 'player_joined':
+            case 'player_left':
+                updatePlayersList(data.players);
+                break;
+            case 'player_ready':
+                updatePlayersList(data.players);
+                if (data.player_id !== currentPlayerId) {
+                    showNotification(`${data.player_name} is ready`, 'success');
+                }
+                break;
+            case 'game_started':
+                handleGameStarted(data);
+                break;
+            case 'number_called':
+                handleNumberCalled(data);
+                break;
+            case 'game_won':
+                handleGameWon(data);
+                break;
+            case 'auto_ready':
+                handleAutoReady(data);
+                break;
+            case 'auto_number':
+                handleAutoNumber(data);
+                break;
+            case 'error':
+                showNotification(data.message, 'error');
+                break;
+        }
+    }
+    
+    function handleGameStarted(data) {
+        roomStatus = 'playing';
+        
+        document.getElementById('setup-actions').classList.add('hidden');
+        document.getElementById('called-numbers-section').classList.remove('hidden');
+        
+        updateStatusBanner(data.current_turn);
+        updatePlayersList(data.players);
+        updateBoardInteractivity();
+        startTimer(data.duration);
+        
+        showNotification('Game started! Good luck!', 'success');
+    }
+    
+    function handleNumberCalled(data) {
+        calledNumbers = data.called_numbers;
+        
+        // Mark number on board
+        markNumberOnBoard(data.number);
+        updateCalledNumbersDisplay();
+        updatePlayersList(data.players);
+        
+        // Update my lines
+        const myData = data.players.find(p => p.id === currentPlayerId);
+        if (myData) {
+            updateMyBingoLetters(myData.completed_lines);
+        }
+        
+        // Update turn
+        if (data.next_turn) {
+            updateStatusBanner(data.next_turn);
+            updateBoardInteractivity();
+        }
+        
+        startTimer(data.duration);
+        
+        if (data.called_by.id !== currentPlayerId) {
+            showNotification(`${data.called_by.name} called ${data.number}`, 'info');
+        }
+    }
+    
+    function handleGameWon(data) {
+        roomStatus = 'finished';
+        if (timerInterval) clearInterval(timerInterval);
+        console.log(data)
+        showWinnerModal(data.winner, data.players || []);
+    }
+    
+    function handleAutoReady(data) {
+        if (data.player_id === currentPlayerId) {
+            isReady = true;
+            document.getElementById('ready-section').classList.add('hidden');
+            document.getElementById('ready-confirmed').classList.remove('hidden');
+            showNotification("Time's up! You've been marked as ready.", 'info');
+        }
+    }
+    
+    function handleAutoNumber(data) {
+        showNotification(`Time's up! Auto-selected ${data.number} for ${data.player_name}`, 'info');
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // UI UPDATE FUNCTIONS
+    // ════════════════════════════════════════════════════════════
+    
+    function updateConnectionStatus(status) {
+        const el = document.getElementById('connection-status');
+        if (! el) return;
+        
+        el.className = 'badge';
+        if (status === 'connected') {
+            el.classList.add('badge-success');
+            el.textContent = 'Connected';
+        } else if (status === 'disconnected') {
+            el.classList.add('badge-warning');
+            el.textContent = 'Reconnecting...';
+        } else {
+            el.style.background = '#fef2f2';
+            el.style.color = '#dc2626';
+            el.textContent = 'Error';
+        }
+    }
+    
+    function updateStatusBanner(turnPlayer) {
+        const banner = document.getElementById('status-banner');
+        const statusText = document.getElementById('status-text');
+        
+        isMyTurn = turnPlayer.id === currentPlayerId;
+        
+        if (isMyTurn) {
+            banner.classList.remove('bg-slate-700');
+            banner.classList.add('bg-accent-500');
+            statusText.textContent = "Your turn — Click a number on your board";
+        } else {
+            banner.classList.remove('bg-accent-500');
+            banner.classList.add('bg-slate-700');
+            statusText.textContent = `${turnPlayer.name}'s turn`;
+        }
+    }
+    
+    function updateBoardInteractivity() {
+        const cells = document.querySelectorAll('.board-cell');
+        
+        cells.forEach(cell => {
+            const num = parseInt(cell.dataset.number);
+            const isMarked = calledNumbers.includes(num);
+            
+            cell.classList.remove('board-cell-selectable');
+            
+            if (roomStatus === 'playing' && isMyTurn && !isMarked) {
+                cell.classList.add('board-cell-selectable');
+                cell.onclick = () => callNumber(num);
+            } else {
+                cell.onclick = null;
+            }
+        });
+    }
+    
+    function markNumberOnBoard(number) {
+        const cell = document.querySelector(`.board-cell[data-number="${number}"]`);
+        if (cell) {
+            cell.classList.remove('board-cell-default', 'board-cell-selectable');
+            cell.classList.add('board-cell-marked');
+            cell.onclick = null;
+            
+            // Animation
+            cell.style.transform = 'scale(1.15)';
+            setTimeout(() => cell.style.transform = 'scale(1)', 200);
+        }
+    }
+    
+    function updateCalledNumbersDisplay() {
+        const container = document.getElementById('called-numbers');
+        const countEl = document.getElementById('called-count');
+        
+        if (countEl) countEl.textContent = `${calledNumbers.length}/25`;
+        
+        container.innerHTML = calledNumbers.map(num => 
+            `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${num}</span>`
+        ).join('');
+    }
+    
+    function updateMyBingoLetters(lines) {
+        myCompletedLines = lines;
+        const letters = ['B', 'I', 'N', 'G', 'O'];
+        
+        letters.forEach((letter, index) => {
+            const el = document.getElementById(`letter-${letter}`);
+            if (el) {
+                if (index < lines) {
+                    el.classList.remove('bingo-letter-inactive');
+                    el.classList.add('bingo-letter-active');
+                } else {
+                    el.classList.remove('bingo-letter-active');
+                    el.classList.add('bingo-letter-inactive');
+                }
+            }
+        });
+    }
+    
+    function updatePlayersList(players, show_score=false) {
+        const container = document.getElementById('players-list');
+        if (!container) return;
+        
+        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
+        
+
+
+        container.innerHTML = players.map(player => {
+            if (show_score){
+                const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
+                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                ).join('');
+            }
+            return `
+                <div class="player-card flex items-center justify-between p-3 rounded-xl ${player.id === currentPlayerId ? 'bg-accent-50' : 'bg-slate-50'}" data-player-id="${player.id}">
+                    <div class="flex items-center gap-2">
+                        ${player.is_host ? crownSvg : ''}
+                        <span class="text-sm font-medium text-slate-700">
+                            ${player.name}${player.id === currentPlayerId ? ' (You)' : ''}
+                        </span>
+                    </div>
+                    ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // TIMER WITH AUTO-ACTIONS
+    // ════════════════════════════════════════════════════════════
+    
+    function startTimer(duration) {
+        if (timerInterval) clearInterval(timerInterval);
+        
+        remainingSeconds = duration;
+        const timerEl = document.getElementById('timer');
+        
+        updateTimerDisplay();
+        
+        timerInterval = setInterval(() => {
+            remainingSeconds--;
+            updateTimerDisplay();
+            
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                handleTimerEnd();
+            }
+        }, 1000);
+    }
+    
+    function updateTimerDisplay() {
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            timerEl.textContent = `${remainingSeconds}s`;
+            if (remainingSeconds <= 10) {
+                timerEl.classList.add('text-red-500');
+            } else {
+                timerEl.classList.remove('text-red-500');
+            }
+        }
+    }
+    
+    function handleTimerEnd() {
+        if (roomStatus === 'setup' && ! isReady) {
+            // Auto-ready
+            setReady();
+            showNotification("Time's up! Auto-marked as ready.", 'info');
+        } else if (roomStatus === 'playing' && isMyTurn) {
+            // Auto-pick random number
+            autoPickNumber();
+        }
+    }
+    
+    function autoPickNumber() {
+        const availableNumbers = [];
+        for (let i = 1; i <= 25; i++) {
+            if (!calledNumbers.includes(i)) {
+                availableNumbers.push(i);
+            }
+        }
+        
+        if (availableNumbers.length > 0) {
+            const randomNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+            callNumber(randomNumber);
+            showNotification(`Time's up! Auto-selected ${randomNumber}`, 'info');
+        }
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // DRAG AND DROP
+    // ════════════════════════════════════════════════════════════
+    
+    function initDragAndDrop() {
+        const cells = document.querySelectorAll('.board-cell');
+        
+        cells.forEach(cell => {
+            cell.addEventListener('dragstart', handleDragStart);
+            cell.addEventListener('dragend', handleDragEnd);
+            cell.addEventListener('dragover', handleDragOver);
+            cell.addEventListener('dragenter', handleDragEnter);
+            cell.addEventListener('dragleave', handleDragLeave);
+            cell.addEventListener('drop', handleDrop);
+        });
+    }
+    
+    function handleDragStart(e) {
+        if (roomStatus !== 'setup' || isReady) {
+            e.preventDefault();
+            return;
+        }
+        
+        draggedCell = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.board-cell').forEach(cell => {
+            cell.classList.remove('drag-over');
+        });
+    }
+    
+    function handleDragOver(e) {
+        if (roomStatus !== 'setup' || isReady) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    function handleDragEnter(e) {
+        if (roomStatus !== 'setup' || isReady) return;
+        this.classList.add('drag-over');
+    }
+    
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+    
+    function handleDrop(e) {
+        e.preventDefault();
+        
+        if (roomStatus !== 'setup' || isReady || ! draggedCell || draggedCell === this) {
+            return;
+        }
+        
+        // Swap numbers
+        const draggedNum = draggedCell.dataset.number;
+        const targetNum = this.dataset.number;
+        
+        draggedCell.textContent = targetNum;
+        draggedCell.dataset.number = targetNum;
+        
+        this.textContent = draggedNum;
+        this.dataset.number = draggedNum;
+        
+        // Update board data
+        updateBoardDataFromDOM();
+        
+        this.classList.remove('drag-over');
+        showNotification('Numbers swapped!', 'success');
+    }
+    
+    function updateBoardDataFromDOM() {
+        const cells = document.querySelectorAll('.board-cell');
+        boardData = [];
+        let row = [];
+        
+        cells.forEach((cell, index) => {
+            row.push(parseInt(cell.dataset.number));
+            if ((index + 1) % 5 === 0) {
+                boardData.push(row);
+                row = [];
+            }
+        });
+        
+        // Send updated board to server
+        sendMessage('update_board', { board: boardData });
+    }
+    
+    function shuffleBoard() {
+        if (roomStatus !== 'setup' || isReady) return;
+        
+        // Generate new shuffled board
+        const numbers = Array.from({length: 25}, (_, i) => i + 1);
+        for (let i = numbers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+        }
+        
+        // Update DOM
+        const cells = document.querySelectorAll('.board-cell');
+        cells.forEach((cell, index) => {
+            cell.textContent = numbers[index];
+            cell.dataset.number = numbers[index];
+        });
+        
+        // Update board data and send to server
+        updateBoardDataFromDOM();
+        showNotification('Board shuffled!', 'success');
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // USER ACTIONS
+    // ════════════════════════════════════════════════════════════
+    
+    function setReady() {
+        if (isReady) return;
+        
+        isReady = true;
+        sendMessage('player_ready');
+        
+        document.getElementById('ready-section').classList.add('hidden');
+        document.getElementById('ready-confirmed').classList.remove('hidden');
+        
+        // Disable drag and drop
+        document.querySelectorAll('.board-cell').forEach(cell => {
+            cell.draggable = false;
+        });
+    }
+    
+    function callNumber(number) {
+        if (! isMyTurn || roomStatus !== 'playing') {
+            showNotification('Not your turn!', 'error');
+            return;
+        }
+        
+        if (calledNumbers.includes(number)) {
+            showNotification('Number already called!', 'error');
+            return;
+        }
+        
+        sendMessage('call_number', { number: number });
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // WINNER MODAL
+    // ════════════════════════════════════════════════════════════
+    
+    function showWinnerModal(winner, players) {
+        const modal = document.getElementById('winner-modal');
+        const modalContent = document.getElementById('winner-modal-content');
+        const title = document.getElementById('winner-title');
+        const message = document.getElementById('winner-message');
+        const scoresContainer = document.getElementById('final-scores');
+        
+        const isWinner = winner.id === currentPlayerId;
+        console.log(players)
+        
+        title.textContent = isWinner ?  '🎉 You Won!' : `${winner.name} Wins!`;
+        message.textContent = isWinner ? 'Congratulations on your victory!' : 'Better luck next time!';
+        
+        // Sort players by completed lines
+        const sortedPlayers = [...players].sort((a, b) => b.completed_lines - a.completed_lines);
+
+        
+        scoresContainer.innerHTML = sortedPlayers.map((player, index) => {
+            const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, idx) =>
+                        `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${idx < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                    ).join('');
+
+            return `
+                <div class="flex items-center justify-between p-2 rounded-lg ${index === 0 ? 'bg-amber-50' : ''}">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${index + 1}</span>
+                        <span class="text-sm font-medium text-slate-700">${player.name}${player.id === currentPlayerId ? ' (You)' : ''}</span>
+                    </div>
+                    <div class="flex gap-2 p-1">
+                        ${bingoLetters}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // NOTIFICATIONS (STACKED)
+    // ════════════════════════════════════════════════════════════
+    
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notification-container');
+        
+        const notification = document.createElement('div');
+        notification.className = 'p-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
+        
+        if (type === 'success') {
+            notification.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100');
+        } else if (type === 'error') {
+            notification.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
+        } else {
+            notification.classList.add('bg-slate-50', 'text-slate-700', 'border', 'border-slate-200');
+        }
+        
+        notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
+        container.appendChild(notification);
+        
+        setTimeout(() => notification.classList.remove('translate-x-full'), 10);
+        
+        setTimeout(() => {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+        
+        // Limit notifications
+        while (container.children.length > 5) {
+            container.children[0].remove();
+        }
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ════════════════════════════════════════════════════════════
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Game loaded for room:', roomCode, 'Status:', roomStatus);
+        
+        connectWebSocket();
+        initDragAndDrop();
+        
+        // Initialize BINGO letters
+        updateMyBingoLetters(myCompletedLines);
+        
+        // Start timer
+        startTimer(remainingSeconds);
+        
+        // Set board interactivity
+        if (roomStatus === 'playing') {
+            updateBoardInteractivity();
+        }
+        
+        // Disable drag if already ready
+        if (isReady) {
+            document.querySelectorAll('.board-cell').forEach(cell => {
+                cell.draggable = false;
+            });
+        }
+    });
+</script>
+{% endblock %}
