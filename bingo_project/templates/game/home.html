@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}Bingo - Play Online{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col">
+    
+    <!-- Header -->
+    <header class="py-6 px-4">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">B</span>
+                </div>
+                <span class="font-semibold text-slate-800">Bingo</span>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-4xl">
+            
+            <!-- Hero Section -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+                    Play Bingo Online
+                </h1>
+                <p class="text-lg text-slate-500 max-w-md mx-auto">
+                    Create a room, invite friends, and enjoy the classic game together.
+                </p>
+            </div>
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="max-w-md mx-auto mb-8">
+                {% for message in messages %}
+                <div class="p-4 rounded-xl mb-3 flex items-center gap-3 {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-emerald-50 text-emerald-700 border border-emerald-100{% endif %}">
+                    {% if message.tags == 'error' %}
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {% else %}
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {% endif %}
+                    <span class="text-sm font-medium">{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Cards -->
+            <div class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                
+                <!-- Create Room Card -->
+                <div class="card card-hover p-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-accent-50 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold text-slate-900">Create Room</h2>
+                    </div>
+                    
+                    <form method="POST" action="{% url 'create_room' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-6">
+                            <label for="create_name" class="block text-sm font-medium text-slate-700 mb-2">
+                                Your name
+                            </label>
+                            <input 
+                                type="text" 
+                                id="create_name" 
+                                name="player_name" 
+                                required
+                                maxlength="30"
+                                placeholder="Enter your name"
+                                class="input-field"
+                            >
+                        </div>
+                        
+                        <button type="submit" class="btn-primary w-full">
+                            Create New Room
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Join Room Card -->
+                <div class="card card-hover p-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold text-slate-900">Join Room</h2>
+                    </div>
+                    
+                    <form method="POST" action="{% url 'join_room' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="join_name" class="block text-sm font-medium text-slate-700 mb-2">
+                                Your name
+                            </label>
+                            <input 
+                                type="text" 
+                                id="join_name" 
+                                name="player_name" 
+                                required
+                                maxlength="30"
+                                placeholder="Enter your name"
+                                class="input-field"
+                            >
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="room_code" class="block text-sm font-medium text-slate-700 mb-2">
+                                Room code
+                            </label>
+                            <input 
+                                type="text" 
+                                id="room_code" 
+                                name="room_code" 
+                                required
+                                maxlength="6"
+                                placeholder="ABC123"
+                                class="input-field uppercase tracking-widest text-center font-mono"
+                            >
+                        </div>
+                        
+                        <button type="submit" class="btn-secondary w-full">
+                            Join Room
+                        </button>
+                    </form>
+                </div>
+                
+            </div>
+            
+            <!-- How to Play -->
+            <div class="mt-16 text-center">
+                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-6">
+                    How to Play
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                            <span class="text-slate-500 font-semibold">1</span>
+                        </div>
+                        <p class="text-sm text-slate-500">Create a room</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                            <span class="text-slate-500 font-semibold">2</span>
+                        </div>
+                        <p class="text-sm text-slate-500">Share the code</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                            <span class="text-slate-500 font-semibold">3</span>
+                        </div>
+                        <p class="text-sm text-slate-500">Arrange your board</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                            <span class="text-slate-500 font-semibold">4</span>
+                        </div>
+                        <p class="text-sm text-slate-500">Get 5 lines to win! </p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="py-6 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <p class="text-sm text-slate-400">
+                Simple, fun, multiplayer Bingo
+            </p>
+        </div>
+    </footer>
+    
+</div>
+{% endblock %}
