@@ -7,12 +7,13 @@ Contains:
 - Winner determination
 """
 
+from .models import RoundPlayer
+
 # ============================================
 # PRE-COMPUTED WINNING LINES (Constant)
 # ============================================
-# 
-# These never change, so we compute once and reuse. 
-# Total: 12 lines (5 rows + 5 columns + 2 diagonals)
+#
+# Total:  12 lines (5 rows + 5 columns + 2 diagonals)
 #
 # Board positions:
 #   (0,0) (0,1) (0,2) (0,3) (0,4)
@@ -37,16 +38,17 @@ WINNING_LINES = [
     [(0, 4), (1, 4), (2, 4), (3, 4), (4, 4)],  # Column 4
     
     # Diagonals (2)
-    [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)],  # Top-left to bottom-right ↘
-    [(0, 4), (1, 3), (2, 2), (3, 1), (4, 0)],  # Top-right to bottom-left ↙
+    [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)],  # Top-left to bottom-right
+    [(0, 4), (1, 3), (2, 2), (3, 1), (4, 0)],  # Top-right to bottom-left
 ]
 
-# Human-readable names for each line (same order as WINNING_LINES)
 LINE_NAMES = [
     "Row 1", "Row 2", "Row 3", "Row 4", "Row 5",
     "Column 1", "Column 2", "Column 3", "Column 4", "Column 5",
     "Diagonal ↘", "Diagonal ↙"
 ]
+
+BINGO_LETTERS = ['B', 'I', 'N', 'G', 'O']
 
 
 def check_completed_lines(board, called_numbers):
@@ -59,32 +61,15 @@ def check_completed_lines(board, called_numbers):
     
     Returns:
         tuple: (count, completed_lines_info)
-            - count: Number of completed lines (0-12)
-            - completed_lines_info: List of dicts with line details
-    
-    Example:
-        >>> board = [[1,2,3,4,5], [6,7,8,9,10], ...]
-        >>> called = [1, 2, 3, 4, 5]
-        >>> count, lines = check_completed_lines(board, called)
-        >>> count
-        1
-        >>> lines
-        [{'index': 0, 'name': 'Row 1', 'positions': [(0,0), (0,1), ... ]}]
     """
-    called_set = set(called_numbers)  # Convert to set for O(1) lookup
+    called_set = set(called_numbers)
     completed_lines_info = []
     
     for line_index, line in enumerate(WINNING_LINES):
-        # Check if all 5 cells in this line are marked
-        line_complete = True
-        for (row, col) in line:
-            number = board[row][col]
-            if number not in called_set:
-                line_complete = False
-                break
+        line_complete = all(board[row][col] in called_set for row, col in line)
         
         if line_complete:
-            completed_lines_info. append({
+            completed_lines_info.append({
                 'index': line_index,
                 'name': LINE_NAMES[line_index],
                 'positions': line
@@ -93,109 +78,168 @@ def check_completed_lines(board, called_numbers):
     return len(completed_lines_info), completed_lines_info
 
 
-def get_completed_line_positions(board, called_numbers):
+def determine_winners(game_round, calling_player):
     """
-    Get all cell positions that are part of completed lines.
-    Useful for highlighting completed lines in UI.
+    Determine winner(s) after a number is called.
+    
+    Rules:
+    1. If caller completes 5+ lines, caller wins alone
+    2. If caller doesn't win, check others
+    3. Multiple non-callers can tie for win
     
     Args:
-        board: 2D list (5x5)
-        called_numbers: List of called numbers
+        game_round: GameRound instance
+        calling_player: RoundPlayer who called the number
     
     Returns:
-        set: Set of (row, col) tuples that are part of completed lines
-    
-    Example:
-        >>> positions = get_completed_line_positions(board, called)
-        >>> (0, 0) in positions  # Is cell (0,0) part of a completed line?
-        True
+        list: List of winning RoundPlayer instances (empty if no winner)
     """
-    _, completed_lines = check_completed_lines(board, called_numbers)
+    called_numbers = game_round.called_numbers
+    lines_to_win = 5
     
-    positions = set()
-    for line_info in completed_lines:
-        for pos in line_info['positions']:
-            positions.add(pos)
+    # First check the caller
+    caller_lines, _ = check_completed_lines(calling_player.board, called_numbers)
+    calling_player. completed_lines = caller_lines
+    calling_player.save(update_fields=['completed_lines'])
     
-    return positions
-
-
-def is_winner(board, called_numbers, lines_to_win=5):
-    """
-    Check if a player has won the game.
+    if caller_lines >= lines_to_win:
+        return [calling_player]  # Caller wins alone
     
-    Args:
-        board: Player's 5x5 board
-        called_numbers: List of called numbers
-        lines_to_win: Lines needed to win (default: 5)
-    
-    Returns:
-        bool: True if player has won
-    """
-    count, _ = check_completed_lines(board, called_numbers)
-    return count >= lines_to_win
-
-
-def get_line_name(line_index):
-    """
-    Get human-readable name for a line by index.
-    
-    Args:
-        line_index: Index of line (0-11)
-    
-    Returns:
-        str: Name like "Row 1", "Column 3", "Diagonal ↘"
-    """
-    if 0 <= line_index < len(LINE_NAMES):
-        return LINE_NAMES[line_index]
-    return "Unknown"
-
-
-def calculate_player_lines(player):
-    """
-    Calculate and update completed lines for a player.
-    
-    Args:
-        player: Player model instance
-    
-    Returns:
-        tuple: (new_line_count, newly_completed_lines)
-    """
-    count, completed_lines = check_completed_lines(
-        player.board, 
-        player.room.called_numbers
-    )
-    
-    old_count = player.completed_lines
-    newly_completed = completed_lines[old_count:] if count > old_count else []
-    
-    # Update player's completed lines count
-    if count != old_count:
-        player. completed_lines = count
+    # Check all other players
+    winners = []
+    for player in game_round.players.exclude(id=calling_player.id):
+        player_lines, _ = check_completed_lines(player.board, called_numbers)
+        player.completed_lines = player_lines
         player.save(update_fields=['completed_lines'])
+        
+        if player_lines >= lines_to_win:
+            winners.append(player)
     
-    return count, newly_completed
+    return winners
 
 
-def get_board_as_dict(board):
+def update_all_players_lines(game_round):
     """
-    Convert 2D board array to dictionary for easy number lookup.
-    
-    Args:
-        board: 2D list (5x5)
+    Update completed lines for all players in a round. 
+    Called after each number is called.
     
     Returns:
-        dict: {number: (row, col)} mapping
-    
-    Example:
-        >>> board = [[7, 12, 3, ... ], ...]
-        >>> mapping = get_board_as_dict(board)
-        >>> mapping[7]
-        (0, 0)
+        list: List of dicts with player line updates
     """
-    mapping = {}
-    for row_idx, row in enumerate(board):
-        for col_idx, number in enumerate(row):
-            mapping[number] = (row_idx, col_idx)
-    return mapping
+    called_numbers = game_round.called_numbers
+    updates = []
+    
+    for player in game_round.players.all():
+        old_lines = player.completed_lines
+        new_lines, completed = check_completed_lines(player. board, called_numbers)
+        
+        if new_lines != old_lines: 
+            player.completed_lines = new_lines
+            player.save(update_fields=['completed_lines'])
+            
+            updates.append({
+                'player_id': player.id,
+                'player_name': player.display_name,
+                'old_lines':  old_lines,
+                'new_lines': new_lines,
+                'completed_line_names': [c['name'] for c in completed[old_lines: ]]
+            })
+    
+    return updates
 
+
+def get_bingo_progress(completed_lines):
+    """
+    Convert completed lines count to BINGO letter progress.
+    
+    Args:
+        completed_lines: Number of completed lines (0-5+)
+    
+    Returns:
+        dict: {'B': True, 'I': True, 'N': False, 'G': False, 'O': False}
+    """
+    return {letter: i < completed_lines for i, letter in enumerate(BINGO_LETTERS)}
+
+
+def validate_board(board):
+    """
+    Validate that board is a proper 5x5 grid with numbers 1-25.
+    
+    Returns:
+        bool: True if valid
+    """
+    if not isinstance(board, list) or len(board) != 5:
+        return False
+    
+    all_numbers = []
+    for row in board: 
+        if not isinstance(row, list) or len(row) != 5:
+            return False
+        all_numbers.extend(row)
+    
+    return sorted(all_numbers) == list(range(1, 26))
+
+
+def get_room_member(room, user=None, session_key=None):
+    """
+    Get RoomMember by user or session_key.
+    
+    Args:
+        room: Room instance
+        user: User instance (optional)
+        session_key: Session key string (optional)
+    
+    Returns:
+        RoomMember or None
+    """
+    if user and user.is_authenticated:
+        return room.members.filter(user=user, is_active=True).first()
+    elif session_key: 
+        return room.members.filter(session_key=session_key, is_active=True).first()
+    return None
+
+
+def get_or_create_room_member(room, display_name, user=None, session_key=None, is_host=False):
+    """
+    Get existing room member or create new one.
+    
+    Returns:
+        tuple: (RoomMember, created:  bool)
+    """
+    # Try to find existing member
+    existing = get_room_member(room, user, session_key)
+    if existing:
+        # Reactivate if inactive
+        if not existing.is_active:
+            existing.is_active = True
+            existing.display_name = display_name
+            existing.save()
+        return existing, False
+    
+    # Create new member
+    role = 'host' if is_host else 'player'
+    member = room.members.create(
+        user=user if user and user.is_authenticated else None,
+        session_key=session_key if not (user and user.is_authenticated) else None,
+        display_name=display_name,
+        role=role
+    )
+    return member, True
+
+
+def get_or_create_round_player(game_round, room_member):
+    """
+    Get existing round player or create new one with generated board.
+    
+    Returns:
+        tuple: (RoundPlayer, created:  bool)
+    """
+    existing = game_round.players.filter(room_member=room_member).first()
+    if existing:
+        return existing, False
+    
+    player = game_round.players.create(
+        room_member=room_member,
+        board=RoundPlayer.generate_board()
+    )
+    return player, True
