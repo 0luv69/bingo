@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bingo{% endblock %}</title>
     
-    {% load static %}
-    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts - Inter for clean professional look -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -19,19 +17,12 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        'sans': ['Inter', 'system-ui', 'sans-serif'],
-                    },
+                    fontFamily:  { 'sans': ['Inter', 'system-ui', 'sans-serif'] },
                     colors: {
                         'accent': {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
+                            50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd',
+                            300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9',
+                            600: '#0284c7', 700: '#0369a1',
                         }
                     }
                 }
@@ -40,23 +31,16 @@
     </script>
     
     <style>
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-        }
+        body { font-family: 'Inter', system-ui, sans-serif; }
         
         .card {
             background: white;
-            border: 1px solid #e5e7eb;
+            border:  1px solid #e5e7eb;
             border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+            box-shadow:  0 1px 3px rgba(0,0,0,0.05);
         }
-        
-        .card-hover {
-            transition: all 0. 2s ease;
-        }
-        
-        .card-hover:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        . card-hover:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             transform: translateY(-1px);
         }
         
@@ -67,23 +51,31 @@
             padding: 12px 24px;
             border-radius: 10px;
             transition: all 0.2s ease;
+            display: inline-block;
+            text-align: center;
         }
-        
         .btn-primary:hover {
             box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
             transform: translateY(-1px);
+        }
+        . btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         
         .btn-secondary {
             background: #f8fafc;
             color: #475569;
-            font-weight: 500;
+            font-weight:  500;
             padding: 12px 24px;
             border-radius: 10px;
             border: 1px solid #e2e8f0;
             transition: all 0.2s ease;
+            display: inline-block;
+            text-align: center;
         }
-        
         .btn-secondary:hover {
             background: #f1f5f9;
             border-color: #cbd5e1;
@@ -91,14 +83,13 @@
         
         .input-field {
             width: 100%;
-            padding: 12px 16px;
+            padding:  12px 16px;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 15px;
+            font-size:  15px;
             transition: all 0.2s ease;
             background: #f8fafc;
         }
-        
         .input-field:focus {
             outline: none;
             border-color: #0ea5e9;
@@ -106,84 +97,23 @@
             box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
         }
         
-        .input-field::placeholder {
-            color: #94a3b8;
-        }
-        
-        .bingo-cell {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 18px;
-            border-radius: 10px;
-            transition: all 0.15s ease;
-            cursor: pointer;
-            user-select: none;
-        }
-        
-        .bingo-cell-default {
-            background: #f8fafc;
-            color: #334155;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .bingo-cell-default:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-        }
-        
-        .bingo-cell-marked {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            color: white;
-            border: 1px solid #f59e0b;
-            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
-        }
-        
-        .bingo-cell-line {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: 1px solid #059669;
-            animation: celebrate 0.5s ease;
-        }
-        
-        @keyframes celebrate {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
-        
-        .badge {
+        . badge {
             display: inline-flex;
             align-items: center;
             padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius:  6px;
+            font-size:  12px;
             font-weight: 500;
         }
-        
-        .badge-success {
-            background: #ecfdf5;
-            color: #059669;
-        }
-        
-        .badge-warning {
-            background: #fffbeb;
-            color: #d97706;
-        }
-        
-        .badge-info {
-            background: #f0f9ff;
-            color: #0284c7;
-        }
+        . badge-success { background: #ecfdf5; color: #059669; }
+        .badge-warning { background: #fffbeb; color: #d97706; }
+        .badge-info { background: #f0f9ff; color: #0284c7; }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
-    
     {% block content %}{% endblock %}
-    
     {% block scripts %}{% endblock %}
 </body>
 </html>
