@@ -1,11 +1,185 @@
 import random
 import string
 from django.db import models
+from django.contrib. auth.models import User
 from django.utils import timezone
+from datetime import timedelta
 
 
 class Room(models.Model):
-   
+    """
+    Persistent room container that survives multiple game rounds. 
+    
+    Room holds:
+    - Unique code for joining
+    - Settings (timeouts, max players)
+    - Members (via RoomMember)
+    - Game rounds (via GameRound)
+    
+    Room lifecycle:
+    - Created when host creates room
+    - Persists through multiple game rounds
+    - Soft-deleted when all members leave (is_active=False)
+    """
+    
+    code = models.CharField(max_length=6, unique=True, help_text="Unique room code (e.g., ABC123)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_rooms', help_text="User who created room (null for guests)")
+    is_active = models.BooleanField(default=True, help_text="False when room is abandoned")
+    
+    # Room Settings
+    settings_setup_duration = models.IntegerField(default=60, help_text="Seconds for board arrangement phase")
+    settings_turn_duration = models.IntegerField(default=30, help_text="Seconds per turn")
+    settings_max_players = models.IntegerField(default=6, help_text="Maximum players allowed (2-15)")
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Room {self.code}"
+    
+    @classmethod
+    def generate_room_code(cls):
+        """Generate unique 6-char room code:  3 letters + 3 digits."""
+        while True:
+            letters = ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ', k=3))
+            digits = ''.join(random.choices('23456789', k=3))
+            code = letters + digits
+            if not cls.objects.filter(code=code).exists():
+                return code
+    
+    def get_active_members(self):
+        """Get all active members in this room."""
+        return self.members.filter(is_active=True)
+    
+    def get_active_members_count(self):
+        """Get count of active members."""
+        return self.get_active_members().count()
+    
+    def get_host(self):
+        """Get current host of the room."""
+        return self.members.filter(is_active=True, role='host').first()
+    
+    def get_current_round(self):
+        """Get the current (latest) game round."""
+        return self.rounds.order_by('-round_number').first()
+    
+    def get_share_url(self):
+        """Get shareable URL for this room."""
+        return f"/join/{self.code}/"
+    
+    def can_join(self):
+        """Check if new players can join this room."""
+        if not self.is_active:
+            return False, "Room is no longer active"
+        
+        current_round = self.get_current_round()
+        if current_round and current_round.status not in ['waiting', 'finished']:
+            return False, "Game in progress, please wait"
+        
+        if self.get_active_members_count() >= self.settings_max_players:
+            return False, "Room is full"
+        
+        return True, "OK"
+    
+    def transfer_host(self, exclude_member=None):
+        """Transfer host role to next available member."""
+        query = self.members.filter(is_active=True, role='player')
+        if exclude_member:
+            query = query.exclude(id=exclude_member.id)
+        
+        # First try co-hosts
+        co_host = self.members.filter(is_active=True, role='co-host').first()
+        if co_host:
+            co_host.role = 'host'
+            co_host.save()
+            return co_host
+        
+        # Then regular players
+        new_host = query.order_by('joined_at').first()
+        if new_host:
+            new_host.role = 'host'
+            new_host.save()
+            return new_host
+        
+        return None
+
+
+class RoomMember(models. Model):
+    """
+    Represents a person's membership in a room.
+    Persists across game rounds.
+    
+    Identified by:
+    - user (if logged in)
+    - session_key (if guest)
+    """
+    
+    ROLE_CHOICES = [
+        ('host', 'Host'),
+        ('co-host', 'Co-Host'),
+        ('player', 'Player'),
+    ]
+    
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='room_memberships', help_text="Logged in user (null for guests)")
+    session_key = models. CharField(max_length=40, blank=True, null=True, help_text="Browser session for guests")
+    display_name = models.CharField(max_length=30, help_text="Player's display name")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='player')
+    joined_at = models. DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, help_text="False when member leaves room")
+    
+    class Meta:
+        ordering = ['joined_at']
+        constraints = [
+            models.UniqueConstraint(fields=['room', 'session_key'], name='unique_room_session', condition=models.Q(session_key__isnull=False)),
+            models.UniqueConstraint(fields=['room', 'user'], name='unique_room_user', condition=models.Q(user__isnull=False)),
+        ]
+    
+    def __str__(self):
+        return f"{self.display_name} in {self.room.code} ({self.role})"
+    
+    @property
+    def is_host(self):
+        return self.role == 'host'
+    
+    @property
+    def is_co_host(self):
+        return self.role == 'co-host'
+    
+    def get_identifier(self):
+        """Get unique identifier for this member."""
+        if self.user:
+            return f"user_{self.user.id}"
+        return f"session_{self.session_key}"
+    
+    def leave_room(self):
+        """Handle member leaving the room."""
+        was_host = self.is_host
+        self.is_active = False
+        self.save()
+        
+        if was_host:
+            self.room.transfer_host(exclude_member=self)
+        
+        # Check if room should be deactivated
+        if self.room.get_active_members_count() == 0:
+            self.room.is_active = False
+            self.room.save()
+
+
+class GameRound(models.Model):
+    """
+    Represents a single game round within a room.
+    
+    A room can have multiple rounds (Play Again feature).
+    Each round has its own: 
+    - Status progression (waiting → setup → playing → finished)
+    - Called numbers
+    - Winner
+    - Round players with their boards
+    """
+    
     STATUS_CHOICES = [
         ('waiting', 'Waiting for Players'),
         ('setup', 'Board Setup Phase'),
@@ -13,50 +187,50 @@ class Room(models.Model):
         ('finished', 'Game Finished'),
     ]
     
-    code = models.CharField(max_length=6, unique=True, help_text="Unique room code for joining (e.g., ABC123)")
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='waiting', help_text="Current state of the game")
-    called_numbers = models.JSONField(default=list, help_text="List of numbers called in the game: [5, 13, 21]")
-
-    current_turn = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True, blank=True, related_name='turn_in_room', help_text="Which player's turn is it?")
-    turn_deadline = models.DateTimeField(null=True, blank=True, help_text="Deadline for current phase/turn")
-    created_at = models.DateTimeField(auto_now_add=True)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='rounds')
+    round_number = models. PositiveIntegerField(default=1)
+    status = models. CharField(max_length=10, choices=STATUS_CHOICES, default='waiting')
+    called_numbers = models.JSONField(default=list, help_text="List of called numbers [5, 13, 21]")
+    current_turn = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_turn_round', help_text="Whose turn is it")
+    turn_deadline = models.DateTimeField(null=True, blank=True, help_text="When current turn/phase expires")
+    winner = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='won_rounds')
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models. DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-round_number']
+        unique_together = ['room', 'round_number']
     
     def __str__(self):
-        return f"Room {self.code} ({self.status})"
-    
-    @classmethod
-    def generate_room_code(cls):
-        """
-        Generate a unique 6-character room code.
-        Format: 3 uppercase letters + 3 digits (e.g., ABC123)
-        """
-        while True:
-            letters = ''.join(random.choices(string.ascii_uppercase, k=3))
-            digits = ''.join(random.choices(string.digits, k=3))
-            code = letters + digits
-            if not cls.objects.filter(code=code).exists():
-                return code
+        return f"Room {self.room.code} - Round {self.round_number} ({self.status})"
     
     def get_players(self):
-        """Get all players in this room."""
-        return self.players.all()
+        """Get all players in this round."""
+        return self. players.all()
     
     def get_players_count(self):
-        """Get number of players in room."""
+        """Get number of players in this round."""
         return self.players.count()
     
+    def get_ready_count(self):
+        """Get number of ready players."""
+        return self.players.filter(is_ready=True).count()
+    
     def are_all_players_ready(self):
-        """Check if all players have clicked Ready."""
+        """Check if all players are ready."""
         players = self.players.all()
         if not players.exists():
             return False
-        return all(player.is_ready for player in players)
+        return all(p.is_ready for p in players)
+    
+    def get_available_numbers(self):
+        """Get numbers that haven't been called yet."""
+        all_numbers = set(range(1, 26))
+        called = set(self.called_numbers)
+        return list(all_numbers - called)
     
     def get_next_turn_player(self):
-        """Get the next player in turn order (based on join order)."""
+        """Get next player in turn order."""
         players = list(self.players.order_by('joined_at'))
         if not players:
             return None
@@ -65,82 +239,137 @@ class Room(models.Model):
             return players[0]
         
         try:
-            current_index = players.index(self.current_turn)
+            current_index = next(i for i, p in enumerate(players) if p.id == self.current_turn.id)
             next_index = (current_index + 1) % len(players)
             return players[next_index]
-        except ValueError:
+        except StopIteration:
             return players[0]
     
-    def get_available_numbers(self):
-        """Get list of numbers that haven't been called yet."""
-        all_numbers = set(range(1, 26))
-        called = set(self.called_numbers)
-        return list(all_numbers - called)
-    
     def is_deadline_passed(self):
-        """Check if the current deadline has passed."""
+        """Check if current deadline has passed."""
         if self.turn_deadline is None:
             return False
         return timezone.now() > self.turn_deadline
+    
+    def add_called_number(self, number):
+        """Add a number to called numbers list."""
+        if number not in self.called_numbers:
+            self.called_numbers.append(number)
+            self.save(update_fields=['called_numbers'])
+    
+    def start_setup_phase(self):
+        """Transition to setup phase."""
+        self.status = 'setup'
+        self.turn_deadline = timezone.now() + timedelta(seconds=self.room.settings_setup_duration)
+        self.started_at = timezone.now()
+        self.save()
+    
+    def start_playing_phase(self):
+        """Transition to playing phase."""
+        self.status = 'playing'
+        
+        # Set first turn
+        first_player = self.players.order_by('joined_at').first()
+        if first_player: 
+            self.current_turn = first_player
+            self.turn_deadline = timezone.now() + timedelta(seconds=self.room.settings_turn_duration)
+        
+        self.save()
+    
+    def end_game(self, winner):
+        """End the game with a winner."""
+        self.status = 'finished'
+        self. winner = winner
+        self.finished_at = timezone.now()
+        self.turn_deadline = None
+        self. save()
+    
+    @classmethod
+    def create_new_round(cls, room):
+        """Create a new round for the room."""
+        last_round = room.rounds.order_by('-round_number').first()
+        round_number = (last_round.round_number + 1) if last_round else 1
+        
+        return cls.objects.create(room=room, round_number=round_number)
 
 
-class Player(models.Model):
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='players', help_text="The room this player is in")
-    name = models.CharField(max_length=30, help_text="Player's display name")
-    session_key = models.CharField(max_length=40, help_text="Browser session key to identify player")
-    board = models.JSONField(default=list, help_text="5x5 grid as 2D array: [[1,2,3,4,5], ...]")
-    is_ready = models.BooleanField(default=False, help_text="Has player clicked Ready in setup phase?")
-    is_host = models.BooleanField(default=False, help_text="Did this player create the room?")
-    completed_lines = models.IntegerField(default=0, help_text="Number of Bingo lines completed (5 to win)")
+class RoundPlayer(models.Model):
+    """
+    Represents a player's participation in a specific game round.
+    
+    Each round has its own set of RoundPlayer records.
+    Stores round-specific data: 
+    - Board arrangement
+    - Ready status
+    - Completed lines
+    """
+    
+    game_round = models.ForeignKey(GameRound, on_delete=models.CASCADE, related_name='players')
+    room_member = models.ForeignKey(RoomMember, on_delete=models.CASCADE, related_name='round_participations')
+    board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
+    is_ready = models.BooleanField(default=False)
+    completed_lines = models. IntegerField(default=0, help_text="Number of completed lines (0-5+)")
     joined_at = models.DateTimeField(auto_now_add=True)
     
-    class Meta:
+    class Meta: 
         ordering = ['joined_at']
-        unique_together = ['room', 'session_key']
+        unique_together = ['game_round', 'room_member']
     
     def __str__(self):
-        return f"{self.name} in Room {self.room.code}"
+        return f"{self.room_member.display_name} in Round {self.game_round.round_number}"
+    
+    @property
+    def display_name(self):
+        return self.room_member.display_name
+    
+    @property
+    def role(self):
+        return self. room_member.role
+    
+    @property
+    def is_host(self):
+        return self.room_member.is_host
     
     @staticmethod
-    def generate_initial_board():
-        """
-        Generate a random 5x5 board with numbers 1-25.
-        
-        Returns:
-            2D list: [[7, 12, 3, 21, 5], [18, 1, 14, 9, 22], ...]
-        """
+    def generate_board():
+        """Generate random 5x5 board with numbers 1-25."""
         numbers = list(range(1, 26))
         random.shuffle(numbers)
-        
-        board = []
-        for i in range(5):
-            row = numbers[i * 5:(i + 1) * 5]
-            board.append(row)
-        
-        return board
+        return [numbers[i*5:(i+1)*5] for i in range(5)]
     
     def get_number_position(self, number):
-        """Find position of a number on board. Returns (row, col) or None."""
-        for row_idx, row in enumerate(self.board):
+        """Find position of number on board.  Returns (row, col) or None."""
+        for row_idx, row in enumerate(self. board):
             for col_idx, cell in enumerate(row):
                 if cell == number:
                     return (row_idx, col_idx)
         return None
     
-    def is_number_marked(self, number):
-        """Check if a number has been called in this game."""
-        return number in self.room.called_numbers
+    def mark_ready(self):
+        """Mark player as ready."""
+        self.is_ready = True
+        self.save(update_fields=['is_ready'])
+    
+    def update_board(self, new_board):
+        """Update player's board arrangement."""
+        self.board = new_board
+        self.save(update_fields=['board'])
 
 
-class CalledNumber(models.Model):
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='called_numbers_history', help_text="The room where this number was called")
-    number = models.IntegerField(help_text="The number that was called (1-25)")
-    called_by = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='numbers_called', help_text="The player who called this number")
+class CalledNumberHistory(models.Model):
+    """
+    Historical record of called numbers for analytics.
+    Tracks who called what number and when.
+    """
+    
+    game_round = models.ForeignKey(GameRound, on_delete=models.CASCADE, related_name='call_history')
+    number = models.IntegerField(help_text="The number called (1-25)")
+    called_by = models.ForeignKey(RoundPlayer, on_delete=models. CASCADE, related_name='calls_made')
     called_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['called_at']
-        unique_together = ['room', 'number']
+        unique_together = ['game_round', 'number']
     
     def __str__(self):
-        return f"Number {self.number} by {self.called_by.name} in Room {self.room.code}"
+        return f"#{self.number} by {self. called_by.display_name} in Round {self.game_round.round_number}"
