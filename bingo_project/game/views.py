@@ -144,57 +144,56 @@ def join_room_view(request):
 
 
 def join_room_direct_view(request, room_code):
-    """
-    Direct join page via link/QR code.
-    Shows join form pre-filled with room code.
-    
-    GET: Show join form
-    POST: Process join (redirects to join_room_view logic)
-    """
+    """Direct join page via link/QR code."""
     room_code = room_code.upper()
     
     try:
         room = Room.objects.get(code=room_code)
     except Room.DoesNotExist:
-        messages.error(request, f'Room {room_code} not found.')
+        messages. error(request, f'Room {room_code} not found.')
         return redirect('home')
     
     # Check if can join
     can_join, reason = room.can_join()
     
-    if request.method == 'POST':
-        if not can_join:
+    if request.method == 'POST': 
+        if not can_join: 
             messages.error(request, reason)
             return redirect('home')
         
-        # Process join same as join_room_view
         player_name = request.POST.get('player_name', '').strip()
         
-        if not player_name: 
+        if not player_name:
             messages.error(request, 'Please enter your name.')
-            return render(request, 'game/join_direct.html', {'room':  room, 'can_join': can_join, 'reason': reason})
+            return render(request, 'join_direct.html', {'room':  room, 'can_join': can_join, 'reason': reason})
         
         if len(player_name) > 30:
             messages.error(request, 'Name must be 30 characters or less.')
-            return render(request, 'game/join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
+            return render(request, 'join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
         
         # Ensure session
         if not request.session.session_key:
             request.session.create()
         
         user = request.user if request.user.is_authenticated else None
-        session_key = request.session.session_key if not user else None
+        session_key = request.session. session_key if not user else None
         
-        existing_member = get_room_member(room, user, session_key)
+        # Try to find existing member (including inactive/kicked ones)
+        existing_member = None
+        if user:
+            existing_member = RoomMember.objects.filter(room=room, user=user).first()
+        elif session_key:
+            existing_member = RoomMember.objects.filter(room=room, session_key=session_key).first()
         
-        if existing_member:
+        if existing_member: 
+            # Reactivate if was kicked/left
+            existing_member.is_active = True
+            existing_member.display_name = player_name
+            existing_member.save()
             member = existing_member
-            if not member.is_active:
-                member.is_active = True
-                member.display_name = player_name
-                member.save()
-        else:
-            member = RoomMember.objects.create(
+        else: 
+            # Create new member
+            member = RoomMember.objects. create(
                 room=room,
                 user=user,
                 session_key=session_key,
@@ -202,9 +201,16 @@ def join_room_direct_view(request, room_code):
                 role='player'
             )
         
-        current_round = room.get_current_round()
-        if current_round and current_round.status == 'waiting':
-            get_or_create_round_player(current_round, member)
+        # Add to current round if waiting
+        current_round = room. get_current_round()
+        if current_round and current_round.status == 'waiting': 
+            existing_round_player = current_round.players.filter(room_member=member).first()
+            if not existing_round_player: 
+                RoundPlayer.objects.create(
+                    game_round=current_round,
+                    room_member=member,
+                    board=RoundPlayer.generate_board()
+                )
         
         request.session['current_room_code'] = room.code
         request.session['current_member_id'] = member.id
