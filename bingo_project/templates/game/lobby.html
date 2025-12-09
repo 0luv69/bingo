@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load game_filters %}
+{% load static %}
 
 {% block title %}Lobby - {{ room.code }}{% endblock %}
 
@@ -8,11 +10,13 @@
     <!-- Header -->
     <header class="py-4 px-4 border-b border-slate-200 bg-white">
         <div class="max-w-4xl mx-auto flex items-center justify-between">
+            
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
-                    <span class="text-white font-bold text-sm">B</span>
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                    <img src="{% static 'pipal.png' %}" alt="Logo" class="w-6 h-6 object-contain" />
                 </div>
-                <span class="font-semibold text-slate-800">Bingo</span>
+                <span class=" text-slate-800" style="font-family: 'Pacifico', cursive, sans-serif;">Bingo-Champs</span>
+                <link href="https://fonts.googleapis.com/css?family=Pacifico&display=swap" rel="stylesheet">
             </div>
             <div id="connection-status" class="badge badge-warning">Connecting...</div>
         </div>
@@ -35,31 +39,37 @@
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-semibold text-slate-900">Room Code</h2>
                             {% if current_round %}
-                            <span class="badge badge-info">Round {{ current_round.round_number }}</span>
+                            <span class="badge badge-info px-2 rounded-xl">Round {{ current_round.round_number }}</span>
                             {% endif %}
                         </div>
                         
                         <div class="flex items-center justify-center gap-4 py-4">
                             <span id="room-code" class="text-4xl font-mono font-bold text-slate-900 tracking-widest">{{ room.code }}</span>
+                            <button 
+                                onclick="copyRoomCode()"
+                                class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+                                title="Copy room code"
+                            >
+                                <svg id="copy-icon" class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <svg id="check-icon" class="w-5 h-5 text-emerald-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </button>
                         </div>
                         
                         <!-- Share Options -->
                         <div class="flex flex-wrap gap-3 justify-center mt-4 pt-4 border-t border-slate-100">
-                            <button onclick="copyRoomCode()" class="btn-secondary flex items-center gap-2 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                </svg>
-                                <span id="copy-code-text">Copy Code</span>
-                            </button>
                             <button onclick="copyShareLink()" class="btn-secondary flex items-center gap-2 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13. 828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                                 </svg>
                                 <span id="copy-link-text">Copy Link</span>
                             </button>
                             <button onclick="showQRCode()" class="btn-secondary flex items-center gap-2 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h. 01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                                 </svg>
                                 QR Code
                             </button>
@@ -75,12 +85,12 @@
                         
                         <div id="players-list" class="space-y-2">
                             {% for player in round_players %}
-                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.room_member. id == current_member.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}" data-member-id="{{ player.room_member.id }}">
+                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.room_member.id == current_member.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}" data-member-id="{{ player.room_member.id }}">
                                 <div class="flex items-center gap-3">
                                     <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
                                         {% if player.is_host %}
                                         <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9. 049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                         </svg>
                                         {% else %}
                                         <span class="text-sm font-medium text-slate-500">{{ player.display_name|slice:": 1"|upper }}</span>
@@ -140,7 +150,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <p class="text-sm text-slate-500">Waiting for host to start... </p>
+                            <p class="text-sm text-slate-500">Waiting for host to start...</p>
                         </div>
                         {% endif %}
                     </div>
@@ -152,7 +162,7 @@
                             <h3 class="font-semibold text-slate-900">Settings</h3>
                             <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c. 426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
                             </button>
@@ -162,6 +172,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Setup Time</label>
                                 <select id="setup-duration" onchange="updateSettings()" class="input-field text-sm">
+                                    <option value="15" {% if room.settings_setup_duration == 15 %}selected{% endif %}>15 seconds</option>
                                     <option value="30" {% if room.settings_setup_duration == 30 %}selected{% endif %}>30 seconds</option>
                                     <option value="60" {% if room.settings_setup_duration == 60 %}selected{% endif %}>60 seconds</option>
                                     <option value="90" {% if room.settings_setup_duration == 90 %}selected{% endif %}>90 seconds</option>
@@ -171,10 +182,11 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Turn Time</label>
                                 <select id="turn-duration" onchange="updateSettings()" class="input-field text-sm">
+                                    <option value="10" {% if room.settings_turn_duration == 10 %}selected{% endif %}>10 seconds</option>
                                     <option value="15" {% if room.settings_turn_duration == 15 %}selected{% endif %}>15 seconds</option>
-                                    <option value="30" {% if room. settings_turn_duration == 30 %}selected{% endif %}>30 seconds</option>
+                                    <option value="30" {% if room.settings_turn_duration == 30 %}selected{% endif %}>30 seconds</option>
                                     <option value="45" {% if room.settings_turn_duration == 45 %}selected{% endif %}>45 seconds</option>
-                                    <option value="60" {% if room. settings_turn_duration == 60 %}selected{% endif %}>60 seconds</option>
+                                    <option value="60" {% if room.settings_turn_duration == 60 %}selected{% endif %}>60 seconds</option>
                                 </select>
                             </div>
                             <div>
@@ -185,6 +197,43 @@
                                     {% endfor %}
                                 </select>
                             </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Round History Card -->
+                    {% if round_history %}
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-slate-900">Round History</h3>
+                            <span class="text-xs text-slate-400">{{ round_history|length }} round{{ round_history|length|pluralize }}</span>
+                        </div>
+                        
+                        <div class="space-y-3 max-h-64 overflow-y-auto">
+                            {% for round in round_history %}
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full {% if round.winner %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
+                                       <span class= "text-xs font-medium text-amber-700 p-2">R{{ round.round_number }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-400">
+                                            {% if round.winner %}
+                                            🏆 {{ round.winner.display_name }}
+                                            {% else %}
+                                            No winner
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    {% if round.finished_at %}
+                                    <p class="text-xs text-slate-400">{{ round.finished_at|timesince }} ago</p>
+                                    {% endif %}
+                                    <p class="text-xs text-slate-500">{{ round.called_numbers|length }} calls</p>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                     {% endif %}
@@ -231,7 +280,7 @@
 
 {% block scripts %}
 <!-- QR Code Library -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
     // ════════════════════════════════════════════════════════════
@@ -254,7 +303,7 @@
     
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location. host}/ws/room/${roomCode}/`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
         
         socket = new WebSocket(wsUrl);
         
@@ -326,7 +375,7 @@
                 break;
             case 'new_round_created':
                 showNotification(data.message, 'success');
-                setTimeout(() => window.location. reload(), 1000);
+                setTimeout(() => window.location.reload(), 1000);
                 break;
             case 'error':
                 showNotification(data.message, 'error');
@@ -360,17 +409,17 @@
         const startHint = document.getElementById('start-hint');
         
         if (countEl) {
-            countEl. textContent = `${players.length}/${document.getElementById('max-players')?.value || 6}`;
+            countEl.textContent = `${players.length}/${document.getElementById('max-players')?.value || 6}`;
         }
         
         if (startBtn && isHost) {
-            startBtn. disabled = players.length < 2;
+            startBtn.disabled = players.length < 2;
             if (startHint) {
                 startHint.textContent = players.length < 2 ? 'Need at least 2 players' : 'Click to start when ready';
             }
         }
         
-        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-. 921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-. 38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
+        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
         
         container.innerHTML = players.map(player => {
             const isMe = player.member_id === currentMemberId;
@@ -380,7 +429,7 @@
                 <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-accent-50 border border-accent-100' : 'bg-slate-50'}" data-member-id="${player.member_id}">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
-                            ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name. charAt(0).toUpperCase()}</span>`}
+                            ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name.charAt(0).toUpperCase()}</span>`}
                         </div>
                         <div>
                             <p class="font-medium text-slate-900 text-sm">
@@ -424,15 +473,19 @@
     }
     
     function copyRoomCode() {
-        navigator. clipboard.writeText(roomCode).then(() => {
-            document.getElementById('copy-code-text').textContent = 'Copied!';
-            setTimeout(() => document.getElementById('copy-code-text').textContent = 'Copy Code', 2000);
+        navigator.clipboard.writeText(roomCode).then(() => {
+            document.getElementById('copy-icon').classList.add('hidden');
+            document.getElementById('check-icon').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('copy-icon').classList.remove('hidden');
+                document.getElementById('check-icon').classList.add('hidden');
+            }, 2000);
         });
     }
     
     function copyShareLink() {
-        const fullUrl = window.location.origin + shareUrl;
-        navigator.clipboard. writeText(fullUrl).then(() => {
+        const fullUrl = shareUrl;
+        navigator.clipboard.writeText(fullUrl).then(() => {
             document.getElementById('copy-link-text').textContent = 'Copied!';
             setTimeout(() => document.getElementById('copy-link-text').textContent = 'Copy Link', 2000);
         });
@@ -442,13 +495,16 @@
         const modal = document.getElementById('qr-modal');
         const qrContainer = document.getElementById('qr-code');
         qrContainer.innerHTML = '';
-        
-        const fullUrl = window.location.origin + shareUrl;
-        QRCode.toCanvas(fullUrl, { width: 200, margin: 2 }, function(error, canvas) {
-            if (! error) qrContainer.appendChild(canvas);
+
+        const fullUrl =  shareUrl;
+
+        new QRCode(qrContainer, {
+            text: fullUrl,
+            width: 200,
+            height: 200
         });
-        
-        modal. classList.remove('hidden');
+
+        modal.classList.remove('hidden');
     }
     
     function hideQRCode() {

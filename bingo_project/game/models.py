@@ -1,14 +1,14 @@
 import random
 import string
 from django.db import models
-from django.contrib. auth.models import User
+from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 
 
 class Room(models.Model):
     """
-    Persistent room container that survives multiple game rounds. 
+    Persistent room container that survives multiple game rounds.
     
     Room holds:
     - Unique code for joining
@@ -105,7 +105,7 @@ class Room(models.Model):
         return None
 
 
-class RoomMember(models. Model):
+class RoomMember(models.Model):
     """
     Represents a person's membership in a room.
     Persists across game rounds.
@@ -123,10 +123,10 @@ class RoomMember(models. Model):
     
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='room_memberships', help_text="Logged in user (null for guests)")
-    session_key = models. CharField(max_length=40, blank=True, null=True, help_text="Browser session for guests")
+    session_key = models.CharField(max_length=40, blank=True, null=True, help_text="Browser session for guests")
     display_name = models.CharField(max_length=30, help_text="Player's display name")
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='player')
-    joined_at = models. DateTimeField(auto_now_add=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="False when member leaves room")
     
     class Meta:
@@ -188,14 +188,14 @@ class GameRound(models.Model):
     ]
     
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='rounds')
-    round_number = models. PositiveIntegerField(default=1)
-    status = models. CharField(max_length=10, choices=STATUS_CHOICES, default='waiting')
+    round_number = models.PositiveIntegerField(default=1)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='waiting')
     called_numbers = models.JSONField(default=list, help_text="List of called numbers [5, 13, 21]")
     current_turn = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_turn_round', help_text="Whose turn is it")
     turn_deadline = models.DateTimeField(null=True, blank=True, help_text="When current turn/phase expires")
     winner = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='won_rounds')
     started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models. DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         ordering = ['-round_number']
@@ -206,7 +206,7 @@ class GameRound(models.Model):
     
     def get_players(self):
         """Get all players in this round."""
-        return self. players.all()
+        return self.players.all()
     
     def get_players_count(self):
         """Get number of players in this round."""
@@ -279,10 +279,10 @@ class GameRound(models.Model):
     def end_game(self, winner):
         """End the game with a winner."""
         self.status = 'finished'
-        self. winner = winner
+        self.winner = winner
         self.finished_at = timezone.now()
         self.turn_deadline = None
-        self. save()
+        self.save()
     
     @classmethod
     def create_new_round(cls, room):
@@ -308,7 +308,7 @@ class RoundPlayer(models.Model):
     room_member = models.ForeignKey(RoomMember, on_delete=models.CASCADE, related_name='round_participations')
     board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
     is_ready = models.BooleanField(default=False)
-    completed_lines = models. IntegerField(default=0, help_text="Number of completed lines (0-5+)")
+    completed_lines = models.IntegerField(default=0, help_text="Number of completed lines (0-5+)")
     joined_at = models.DateTimeField(auto_now_add=True)
     
     class Meta: 
@@ -324,7 +324,7 @@ class RoundPlayer(models.Model):
     
     @property
     def role(self):
-        return self. room_member.role
+        return self.room_member.role
     
     @property
     def is_host(self):
@@ -338,8 +338,8 @@ class RoundPlayer(models.Model):
         return [numbers[i*5:(i+1)*5] for i in range(5)]
     
     def get_number_position(self, number):
-        """Find position of number on board.  Returns (row, col) or None."""
-        for row_idx, row in enumerate(self. board):
+        """Find position of number on board. Returns (row, col) or None."""
+        for row_idx, row in enumerate(self.board):
             for col_idx, cell in enumerate(row):
                 if cell == number:
                     return (row_idx, col_idx)
@@ -364,7 +364,7 @@ class CalledNumberHistory(models.Model):
     
     game_round = models.ForeignKey(GameRound, on_delete=models.CASCADE, related_name='call_history')
     number = models.IntegerField(help_text="The number called (1-25)")
-    called_by = models.ForeignKey(RoundPlayer, on_delete=models. CASCADE, related_name='calls_made')
+    called_by = models.ForeignKey(RoundPlayer, on_delete=models.CASCADE, related_name='calls_made')
     called_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -372,4 +372,4 @@ class CalledNumberHistory(models.Model):
         unique_together = ['game_round', 'number']
     
     def __str__(self):
-        return f"#{self.number} by {self. called_by.display_name} in Round {self.game_round.round_number}"
+        return f"#{self.number} by {self.called_by.display_name} in Round {self.game_round.round_number}"

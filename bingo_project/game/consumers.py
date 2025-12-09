@@ -4,7 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from datetime import timedelta
-from . models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
+from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 from .utils import determine_winners, update_all_players_lines, validate_board
 
 
@@ -18,7 +18,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f'bingo_{self.room_code}'
         
         # Get member from session
-        session = self.scope. get('session', {})
+        session = self.scope.get('session', {})
         self.member_id = session.get('current_member_id')
         
         # Join room group
@@ -33,7 +33,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'player_connected',
                     'member_id': member.id,
-                    'member_name': member. display_name,
+                    'member_name': member.display_name,
                     'members': await self.get_all_members_data(),
                     'round_players': await self.get_round_players_data(),
                 }
@@ -51,7 +51,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             )
         
-        await self.channel_layer. group_discard(self.room_group_name, self.channel_name)
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
     async def receive(self, text_data):
         try:
@@ -99,7 +99,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         players_count = await self.get_round_players_count()
         if players_count < 2:
-            await self. send_error('Need at least 2 players')
+            await self.send_error('Need at least 2 players')
             return
         
         # Start setup phase
@@ -133,7 +133,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         # Mark player ready
         round_player = await self.get_round_player(member.id)
         if round_player:
-            await self.mark_player_ready(round_player. id)
+            await self.mark_player_ready(round_player.id)
         
         # Get updated data
         round_players = await self.get_round_players_data()
@@ -154,11 +154,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         # Check if all ready
         if ready_count == total_count:
-            await self. transition_to_playing()
+            await self.transition_to_playing()
     
     async def handle_update_board(self, data):
         """Player updates their board arrangement."""
-        member = await self. get_member()
+        member = await self.get_member()
         current_round = await self.get_current_round()
         
         if not member or not current_round: 
@@ -178,7 +178,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_error('Invalid board')
             return
         
-        await self.save_player_board(round_player. id, new_board)
+        await self.save_player_board(round_player.id, new_board)
         
         await self.send(text_data=json.dumps({
             'type': 'board_updated',
@@ -285,7 +285,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def handle_kick_player(self, data):
         """Host kicks a player."""
-        member = await self. get_member()
+        member = await self.get_member()
         if not member or not member.is_host:
             await self.send_error('Only host can kick players')
             return
@@ -299,7 +299,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         kicked_member = await self.kick_member(kick_member_id)
         
         if kicked_member:
-            await self. channel_layer.group_send(
+            await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'player_kicked',
@@ -354,7 +354,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         first_player = await self.start_playing_phase()
         
         if first_player:
-            await self. channel_layer.group_send(
+            await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'game_started',
@@ -466,8 +466,8 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_room(self):
         try:
-            return Room.objects. get(code=self.room_code)
-        except Room. DoesNotExist:
+            return Room.objects.get(code=self.room_code)
+        except Room.DoesNotExist:
             return None
     
     @database_sync_to_async
@@ -501,7 +501,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_all_members_data(self):
         try:
-            room = Room.objects. get(code=self.room_code)
+            room = Room.objects.get(code=self.room_code)
             return [{
                 'id': m.id,
                 'name': m.display_name,
@@ -520,13 +520,13 @@ class GameConsumer(AsyncWebsocketConsumer):
                 return []
             return [{
                 'id': p.id,
-                'member_id': p.room_member. id,
+                'member_id': p.room_member.id,
                 'name': p.display_name,
                 'role':  p.role,
                 'is_host': p.is_host,
-                'is_ready': p. is_ready,
+                'is_ready': p.is_ready,
                 'completed_lines': p.completed_lines,
-            } for p in current_round. players.select_related('room_member').all()]
+            } for p in current_round.players.select_related('room_member').all()]
         except:
             return []
     
@@ -544,7 +544,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         room = Room.objects.get(code=self.room_code)
         current_round = room.get_current_round()
         if current_round:
-            current_round. status = 'setup'
+            current_round.status = 'setup'
             current_round.turn_deadline = timezone.now() + timedelta(seconds=duration)
             current_round.started_at = timezone.now()
             current_round.save()
@@ -555,7 +555,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def save_player_board(self, player_id, board):
-        RoundPlayer.objects. filter(id=player_id).update(board=board)
+        RoundPlayer.objects.filter(id=player_id).update(board=board)
     
     @database_sync_to_async
     def start_playing_phase(self):
@@ -598,7 +598,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         player = RoundPlayer.objects.get(id=player_id)
         
         if number not in current_round.called_numbers:
-            current_round. called_numbers.append(number)
+            current_round.called_numbers.append(number)
             current_round.save()
         
         CalledNumberHistory.objects.create(
@@ -631,7 +631,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if next_player:
             current_round.current_turn = next_player
             current_round.turn_deadline = timezone.now() + timedelta(seconds=room.settings_turn_duration)
-            current_round. save()
+            current_round.save()
             return {
                 'id': next_player.id,
                 'member_id': next_player.room_member.id,
@@ -647,7 +647,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         current_round.status = 'finished'
         current_round.winner = winner
-        current_round. finished_at = timezone.now()
+        current_round.finished_at = timezone.now()
         current_round.turn_deadline = None
         current_round.save()
     
@@ -658,21 +658,21 @@ class GameConsumer(AsyncWebsocketConsumer):
         if 'setup_duration' in settings:
             room.settings_setup_duration = max(15, min(120, int(settings['setup_duration'])))
         if 'turn_duration' in settings:
-            room. settings_turn_duration = max(10, min(90, int(settings['turn_duration'])))
+            room.settings_turn_duration = max(10, min(90, int(settings['turn_duration'])))
         if 'max_players' in settings:
             room.settings_max_players = max(2, min(15, int(settings['max_players'])))
         
-        room. save()
+        room.save()
     
     @database_sync_to_async
     def kick_member(self, member_id):
         try:
-            member = RoomMember.objects. get(id=member_id, room__code=self.room_code)
+            member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
             if member.is_host:
                 return None
             
             name = member.display_name
-            member. is_active = False
+            member.is_active = False
             member.save()
             
             # Remove from current round
@@ -682,7 +682,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 current_round.players.filter(room_member=member).delete()
             
             return {'name': name}
-        except RoomMember. DoesNotExist:
+        except RoomMember.DoesNotExist:
             return None
     
     @database_sync_to_async
@@ -691,7 +691,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         new_round = GameRound.create_new_round(room)
         
         # Add all active members as players
-        for member in room. get_active_members():
+        for member in room.get_active_members():
             RoundPlayer.objects.create(
                 game_round=new_round,
                 room_member=member,

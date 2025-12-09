@@ -1,10 +1,11 @@
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils. html import format_html
+from django.utils.safestring import mark_safe
 from . models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 
 
 @admin.register(Room)
-class RoomAdmin(admin.ModelAdmin):
+class RoomAdmin(admin. ModelAdmin):
     list_display = ['code', 'is_active_badge', 'members_count', 'rounds_count', 'settings_display', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['code']
@@ -17,7 +18,7 @@ class RoomAdmin(admin.ModelAdmin):
     
     def members_count(self, obj):
         active = obj.get_active_members_count()
-        total = obj.members.count()
+        total = obj.members. count()
         return f"{active}/{total}"
     members_count.short_description = 'Members (Active/Total)'
     
@@ -27,8 +28,8 @@ class RoomAdmin(admin.ModelAdmin):
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return format_html('<span style="color: #10b981;">● Active</span>')
-        return format_html('<span style="color: #ef4444;">● Inactive</span>')
+            return mark_safe('<span style="color: #10b981;">● Active</span>')
+        return mark_safe('<span style="color: #ef4444;">● Inactive</span>')
     is_active_badge.short_description = 'Status'
     
     def settings_display(self, obj):
@@ -50,13 +51,13 @@ class RoomMemberAdmin(admin.ModelAdmin):
     def role_badge(self, obj):
         colors = {'host': '#f59e0b', 'co-host': '#3b82f6', 'player': '#6b7280'}
         color = colors.get(obj.role, '#6b7280')
-        return format_html('<span style="color: {};">{}</span>', color, obj.get_role_display())
+        return format_html('<span style="color:  {};">{}</span>', color, obj.get_role_display())
     role_badge.short_description = 'Role'
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return format_html('<span style="color: #10b981;">● Active</span>')
-        return format_html('<span style="color: #ef4444;">● Left</span>')
+            return mark_safe('<span style="color: #10b981;">● Active</span>')
+        return mark_safe('<span style="color: #ef4444;">● Left</span>')
     is_active_badge.short_description = 'Status'
     
     def identifier_type(self, obj):
@@ -74,7 +75,7 @@ class GameRoundAdmin(admin.ModelAdmin):
     readonly_fields = ['started_at', 'finished_at']
     
     def round_display(self, obj):
-        return f"{obj.room.code} - R{obj.round_number}"
+        return f"{obj.room.code} - R{obj. round_number}"
     round_display.short_description = 'Round'
     
     def status_badge(self, obj):
@@ -117,17 +118,17 @@ class RoundPlayerAdmin(admin.ModelAdmin):
         role_icon = {'host': '👑', 'co-host':  '⭐', 'player': ''}
         icon = role_icon.get(obj.role, '')
         return f"{icon} {obj.display_name}"
-    player_display. short_description = 'Player'
+    player_display.short_description = 'Player'
     
     def round_display(self, obj):
-        return f"{obj.game_round. room.code} - R{obj.game_round.round_number}"
-    round_display.short_description = 'Round'
+        return f"{obj.game_round.room.code} - R{obj.game_round.round_number}"
+    round_display. short_description = 'Round'
     
     def is_ready_badge(self, obj):
         if obj.is_ready:
-            return format_html('<span style="color: #10b981;">✅ Ready</span>')
-        return format_html('<span style="color: #f59e0b;">⏳ Waiting</span>')
-    is_ready_badge.short_description = 'Ready'
+            return mark_safe('<span style="color: #10b981;">✅ Ready</span>')
+        return mark_safe('<span style="color: #f59e0b;">⏳ Waiting</span>')
+    is_ready_badge. short_description = 'Ready'
     
     def lines_progress(self, obj):
         letters = 'BINGO'
@@ -137,23 +138,23 @@ class RoundPlayerAdmin(admin.ModelAdmin):
                 result += f'<span style="color: #10b981; font-weight: bold;">{letter}</span>'
             else: 
                 result += f'<span style="color: #d1d5db;">{letter}</span>'
-        return format_html(result)
+        return mark_safe(result)
     lines_progress.short_description = 'BINGO'
     
     def board_display(self, obj):
         if not obj.board:
             return "No board"
         
-        called = set(obj.game_round.called_numbers)
+        called = set(obj. game_round.called_numbers)
         html = '<table style="border-collapse: collapse; font-family: monospace;">'
         for row in obj.board:
             html += '<tr>'
             for cell in row:
                 bg = '#fbbf24' if cell in called else '#f3f4f6'
-                html += f'<td style="border: 1px solid #ccc; padding: 8px; text-align: center; background-color: {bg}; min-width: 35px;">{cell}</td>'
+                html += f'<td style="border:  1px solid #ccc; padding: 8px; text-align: center; background-color: {bg}; min-width: 35px;">{cell}</td>'
             html += '</tr>'
         html += '</table>'
-        return format_html(html)
+        return mark_safe(html)
     board_display.short_description = 'Board'
 
 
