@@ -2,40 +2,29 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
-from datetime import timedelta
-from .models import Room, Player
+from . models import Room, RoomMember, GameRound, RoundPlayer
+from .utils import get_room_member, get_or_create_room_member, get_or_create_round_player
 
 
 def home_view(request):
     """
-    Landing page - Create or Join a room.
-    
-    GET: Display the home page with create/join forms
+    Landing page - Create or Join a room. 
     """
-    return render(request, 'game/home.html')
+    return render(request, 'home. html')
 
 
 def create_room_view(request):
     """
     Create a new room and join as host.
     
-    POST: Create room, create player as host, redirect to lobby
-    
-    Flow:
-    1. Validate player name
-    2.Generate unique room code
-    3.Create room in database
-    4.Create player as host with generated board
-    5.Store player info in session
-    6.Redirect to lobby
+    POST: Create room, create member as host, create first round, redirect to lobby
     """
     if request.method != 'POST':
         return redirect('home')
     
-    # Get player name from form
     player_name = request.POST.get('player_name', '').strip()
     
-    if not player_name:
+    if not player_name: 
         messages.error(request, 'Please enter your name.')
         return redirect('home')
     
@@ -47,21 +36,32 @@ def create_room_view(request):
     if not request.session.session_key:
         request.session.create()
     
-    # Create the room
+    # Create room
     room = Room.objects.create(code=Room.generate_room_code())
     
-    # Create the player as host
-    player = Player.objects.create(
+    # Create room member as host
+    user = request.user if request.user.is_authenticated else None
+    member = RoomMember.objects.create(
         room=room,
-        name=player_name,
-        session_key=request.session.session_key,
-        board=Player.generate_initial_board(),
-        is_host=True
+        user=user,
+        session_key=request.session.session_key if not user else None,
+        display_name=player_name,
+        role='host'
     )
     
-    # Store current room and player in session for easy access
+    # Create first game round
+    game_round = GameRound.create_new_round(room)
+    
+    # Create round player
+    RoundPlayer.objects.create(
+        game_round=game_round,
+        room_member=member,
+        board=RoundPlayer.generate_board()
+    )
+    
+    # Store in session
     request.session['current_room_code'] = room.code
-    request.session['current_player_id'] = player.id
+    request.session['current_member_id'] = member.id
     
     messages.success(request, f'Room {room.code} created!  Share this code with friends.')
     return redirect('lobby', room_code=room.code)
@@ -71,16 +71,7 @@ def join_room_view(request):
     """
     Join an existing room.
     
-    POST: Find room, create player, redirect to lobby
-    
-    Flow:
-    1. Validate player name and room code
-    2.Find existing room
-    3.Check room is joinable (waiting status)
-    4.Check player not already in room
-    5.Create player with generated board
-    6.Store player info in session
-    7.Redirect to lobby
+    POST: Find room, create member, redirect to lobby
     """
     if request.method != 'POST':
         return redirect('home')
@@ -88,7 +79,6 @@ def join_room_view(request):
     player_name = request.POST.get('player_name', '').strip()
     room_code = request.POST.get('room_code', '').strip().upper()
     
-    # Validate inputs
     if not player_name:
         messages.error(request, 'Please enter your name.')
         return redirect('home')
@@ -101,235 +91,404 @@ def join_room_view(request):
         messages.error(request, 'Please enter a room code.')
         return redirect('home')
     
-    # Find the room
+    # Find room
     try:
         room = Room.objects.get(code=room_code)
     except Room.DoesNotExist:
-        messages.error(request, f'Room {room_code} not found.')
+        messages. error(request, f'Room {room_code} not found.')
         return redirect('home')
     
-    # Check room status
-    if room.status != 'waiting':
-        messages.error(request, 'This room is no longer accepting players.')
+    # Check if can join
+    can_join, reason = room.can_join()
+    if not can_join: 
+        messages.error(request, reason)
         return redirect('home')
     
     # Ensure session exists
     if not request.session.session_key:
         request.session.create()
     
-    # Check if player already in this room
-    existing_player = Player.objects.filter(
-        room=room,
-        session_key=request.session.session_key
-    ).first()
+    # Get or create room member
+    user = request.user if request.user.is_authenticated else None
+    session_key = request.session.session_key if not user else None
     
-    if existing_player:
-        # Player already in room, just redirect to lobby
-        request.session['current_room_code'] = room.code
-        request.session['current_player_id'] = existing_player.id
-        return redirect('lobby', room_code=room.code)
+    # Check if already a member
+    existing_member = get_room_member(room, user, session_key)
     
-    # Create new player
-    player = Player.objects.create(
-        room=room,
-        name=player_name,
-        session_key=request.session.session_key,
-        board=Player.generate_initial_board()
-    )
+    if existing_member:
+        member = existing_member
+        if not member.is_active:
+            member.is_active = True
+            member.display_name = player_name
+            member.save()
+    else:
+        member = RoomMember.objects. create(
+            room=room,
+            user=user,
+            session_key=session_key,
+            display_name=player_name,
+            role='player'
+        )
+    
+    # Get current round and create round player if in waiting status
+    current_round = room. get_current_round()
+    if current_round and current_round.status == 'waiting':
+        get_or_create_round_player(current_round, member)
     
     # Store in session
     request.session['current_room_code'] = room.code
-    request.session['current_player_id'] = player.id
+    request.session['current_member_id'] = member.id
     
-    messages.success(request, f'Joined room {room.code}!')
+    messages. success(request, f'Joined room {room.code}!')
     return redirect('lobby', room_code=room.code)
+
+
+def join_room_direct_view(request, room_code):
+    """
+    Direct join page via link/QR code.
+    Shows join form pre-filled with room code.
+    
+    GET: Show join form
+    POST: Process join (redirects to join_room_view logic)
+    """
+    room_code = room_code.upper()
+    
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages. error(request, f'Room {room_code} not found.')
+        return redirect('home')
+    
+    # Check if can join
+    can_join, reason = room.can_join()
+    
+    if request.method == 'POST':
+        if not can_join:
+            messages.error(request, reason)
+            return redirect('home')
+        
+        # Process join same as join_room_view
+        player_name = request.POST.get('player_name', '').strip()
+        
+        if not player_name: 
+            messages.error(request, 'Please enter your name.')
+            return render(request, 'join_direct.html', {'room':  room, 'can_join': can_join, 'reason': reason})
+        
+        if len(player_name) > 30:
+            messages. error(request, 'Name must be 30 characters or less.')
+            return render(request, 'join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
+        
+        # Ensure session
+        if not request.session.session_key:
+            request.session.create()
+        
+        user = request.user if request.user.is_authenticated else None
+        session_key = request.session. session_key if not user else None
+        
+        existing_member = get_room_member(room, user, session_key)
+        
+        if existing_member:
+            member = existing_member
+            if not member.is_active:
+                member.is_active = True
+                member. display_name = player_name
+                member.save()
+        else:
+            member = RoomMember.objects.create(
+                room=room,
+                user=user,
+                session_key=session_key,
+                display_name=player_name,
+                role='player'
+            )
+        
+        current_round = room.get_current_round()
+        if current_round and current_round.status == 'waiting':
+            get_or_create_round_player(current_round, member)
+        
+        request.session['current_room_code'] = room.code
+        request.session['current_member_id'] = member.id
+        
+        messages.success(request, f'Joined room {room.code}!')
+        return redirect('lobby', room_code=room.code)
+    
+    return render(request, 'join_direct. html', {
+        'room': room,
+        'can_join': can_join,
+        'reason': reason
+    })
 
 
 def lobby_view(request, room_code):
     """
     Waiting room before game starts.
-    
-    GET: Display lobby with player list and room info
-    
-    Features:
-    - Show room code (for sharing)
-    - Show all players and their ready status
-    - Host can start game when all ready
-    - Real-time updates via WebSocket
+    Shows players, settings, share options.
     """
     room = get_object_or_404(Room, code=room_code)
     
-    # Get current player
-    player_id = request.session.get('current_player_id')
-    current_player = None
+    # Get current member
+    member_id = request.session.get('current_member_id')
+    current_member = None
     
-    if player_id:
-        current_player = Player.objects.filter(id=player_id, room=room).first()
+    if member_id:
+        current_member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
     
-    # If player not in this room, redirect to home
-    if not current_player:
+    if not current_member:
         messages.error(request, 'You are not in this room.')
         return redirect('home')
     
-    # If game already started, redirect to game page
-    if room.status in ['setup', 'playing']:
-        return redirect('game', room_code=room.code)
+    # Get current round
+    current_round = room.get_current_round()
     
-    # If game finished, show message
-    if room.status == 'finished':
-        messages.info(request, 'This game has ended.')
-        return redirect('home')
+    # If game in progress, redirect to game
+    if current_round and current_round.status in ['setup', 'playing']: 
+        return redirect('game', room_code=room. code)
+    
+    # Get all active members
+    members = room.get_active_members()
+    
+    # Get round players if round exists
+    round_players = []
+    current_round_player = None
+    if current_round:
+        round_players = current_round.players.select_related('room_member').all()
+        current_round_player = current_round.players.filter(room_member=current_member).first()
     
     context = {
         'room': room,
-        'players': room.get_players(),
-        'current_player': current_player,
-        'is_host': current_player.is_host,
+        'current_member': current_member,
+        'current_round':  current_round,
+        'current_round_player': current_round_player,
+        'members':  members,
+        'round_players': round_players,
+        'is_host': current_member.is_host,
+        'share_url': request.build_absolute_uri(f'/join/{room. code}/'),
     }
     
-    return render(request, 'game/lobby.html', context)
+    return render(request, 'lobby.html', context)
 
 
 def game_view(request, room_code):
     """
     Main game board page.
-    
-    GET: Display game board with all game info
-    
-    Phases handled:
-    - SETUP: Show board with drag/drop, timer, ready button
-    - PLAYING: Show board, turn info, number buttons
-    - FINISHED: Show winner announcement
+    Handles setup and playing phases.
     """
     room = get_object_or_404(Room, code=room_code)
     
-    # Get current player
-    player_id = request.session.get('current_player_id')
-    current_player = None
+    # Get current member
+    member_id = request.session.get('current_member_id')
+    current_member = None
     
-    if player_id:
-        current_player = Player.objects.filter(id=player_id, room=room).first()
+    if member_id:
+        current_member = RoomMember.objects. filter(id=member_id, room=room, is_active=True).first()
     
-    # If player not in this room, redirect to home
-    if not current_player:
+    if not current_member:
         messages.error(request, 'You are not in this room.')
         return redirect('home')
     
-    # If still waiting, redirect to lobby
-    if room.status == 'waiting':
+    # Get current round
+    current_round = room.get_current_round()
+    
+    if not current_round or current_round.status == 'waiting':
         return redirect('lobby', room_code=room.code)
     
-    # Get all players for scoreboard
-    players = room.get_players()
+    # Get current player in round
+    current_player = current_round.players.filter(room_member=current_member).first()
+    
+    if not current_player:
+        messages.error(request, 'You are not in this game round.')
+        return redirect('lobby', room_code=room.code)
+    
+    # Get all players
+    all_players = current_round.players.select_related('room_member').all()
     
     # Determine if it's current player's turn
-    is_my_turn = (room.current_turn == current_player) if room.current_turn else False
+    is_my_turn = (current_round.current_turn_id == current_player.id) if current_round. current_turn else False
     
-    # Get available numbers (not yet called)
-    available_numbers = room.get_available_numbers()
-    
-    # Calculate remaining time if deadline exists
+    # Calculate remaining time
     remaining_seconds = 0
-    if room.turn_deadline:
-        delta = room.turn_deadline - timezone.now()
+    if current_round. turn_deadline:
+        delta = current_round.turn_deadline - timezone.now()
         remaining_seconds = max(0, int(delta.total_seconds()))
     
     context = {
         'room': room,
+        'current_round': current_round,
+        'current_member': current_member,
         'current_player': current_player,
-        'players': players,
+        'all_players': all_players,
         'is_my_turn': is_my_turn,
-        'available_numbers': available_numbers,
-        'called_numbers': room.called_numbers,
+        'is_host': current_member.is_host,
+        'called_numbers': current_round.called_numbers,
         'remaining_seconds': remaining_seconds,
     }
     
-    return render(request, 'game/game.html', context)
+    return render(request, 'game.html', context)
 
 
 def leave_room_view(request, room_code):
     """
     Leave the current room.
-    
-    POST: Remove player from room, handle host transfer
-    
-    Logic:
-    - Remove player from room
-    - If host leaves, transfer to next player
-    - If last player leaves, delete room
-    - Clear session data
+    Handles host transfer if needed.
     """
-    if request.method != 'POST':
+    if request.method != 'POST': 
         return redirect('home')
     
     room = get_object_or_404(Room, code=room_code)
     
-    player_id = request.session.get('current_player_id')
-    if not player_id:
+    member_id = request.session.get('current_member_id')
+    if not member_id:
         return redirect('home')
     
-    player = Player.objects.filter(id=player_id, room=room).first()
-    if not player:
+    member = RoomMember.objects.filter(id=member_id, room=room).first()
+    if not member:
         return redirect('home')
     
-    was_host = player.is_host
-    player_name = player.name
+    member_name = member.display_name
+    was_host = member.is_host
     
-    # Delete the player
-    player.delete()
+    # Leave room (handles host transfer internally)
+    member.leave_room()
     
     # Clear session
     request.session.pop('current_room_code', None)
-    request.session.pop('current_player_id', None)
+    request.session.pop('current_member_id', None)
     
-    # Check remaining players
-    remaining_players = room.get_players()
-    
-    if not remaining_players.exists():
-        # No players left, delete room
-        room.delete()
-        messages.info(request, 'You left the room. Room was deleted (no players remaining).')
-    elif was_host:
-        # Transfer host to next player
-        new_host = remaining_players.first()
-        new_host.is_host = True
-        new_host.save()
-        messages.info(request, f'You left the room.{new_host.name} is now the host.')
+    if was_host:
+        new_host = room.get_host()
+        if new_host: 
+            messages.info(request, f'You left the room.  {new_host.display_name} is now the host.')
+        else:
+            messages.info(request, 'You left the room.  Room is now empty.')
     else:
         messages.info(request, 'You left the room.')
     
     return redirect('home')
 
 
-# ============================================
-# API Views (for AJAX requests if needed)
-# ============================================
+def room_settings_view(request, room_code):
+    """
+    Update room settings (host only).
+    """
+    if request.method != 'POST': 
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    room = get_object_or_404(Room, code=room_code)
+    
+    member_id = request.session.get('current_member_id')
+    member = RoomMember.objects. filter(id=member_id, room=room, is_active=True).first()
+    
+    if not member or not member.is_host:
+        return JsonResponse({'error': 'Only host can change settings'}, status=403)
+    
+    # Update settings
+    try:
+        setup_duration = int(request.POST.get('setup_duration', 60))
+        turn_duration = int(request.POST.get('turn_duration', 30))
+        max_players = int(request.POST.get('max_players', 6))
+        
+        # Validate
+        setup_duration = max(15, min(120, setup_duration))
+        turn_duration = max(10, min(90, turn_duration))
+        max_players = max(2, min(15, max_players))
+        
+        room.settings_setup_duration = setup_duration
+        room.settings_turn_duration = turn_duration
+        room.settings_max_players = max_players
+        room.save()
+        
+        return JsonResponse({'success': True})
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid settings'}, status=400)
+
+
+def kick_player_view(request, room_code):
+    """
+    Kick a player from the room (host only, lobby only).
+    """
+    if request.method != 'POST': 
+        return JsonResponse({'error':  'POST required'}, status=405)
+    
+    room = get_object_or_404(Room, code=room_code)
+    
+    member_id = request.session.get('current_member_id')
+    member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
+    
+    if not member or not member.is_host:
+        return JsonResponse({'error': 'Only host can kick players'}, status=403)
+    
+    # Check room is in lobby state
+    current_round = room.get_current_round()
+    if current_round and current_round.status not in ['waiting', 'finished']:
+        return JsonResponse({'error': 'Cannot kick during game'}, status=400)
+    
+    # Get player to kick
+    kick_member_id = request.POST.get('member_id')
+    kick_member = RoomMember.objects. filter(id=kick_member_id, room=room, is_active=True).first()
+    
+    if not kick_member:
+        return JsonResponse({'error': 'Player not found'}, status=404)
+    
+    if kick_member.is_host:
+        return JsonResponse({'error': 'Cannot kick the host'}, status=400)
+    
+    # Kick the player
+    kick_member.is_active = False
+    kick_member.save()
+    
+    # Remove from current round if exists
+    if current_round: 
+        current_round.players. filter(room_member=kick_member).delete()
+    
+    return JsonResponse({
+        'success': True,
+        'kicked_name': kick_member.display_name
+    })
+
+
+# API Endpoints
 
 def room_status_api(request, room_code):
     """
-    API endpoint to get current room status.
-    Useful for polling if WebSocket isn't available.
-    
-    GET: Return room status as JSON
+    API:  Get current room status.
     """
     room = get_object_or_404(Room, code=room_code)
+    current_round = room.get_current_round()
     
-    players_data = []
-    for player in room.get_players():
-        players_data.append({
-            'id': player.id,
-            'name': player.name,
-            'is_host': player.is_host,
-            'is_ready': player.is_ready,
-            'completed_lines': player.completed_lines,
-        })
+    members_data = [{
+        'id': m.id,
+        'name': m.display_name,
+        'role': m.role,
+        'is_active': m.is_active,
+    } for m in room.members. filter(is_active=True)]
     
-    data = {
+    round_data = None
+    if current_round: 
+        players_data = [{
+            'id': p.id,
+            'member_id': p.room_member. id,
+            'name': p.display_name,
+            'role': p.role,
+            'is_ready': p.is_ready,
+            'completed_lines': p.completed_lines,
+        } for p in current_round. players.all()]
+        
+        round_data = {
+            'round_number': current_round.round_number,
+            'status': current_round.status,
+            'called_numbers': current_round.called_numbers,
+            'current_turn_id': current_round.current_turn_id,
+            'players': players_data,
+        }
+    
+    return JsonResponse({
         'code': room.code,
-        'status': room.status,
-        'current_turn_id': room.current_turn.id if room.current_turn else None,
-        'called_numbers': room.called_numbers,
-        'players': players_data,
-    }
-    
-    return JsonResponse(data)
+        'is_active': room.is_active,
+        'settings': {
+            'setup_duration': room.settings_setup_duration,
+            'turn_duration': room. settings_turn_duration,
+            'max_players': room.settings_max_players,
+        },
+        'members': members_data,
+        'current_round': round_data,
+    })
