@@ -5,33 +5,21 @@
 {% block extra_css %}
 <style>
     .bingo-letter {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 20px;
-        font-weight: 700;
+        font-size: 18px;
+        font-weight:  700;
         border-radius: 50%;
         transition: all 0.3s ease;
     }
-    
-    .bingo-letter-inactive {
-        background: #f1f5f9;
-        color: #94a3b8;
-    }
-    
+    . bingo-letter-inactive { background:  #f1f5f9; color: #94a3b8; }
     .bingo-letter-active {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        animation: popIn 0.3s ease;
-    }
-    
-    @keyframes popIn {
-        0% { transform: scale(0.5); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
     }
     
     .board-cell {
@@ -41,58 +29,40 @@
         justify-content: center;
         font-weight: 600;
         font-size: 18px;
-        border-radius: 12px;
+        border-radius: 10px;
         transition: all 0.15s ease;
         cursor: pointer;
         user-select: none;
-        position: relative;
     }
-    
-    .board-cell-default {
-        background: #f8fafc;
-        color: #334155;
-        border: 2px solid #e2e8f0;
-    }
-    
-    .board-cell-default:hover {
-        background: #e2e8f0;
-        transform: scale(1.05);
-    }
-    
-    .board-cell-marked {
+    .board-cell-default { background: #f8fafc; color: #334155; border: 2px solid #e2e8f0; }
+    .board-cell-default: hover { background: #e2e8f0; }
+    . board-cell-marked {
         background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
         color: white;
         border: 2px solid #f59e0b;
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     }
-    
     .board-cell-selectable {
         border: 2px solid #0ea5e9;
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
     }
-    
     .board-cell-selectable:hover {
         background: #0ea5e9;
         color: white;
-        transform: scale(1.08);
+        transform: scale(1.05);
     }
+    . board-cell. dragging { opacity: 0.5; }
+    .board-cell.drag-over { background: #dbeafe; border:  2px dashed #3b82f6; }
     
-    .board-cell.dragging {
-        opacity: 0.5;
-        transform: scale(1.1);
+    .turn-indicator {
+        width: 8px;
+        height: 8px;
+        background: #0ea5e9;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
     }
-    
-    .board-cell.drag-over {
-        background: #dbeafe;
-        border: 2px dashed #3b82f6;
-    }
-    
-    .player-card {
-        transition: all 0.3s ease;
-    }
-    
-    .player-card.current-turn {
-        box-shadow: 0 0 0 2px #0ea5e9;
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
     }
 </style>
 {% endblock %}
@@ -102,7 +72,7 @@
     
     <!-- Header -->
     <header class="py-3 px-4 border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
@@ -111,17 +81,15 @@
                     <span class="font-semibold text-slate-800">Bingo</span>
                 </div>
                 <span class="text-slate-300">|</span>
-                <span class="text-sm font-mono text-slate-500">{{ room.code }}</span>
+                <span class="text-sm font-mono text-slate-500">{{ room.code }} • R{{ current_round. round_number }}</span>
             </div>
-            
             <div class="flex items-center gap-3">
                 <div id="connection-status" class="badge badge-warning">Connecting...</div>
-                
                 <div id="timer-container" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
                     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span id="timer" class="text-sm font-mono font-medium text-slate-700">60s</span>
+                    <span id="timer" class="text-sm font-mono font-medium text-slate-700">{{ remaining_seconds }}s</span>
                 </div>
             </div>
         </div>
@@ -131,54 +99,49 @@
     <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Status Banner -->
-    <div id="status-banner" class="py-3 px-4 text-white text-center transition-all duration-300 {% if room.status == 'setup' %}bg-accent-500{% else %}bg-slate-700{% endif %}">
+    <div id="status-banner" class="py-3 px-4 text-white text-center {% if current_round.status == 'setup' %}bg-accent-500{% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-700{% endif %}">
         <p id="status-text" class="font-medium">
-            {% if room.status == 'setup' %}
-                Setup Phase — Arrange your board! 
+            {% if current_round.status == 'setup' %}
+                Setup Phase — Arrange your board!
             {% elif is_my_turn %}
                 Your turn — Click a number on your board
             {% else %}
-                {{ room.current_turn.name }}'s turn
+                {% if current_round.current_turn %}{{ current_round.current_turn. display_name }}{% endif %}'s turn
             {% endif %}
         </p>
     </div>
     
     <!-- Main Content -->
     <main class="flex-1 py-6 px-4">
-        <div class="max-w-4xl mx-auto">
-            
+        <div class="max-w-5xl mx-auto">
             <div class="grid lg:grid-cols-3 gap-6">
                 
-                <!-- Left Column: Bingo Board -->
+                <!-- Board Column -->
                 <div class="lg:col-span-2">
                     <div class="card p-6">
                         
-                        <!-- BINGO Letters Progress -->
-                        <div class="flex items-center justify-center gap-3 mb-6">
-                            <div id="letter-B" class="bingo-letter bingo-letter-inactive">B</div>
-                            <div id="letter-I" class="bingo-letter bingo-letter-inactive">I</div>
-                            <div id="letter-N" class="bingo-letter bingo-letter-inactive">N</div>
-                            <div id="letter-G" class="bingo-letter bingo-letter-inactive">G</div>
-                            <div id="letter-O" class="bingo-letter bingo-letter-inactive">O</div>
+                        <!-- BINGO Progress -->
+                        <div class="flex items-center justify-center gap-2 mb-6">
+                            <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
+                            <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
+                            <div id="letter-N" class="bingo-letter {% if current_player. completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
+                            <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
+                            <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
                         </div>
                         
-                        <!-- 5x5 Bingo Grid -->
-                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-sm mx-auto">
+                        <!-- 5x5 Board -->
+                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-xs mx-auto">
                             {% for row in current_player.board %}
                                 {% for number in row %}
-                                <div 
-                                    class="board-cell {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}"
-                                    data-number="{{ number }}"
-                                    draggable="true"
-                                >
+                                <div class="board-cell {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" data-number="{{ number }}" draggable="true">
                                     {{ number }}
                                 </div>
                                 {% endfor %}
                             {% endfor %}
                         </div>
                         
-                        <!-- Setup Phase Actions -->
-                        <div id="setup-actions" class="mt-6 pt-6 border-t border-slate-100 {% if room.status != 'setup' %}hidden{% endif %}">
+                        <!-- Setup Actions -->
+                        <div id="setup-actions" class="mt-6 pt-6 border-t border-slate-100 {% if current_round.status != 'setup' %}hidden{% endif %}">
                             <div id="ready-section" class="{% if current_player.is_ready %}hidden{% endif %}">
                                 <div class="flex gap-3 justify-center mb-4">
                                     <button onclick="shuffleBoard()" class="btn-secondary flex items-center gap-2">
@@ -203,99 +166,90 @@
                                     </svg>
                                     <span class="font-medium text-sm">You're ready!</span>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-2">Waiting for other players...</p>
+                                <p id="waiting-text" class="text-xs text-slate-400 mt-2">Waiting for others... </p>
                             </div>
                         </div>
                         
-                        <!-- Called Numbers (During Play) -->
-                        <div id="called-numbers-section" class="mt-6 pt-6 border-t border-slate-100 {% if room.status == 'setup' %}hidden{% endif %}">
+                        <!-- Called Numbers -->
+                        <div id="called-section" class="mt-6 pt-6 border-t border-slate-100 {% if current_round.status == 'setup' %}hidden{% endif %}">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-sm font-semibold text-slate-700">Called Numbers</h3>
                                 <span id="called-count" class="text-xs text-slate-400">{{ called_numbers|length }}/25</span>
                             </div>
-                            <div id="called-numbers" class="flex flex-wrap gap-1.5">
-                                {% if called_numbers %}
-                                    {% for num in called_numbers %}
-                                    <span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">{{ num }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <p id="no-calls-msg" class="text-xs text-slate-400">No numbers called yet</p>
-                                {% endif %}
+                            <div id="called-numbers" class="flex flex-wrap gap-1. 5">
+                                {% for num in called_numbers %}
+                                <span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">{{ num }}</span>
+                                {% empty %}
+                                <span class="text-xs text-slate-400">No numbers called yet</span>
+                                {% endfor %}
                             </div>
                         </div>
                         
                     </div>
                 </div>
                 
-                <!-- Right Column: Players -->
+                <!-- Players Column -->
                 <div class="space-y-4">
                     
                     <!-- Players List -->
                     <div class="card p-5">
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
                         <div id="players-list" class="space-y-2">
-                            {% for player in players %}
-                            <div class="player-card flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50{% else %}bg-slate-50{% endif %} {% if room.current_turn and room.current_turn.id == player.id %}current-turn{% endif %}" data-player-id="{{ player.id }}">
+                            {% for player in all_players %}
+                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50{% else %}bg-slate-50{% endif %}" data-player-id="{{ player. id }}">
                                 <div class="flex items-center gap-2">
                                     {% if player.is_host %}
                                     <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-. 755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                     </svg>
                                     {% endif %}
-                                    <span class="text-sm font-medium text-slate-700">
-                                        {{ player.name }}{% if player.id == current_player.id %} (You){% endif %}
-                                    </span>
+                                    <span class="text-sm font-medium text-slate-700">{{ player. display_name }}{% if player.id == current_player.id %} (You){% endif %}</span>
+                                    {% if current_round.current_turn_id == player.id %}
+                                    <div class="turn-indicator"></div>
+                                    {% endif %}
                                 </div>
-                                
+                                <!-- BINGO Letters -->
+                                <div class="flex gap-0.5">
+                                    {% for letter in "BINGO" %}
+                                    <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if forloop.counter <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ letter }}</span>
+                                    {% endfor %}
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
                     
-                    <!-- Leave Game -->
+                    <!-- Leave -->
                     <form method="POST" action="{% url 'leave_room' room.code %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50 hover:border-red-200">
-                            Leave Game
-                        </button>
+                        <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50">Leave Game</button>
                     </form>
+                    
                 </div>
-                
             </div>
-            
         </div>
     </main>
 </div>
 
 <!-- Winner Modal -->
 <div id="winner-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="card p-8 max-w-md mx-4 transform transition-all duration-300 scale-95 opacity-0" id="winner-modal-content">
+    <div class="card p-8 max-w-md mx-4 transform scale-95 opacity-0 transition-all" id="winner-content">
         <div class="text-center mb-6">
             <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c. 969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                 </svg>
             </div>
             <h2 id="winner-title" class="text-2xl font-bold text-slate-900 mb-2">Game Over!</h2>
-            <p id="winner-message" class="text-slate-500">Congratulations! </p>
+            <p id="winner-message" class="text-slate-500"></p>
         </div>
-        
-        <!-- Final Scoreboard -->
-        <div class="bg-slate-50 rounded-xl p-4 mb-6">
-            <h3 class="font-semibold text-slate-700 text-sm mb-3">Final Scores</h3>
-            <div id="final-scores" class="space-y-2">
-                <!-- BINGO progress for this player -->
-                <div class="flex gap-1 bingo-progress" data-lines="{{ player.completed_lines }}">
-                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 1 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">B</span>
-                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 2 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">I</span>
-                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 3 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">N</span>
-                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 4 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">G</span>
-                    <span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center {% if player.completed_lines >= 5 %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">O</span>
-                </div>
-            </div>
+        <div id="final-scores" class="bg-slate-50 rounded-xl p-4 mb-6 space-y-2"></div>
+        <div class="flex gap-3">
+            {% if is_host %}
+            <button onclick="startNewRound()" class="btn-primary flex-1">Play Again</button>
+            {% endif %}
+            <a href="{% url 'lobby' room.code %}" class="btn-secondary flex-1 text-center">Back to Lobby</a>
         </div>
-        
-        <a href="{% url 'home' %}" class="btn-primary w-full text-center block">Play Again</a>
     </div>
 </div>
 {% endblock %}
@@ -303,71 +257,45 @@
 {% block scripts %}
 <script>
     // ════════════════════════════════════════════════════════════
-    // CONFIGURATION
+    // CONFIG
     // ════════════════════════════════════════════════════════════
     
     const roomCode = "{{ room.code }}";
     const currentPlayerId = {{ current_player.id }};
-    let roomStatus = "{{ room.status }}";
+    const currentMemberId = {{ current_member.id }};
+    const isHost = {{ is_host|yesno:"true,false" }};
+    let roomStatus = "{{ current_round.status }}";
     let isMyTurn = {{ is_my_turn|yesno:"true,false" }};
-    let remainingSeconds = {{ remaining_seconds|default:60 }};
+    let isReady = {{ current_player.is_ready|yesno:"true,false" }};
+    let remainingSeconds = {{ remaining_seconds }};
     let calledNumbers = {{ called_numbers|safe }};
     let myCompletedLines = {{ current_player.completed_lines }};
-    let isReady = {{ current_player.is_ready|yesno:"true,false" }};
-    
-    // Board data (2D array)
     let boardData = {{ current_player.board|safe }};
     
     let socket = null;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
     let timerInterval = null;
-    
-    // Drag and drop variables
     let draggedCell = null;
     
     // ════════════════════════════════════════════════════════════
-    // WEBSOCKET CONNECTION
+    // WEBSOCKET
     // ════════════════════════════════════════════════════════════
     
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
+        socket = new WebSocket(`${protocol}//${window.location.host}/ws/room/${roomCode}/`);
         
-        console.log('Connecting to WebSocket:', wsUrl);
-        socket = new WebSocket(wsUrl);
-        
-        socket.onopen = function(e) {
-            console.log('WebSocket connected');
-            reconnectAttempts = 0;
-            updateConnectionStatus('connected');
-        };
-        
-        socket.onclose = function(e) {
-            console.log('WebSocket disconnected');
+        socket.onopen = () => updateConnectionStatus('connected');
+        socket.onclose = () => {
             updateConnectionStatus('disconnected');
-            
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                setTimeout(connectWebSocket, 2000);
-            }
+            setTimeout(connectWebSocket, 2000);
         };
-        
-        socket.onerror = function(e) {
-            console.error('WebSocket error:', e);
-            updateConnectionStatus('error');
-        };
-        
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log('Received:', data);
-            handleMessage(data);
-        };
+        socket.onerror = () => updateConnectionStatus('error');
+        socket.onmessage = (e) => handleMessage(JSON.parse(e.data));
     }
     
     function sendMessage(type, payload = {}) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type, ...payload }));
+        if (socket?. readyState === WebSocket. OPEN) {
+            socket.send(JSON.stringify({ type, ... payload }));
         }
     }
     
@@ -376,31 +304,38 @@
     // ════════════════════════════════════════════════════════════
     
     function handleMessage(data) {
+        console.log('Received:', data);
         switch (data.type) {
-            case 'player_joined':
-            case 'player_left':
-                updatePlayersList(data.players);
-                break;
             case 'player_ready':
-                updatePlayersList(data.players);
-                if (data.player_id !== currentPlayerId) {
-                    showNotification(`${data.player_name} is ready`, 'success');
-                }
+                updatePlayersList(data.round_players);
+                document.getElementById('waiting-text').textContent = `${data.ready_count}/${data.total_count} ready`;
                 break;
             case 'game_started':
-                handleGameStarted(data);
+                roomStatus = 'playing';
+                document.getElementById('setup-actions').classList.add('hidden');
+                document.getElementById('called-section').classList.remove('hidden');
+                updateStatusBanner(data.current_turn);
+                updatePlayersList(data.round_players);
+                startTimer(data.duration);
+                showNotification('Game started!', 'success');
                 break;
             case 'number_called':
-                handleNumberCalled(data);
+                calledNumbers = data.called_numbers;
+                markNumber(data.number);
+                updateCalledNumbers();
+                updatePlayersList(data.round_players);
+                updateStatusBanner(data.next_turn);
+                startTimer(data.duration);
+                if (data.called_by. member_id !== currentMemberId) {
+                    showNotification(`${data.called_by.name} called ${data.number}`, 'info');
+                }
                 break;
             case 'game_won':
                 handleGameWon(data);
                 break;
-            case 'auto_ready':
-                handleAutoReady(data);
-                break;
-            case 'auto_number':
-                handleAutoNumber(data);
+            case 'new_round_created':
+                showNotification(data.message, 'success');
+                setTimeout(() => window.location.href = `/room/${roomCode}/lobby/`, 1500);
                 break;
             case 'error':
                 showNotification(data.message, 'error');
@@ -408,210 +343,121 @@
         }
     }
     
-    function handleGameStarted(data) {
-        roomStatus = 'playing';
-        
-        document.getElementById('setup-actions').classList.add('hidden');
-        document.getElementById('called-numbers-section').classList.remove('hidden');
-        
-        updateStatusBanner(data.current_turn);
-        updatePlayersList(data.players);
-        updateBoardInteractivity();
-        startTimer(data.duration);
-        
-        showNotification('Game started! Good luck!', 'success');
-    }
-    
-    function handleNumberCalled(data) {
-        calledNumbers = data.called_numbers;
-        
-        // Mark number on board
-        markNumberOnBoard(data.number);
-        updateCalledNumbersDisplay();
-        updatePlayersList(data.players);
-        
-        // Update my lines
-        const myData = data.players.find(p => p.id === currentPlayerId);
-        if (myData) {
-            updateMyBingoLetters(myData.completed_lines);
-        }
-        
-        // Update turn
-        if (data.next_turn) {
-            updateStatusBanner(data.next_turn);
-            updateBoardInteractivity();
-        }
-        
-        startTimer(data.duration);
-        
-        if (data.called_by.id !== currentPlayerId) {
-            showNotification(`${data.called_by.name} called ${data.number}`, 'info');
-        }
-    }
-    
-    function handleGameWon(data) {
-        roomStatus = 'finished';
-        if (timerInterval) clearInterval(timerInterval);
-        console.log(data)
-        showWinnerModal(data.winner, data.players || []);
-    }
-    
-    function handleAutoReady(data) {
-        if (data.player_id === currentPlayerId) {
-            isReady = true;
-            document.getElementById('ready-section').classList.add('hidden');
-            document.getElementById('ready-confirmed').classList.remove('hidden');
-            showNotification("Time's up! You've been marked as ready.", 'info');
-        }
-    }
-    
-    function handleAutoNumber(data) {
-        showNotification(`Time's up! Auto-selected ${data.number} for ${data.player_name}`, 'info');
-    }
-    
     // ════════════════════════════════════════════════════════════
-    // UI UPDATE FUNCTIONS
+    // UI UPDATES
     // ════════════════════════════════════════════════════════════
     
     function updateConnectionStatus(status) {
         const el = document.getElementById('connection-status');
-        if (! el) return;
-        
-        el.className = 'badge';
-        if (status === 'connected') {
-            el.classList.add('badge-success');
-            el.textContent = 'Connected';
-        } else if (status === 'disconnected') {
-            el.classList.add('badge-warning');
-            el.textContent = 'Reconnecting...';
-        } else {
-            el.style.background = '#fef2f2';
-            el.style.color = '#dc2626';
-            el.textContent = 'Error';
-        }
+        el.className = 'badge ' + (status === 'connected' ? 'badge-success' : 'badge-warning');
+        el.textContent = status === 'connected' ? 'Connected' : 'Reconnecting... ';
     }
     
     function updateStatusBanner(turnPlayer) {
         const banner = document.getElementById('status-banner');
-        const statusText = document.getElementById('status-text');
+        const text = document.getElementById('status-text');
         
-        isMyTurn = turnPlayer.id === currentPlayerId;
+        isMyTurn = turnPlayer && turnPlayer.member_id === currentMemberId;
         
-        if (isMyTurn) {
-            banner.classList.remove('bg-slate-700');
-            banner.classList.add('bg-accent-500');
-            statusText.textContent = "Your turn — Click a number on your board";
-        } else {
-            banner.classList.remove('bg-accent-500');
-            banner.classList.add('bg-slate-700');
-            statusText.textContent = `${turnPlayer.name}'s turn`;
-        }
+        banner.className = 'py-3 px-4 text-white text-center ' + (isMyTurn ? 'bg-emerald-500' : 'bg-slate-700');
+        text.textContent = isMyTurn ? "Your turn — Click a number on your board" : `${turnPlayer?. name || ''}'s turn`;
+        
+        updateBoardInteractivity();
+        updateTurnIndicators(turnPlayer?. id);
     }
     
     function updateBoardInteractivity() {
-        const cells = document.querySelectorAll('.board-cell');
-        
-        cells.forEach(cell => {
+        document.querySelectorAll('.board-cell').forEach(cell => {
             const num = parseInt(cell.dataset.number);
             const isMarked = calledNumbers.includes(num);
             
             cell.classList.remove('board-cell-selectable');
+            cell.onclick = null;
             
             if (roomStatus === 'playing' && isMyTurn && !isMarked) {
                 cell.classList.add('board-cell-selectable');
                 cell.onclick = () => callNumber(num);
-            } else {
-                cell.onclick = null;
             }
         });
     }
     
-    function markNumberOnBoard(number) {
+    function markNumber(number) {
         const cell = document.querySelector(`.board-cell[data-number="${number}"]`);
         if (cell) {
             cell.classList.remove('board-cell-default', 'board-cell-selectable');
-            cell.classList.add('board-cell-marked');
+            cell.classList. add('board-cell-marked');
             cell.onclick = null;
-            
-            // Animation
-            cell.style.transform = 'scale(1.15)';
-            setTimeout(() => cell.style.transform = 'scale(1)', 200);
+            cell.style.transform = 'scale(1.1)';
+            setTimeout(() => cell.style.transform = '', 200);
         }
     }
     
-    function updateCalledNumbersDisplay() {
+    function updateCalledNumbers() {
         const container = document.getElementById('called-numbers');
-        const countEl = document.getElementById('called-count');
-        
-        if (countEl) countEl.textContent = `${calledNumbers.length}/25`;
-        
-        container.innerHTML = calledNumbers.map(num => 
-            `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${num}</span>`
-        ).join('');
+        document.getElementById('called-count').textContent = `${calledNumbers.length}/25`;
+        container.innerHTML = calledNumbers.map(n => 
+            `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${n}</span>`
+        ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';
     }
     
-    function updateMyBingoLetters(lines) {
-        myCompletedLines = lines;
-        const letters = ['B', 'I', 'N', 'G', 'O'];
-        
-        letters.forEach((letter, index) => {
-            const el = document.getElementById(`letter-${letter}`);
-            if (el) {
-                if (index < lines) {
-                    el.classList.remove('bingo-letter-inactive');
-                    el.classList.add('bingo-letter-active');
-                } else {
-                    el.classList.remove('bingo-letter-active');
-                    el.classList.add('bingo-letter-inactive');
-                }
-            }
-        });
-    }
-    
-    function updatePlayersList(players, show_score=false) {
+    function updatePlayersList(players) {
         const container = document.getElementById('players-list');
-        if (!container) return;
+        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c. 3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-. 38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
         
-        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
-        
-
-
-        container.innerHTML = players.map(player => {
-            if (show_score){
-                const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
-                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
-                ).join('');
+        container.innerHTML = players.map(p => {
+            const isMe = p.id === currentPlayerId;
+            const bingoLetters = 'BINGO'.split('').map((l, i) => 
+                `<span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center ${i < p.completed_lines ?  'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${l}</span>`
+            ).join('');
+            
+            // Update my lines
+            if (isMe) {
+                myCompletedLines = p.completed_lines;
+                updateMyBingoLetters();
             }
+            
             return `
-                <div class="player-card flex items-center justify-between p-3 rounded-xl ${player.id === currentPlayerId ? 'bg-accent-50' : 'bg-slate-50'}" data-player-id="${player.id}">
+                <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-accent-50' : 'bg-slate-50'}" data-player-id="${p. id}">
                     <div class="flex items-center gap-2">
-                        ${player.is_host ? crownSvg : ''}
-                        <span class="text-sm font-medium text-slate-700">
-                            ${player.name}${player.id === currentPlayerId ? ' (You)' : ''}
-                        </span>
+                        ${p.is_host ? crownSvg : ''}
+                        <span class="text-sm font-medium text-slate-700">${p.name}${isMe ? ' (You)' : ''}</span>
+                        <div class="turn-indicator-${p.id} turn-indicator hidden"></div>
                     </div>
-                    ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
+                    <div class="flex gap-0.5">${bingoLetters}</div>
                 </div>
             `;
         }).join('');
     }
     
+    function updateTurnIndicators(currentTurnId) {
+        document.querySelectorAll('[class*="turn-indicator-"]').forEach(el => el.classList.add('hidden'));
+        if (currentTurnId) {
+            const indicator = document.querySelector(`.turn-indicator-${currentTurnId}`);
+            if (indicator) indicator.classList.remove('hidden');
+        }
+    }
+    
+    function updateMyBingoLetters() {
+        'BINGO'.split('').forEach((letter, i) => {
+            const el = document.getElementById(`letter-${letter}`);
+            if (el) {
+                el.className = 'bingo-letter ' + (i < myCompletedLines ? 'bingo-letter-active' : 'bingo-letter-inactive');
+            }
+        });
+    }
+    
     // ════════════════════════════════════════════════════════════
-    // TIMER WITH AUTO-ACTIONS
+    // TIMER
     // ════════════════════════════════════════════════════════════
     
     function startTimer(duration) {
         if (timerInterval) clearInterval(timerInterval);
-        
         remainingSeconds = duration;
-        const timerEl = document.getElementById('timer');
-        
         updateTimerDisplay();
         
         timerInterval = setInterval(() => {
             remainingSeconds--;
             updateTimerDisplay();
-            
             if (remainingSeconds <= 0) {
                 clearInterval(timerInterval);
                 handleTimerEnd();
@@ -620,296 +466,234 @@
     }
     
     function updateTimerDisplay() {
-        const timerEl = document.getElementById('timer');
-        if (timerEl) {
-            timerEl.textContent = `${remainingSeconds}s`;
-            if (remainingSeconds <= 10) {
-                timerEl.classList.add('text-red-500');
-            } else {
-                timerEl.classList.remove('text-red-500');
-            }
-        }
+        const el = document.getElementById('timer');
+        el.textContent = `${remainingSeconds}s`;
+        el.classList.toggle('text-red-500', remainingSeconds <= 10);
     }
     
     function handleTimerEnd() {
         if (roomStatus === 'setup' && ! isReady) {
-            // Auto-ready
             setReady();
-            showNotification("Time's up! Auto-marked as ready.", 'info');
+            showNotification("Time's up! Auto-marked ready.", 'info');
         } else if (roomStatus === 'playing' && isMyTurn) {
-            // Auto-pick random number
             autoPickNumber();
         }
     }
     
     function autoPickNumber() {
-        const availableNumbers = [];
+        const available = [];
         for (let i = 1; i <= 25; i++) {
-            if (!calledNumbers.includes(i)) {
-                availableNumbers.push(i);
-            }
+            if (!calledNumbers.includes(i)) available.push(i);
         }
-        
-        if (availableNumbers.length > 0) {
-            const randomNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
-            callNumber(randomNumber);
-            showNotification(`Time's up! Auto-selected ${randomNumber}`, 'info');
+        if (available.length > 0) {
+            const num = available[Math.floor(Math.random() * available.length)];
+            callNumber(num);
+            showNotification(`Time's up! Auto-selected ${num}`, 'info');
         }
     }
     
     // ════════════════════════════════════════════════════════════
-    // DRAG AND DROP
+    // DRAG & DROP
     // ════════════════════════════════════════════════════════════
     
-    function initDragAndDrop() {
-        const cells = document.querySelectorAll('.board-cell');
-        
-        cells.forEach(cell => {
-            cell.addEventListener('dragstart', handleDragStart);
-            cell.addEventListener('dragend', handleDragEnd);
-            cell.addEventListener('dragover', handleDragOver);
-            cell.addEventListener('dragenter', handleDragEnter);
-            cell.addEventListener('dragleave', handleDragLeave);
-            cell.addEventListener('drop', handleDrop);
-        });
-    }
-    
-    function handleDragStart(e) {
-        if (roomStatus !== 'setup' || isReady) {
-            e.preventDefault();
-            return;
-        }
-        
-        draggedCell = this;
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-    
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
+    function initDragDrop() {
         document.querySelectorAll('.board-cell').forEach(cell => {
-            cell.classList.remove('drag-over');
+            cell.addEventListener('dragstart', e => {
+                if (roomStatus !== 'setup' || isReady) { e.preventDefault(); return; }
+                draggedCell = cell;
+                cell.classList. add('dragging');
+            });
+            
+            cell.addEventListener('dragend', () => {
+                cell.classList. remove('dragging');
+                document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('drag-over'));
+            });
+            
+            cell.addEventListener('dragover', e => {
+                if (roomStatus !== 'setup' || isReady) return;
+                e.preventDefault();
+            });
+            
+            cell.addEventListener('dragenter', () => {
+                if (roomStatus !== 'setup' || isReady) return;
+                cell.classList.add('drag-over');
+            });
+            
+            cell.addEventListener('dragleave', () => {
+                cell.classList.remove('drag-over');
+            });
+            
+            cell.addEventListener('drop', e => {
+                e.preventDefault();
+                if (roomStatus !== 'setup' || isReady || !draggedCell || draggedCell === cell) return;
+                
+                // Swap numbers
+                const draggedNum = draggedCell.dataset.number;
+                const targetNum = cell.dataset.number;
+                
+                draggedCell.textContent = targetNum;
+                draggedCell.dataset.number = targetNum;
+                cell.textContent = draggedNum;
+                cell.dataset.number = draggedNum;
+                
+                cell.classList.remove('drag-over');
+                updateBoardData();
+                showNotification('Numbers swapped!', 'success');
+            });
         });
     }
     
-    function handleDragOver(e) {
-        if (roomStatus !== 'setup' || isReady) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    }
-    
-    function handleDragEnter(e) {
-        if (roomStatus !== 'setup' || isReady) return;
-        this.classList.add('drag-over');
-    }
-    
-    function handleDragLeave(e) {
-        this.classList.remove('drag-over');
-    }
-    
-    function handleDrop(e) {
-        e.preventDefault();
-        
-        if (roomStatus !== 'setup' || isReady || ! draggedCell || draggedCell === this) {
-            return;
-        }
-        
-        // Swap numbers
-        const draggedNum = draggedCell.dataset.number;
-        const targetNum = this.dataset.number;
-        
-        draggedCell.textContent = targetNum;
-        draggedCell.dataset.number = targetNum;
-        
-        this.textContent = draggedNum;
-        this.dataset.number = draggedNum;
-        
-        // Update board data
-        updateBoardDataFromDOM();
-        
-        this.classList.remove('drag-over');
-        showNotification('Numbers swapped!', 'success');
-    }
-    
-    function updateBoardDataFromDOM() {
+    function updateBoardData() {
         const cells = document.querySelectorAll('.board-cell');
         boardData = [];
         let row = [];
         
-        cells.forEach((cell, index) => {
+        cells.forEach((cell, i) => {
             row.push(parseInt(cell.dataset.number));
-            if ((index + 1) % 5 === 0) {
+            if ((i + 1) % 5 === 0) {
                 boardData.push(row);
                 row = [];
             }
         });
         
-        // Send updated board to server
         sendMessage('update_board', { board: boardData });
     }
     
     function shuffleBoard() {
         if (roomStatus !== 'setup' || isReady) return;
         
-        // Generate new shuffled board
         const numbers = Array.from({length: 25}, (_, i) => i + 1);
         for (let i = numbers.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
         }
         
-        // Update DOM
         const cells = document.querySelectorAll('.board-cell');
-        cells.forEach((cell, index) => {
-            cell.textContent = numbers[index];
-            cell.dataset.number = numbers[index];
+        cells.forEach((cell, i) => {
+            cell.textContent = numbers[i];
+            cell.dataset.number = numbers[i];
         });
         
-        // Update board data and send to server
-        updateBoardDataFromDOM();
+        updateBoardData();
         showNotification('Board shuffled!', 'success');
     }
     
     // ════════════════════════════════════════════════════════════
-    // USER ACTIONS
+    // ACTIONS
     // ════════════════════════════════════════════════════════════
     
     function setReady() {
         if (isReady) return;
-        
         isReady = true;
         sendMessage('player_ready');
         
         document.getElementById('ready-section').classList.add('hidden');
         document.getElementById('ready-confirmed').classList.remove('hidden');
-        
-        // Disable drag and drop
-        document.querySelectorAll('.board-cell').forEach(cell => {
-            cell.draggable = false;
-        });
+        document.querySelectorAll('.board-cell').forEach(c => c.draggable = false);
     }
     
     function callNumber(number) {
-        if (! isMyTurn || roomStatus !== 'playing') {
+        if (!isMyTurn || roomStatus !== 'playing') {
             showNotification('Not your turn!', 'error');
             return;
         }
-        
         if (calledNumbers.includes(number)) {
-            showNotification('Number already called!', 'error');
+            showNotification('Already called!', 'error');
             return;
         }
-        
-        sendMessage('call_number', { number: number });
+        sendMessage('call_number', { number });
+    }
+    
+    function startNewRound() {
+        sendMessage('new_round');
     }
     
     // ════════════════════════════════════════════════════════════
-    // WINNER MODAL
+    // WINNER
     // ════════════════════════════════════════════════════════════
     
-    function showWinnerModal(winner, players) {
+    function handleGameWon(data) {
+        roomStatus = 'finished';
+        if (timerInterval) clearInterval(timerInterval);
+        
         const modal = document.getElementById('winner-modal');
-        const modalContent = document.getElementById('winner-modal-content');
+        const content = document.getElementById('winner-content');
         const title = document.getElementById('winner-title');
         const message = document.getElementById('winner-message');
-        const scoresContainer = document.getElementById('final-scores');
+        const scores = document.getElementById('final-scores');
         
-        const isWinner = winner.id === currentPlayerId;
-        console.log(players)
+        const winner = data.winners[0];
+        const iWon = winner.member_id === currentMemberId;
         
-        title.textContent = isWinner ?  '🎉 You Won!' : `${winner.name} Wins!`;
-        message.textContent = isWinner ? 'Congratulations on your victory!' : 'Better luck next time!';
+        if (data.is_tie) {
+            title.textContent = "🎉 It's a Tie!";
+            message.textContent = data.winners.map(w => w.name).join(' & ') + ' win together!';
+        } else if (iWon) {
+            title.textContent = '🎉 You Won!';
+            message.textContent = 'Congratulations! ';
+        } else {
+            title.textContent = `${winner.name} Wins!`;
+            message.textContent = 'Better luck next time!';
+        }
         
-        // Sort players by completed lines
-        const sortedPlayers = [...players].sort((a, b) => b.completed_lines - a.completed_lines);
-
-        
-        scoresContainer.innerHTML = sortedPlayers.map((player, index) => {
-            const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, idx) =>
-                        `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${idx < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
-                    ).join('');
-
-            return `
-                <div class="flex items-center justify-between p-2 rounded-lg ${index === 0 ? 'bg-amber-50' : ''}">
-                    <div class="flex items-center gap-2">
-                        <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${index + 1}</span>
-                        <span class="text-sm font-medium text-slate-700">${player.name}${player.id === currentPlayerId ? ' (You)' : ''}</span>
-                    </div>
-                    <div class="flex gap-2 p-1">
-                        ${bingoLetters}
-                    </div>
+        // Sort players by lines
+        const sortedPlayers = [...data.round_players].sort((a, b) => b.completed_lines - a.completed_lines);
+        scores.innerHTML = sortedPlayers.map((p, i) => `
+            <div class="flex items-center justify-between p-2 rounded-lg ${i === 0 ? 'bg-amber-50' : ''}">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${i + 1}</span>
+                    <span class="text-sm font-medium text-slate-700">${p.name}${p.member_id === currentMemberId ?  ' (You)' : ''}</span>
                 </div>
-            `;
-        }).join('');
+                <span class="text-sm font-semibold text-slate-900">${p.completed_lines} lines</span>
+            </div>
+        `).join('');
         
-        modal.classList.remove('hidden');
+        modal.classList. remove('hidden');
         setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-            modalContent.classList.add('scale-100', 'opacity-100');
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
         }, 10);
     }
     
     // ════════════════════════════════════════════════════════════
-    // NOTIFICATIONS (STACKED)
+    // NOTIFICATIONS
     // ════════════════════════════════════════════════════════════
     
     function showNotification(message, type = 'info') {
         const container = document.getElementById('notification-container');
-        
         const notification = document.createElement('div');
         notification.className = 'p-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
         
-        if (type === 'success') {
-            notification.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100');
-        } else if (type === 'error') {
-            notification.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
-        } else {
-            notification.classList.add('bg-slate-50', 'text-slate-700', 'border', 'border-slate-200');
-        }
+        const colors = {
+            success: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+            error: 'bg-red-50 text-red-700 border border-red-100',
+            info: 'bg-slate-50 text-slate-700 border border-slate-200'
+        };
+        notification.classList.add(... (colors[type] || colors.info).split(' '));
         
         notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
         container.appendChild(notification);
         
         setTimeout(() => notification.classList.remove('translate-x-full'), 10);
-        
         setTimeout(() => {
             notification.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => notification.remove(), 300);
         }, 3000);
         
-        // Limit notifications
-        while (container.children.length > 5) {
-            container.children[0].remove();
-        }
+        while (container.children.length > 5) container.children[0].remove();
     }
     
     // ════════════════════════════════════════════════════════════
-    // INITIALIZATION
+    // INIT
     // ════════════════════════════════════════════════════════════
     
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Game loaded for room:', roomCode, 'Status:', roomStatus);
-        
+    document.addEventListener('DOMContentLoaded', () => {
         connectWebSocket();
-        initDragAndDrop();
+        initDragDrop();
         
-        // Initialize BINGO letters
-        updateMyBingoLetters(myCompletedLines);
-        
-        // Start timer
-        startTimer(remainingSeconds);
-        
-        // Set board interactivity
-        if (roomStatus === 'playing') {
-            updateBoardInteractivity();
-        }
-        
-        // Disable drag if already ready
-        if (isReady) {
-            document.querySelectorAll('.board-cell').forEach(cell => {
-                cell.draggable = false;
-            });
-        }
+        if (remainingSeconds > 0) startTimer(remainingSeconds);
+        if (roomStatus === 'playing') updateBoardInteractivity();
+        if (isReady) document.querySelectorAll('.board-cell').forEach(c => c.draggable = false);
     });
 </script>
 {% endblock %}

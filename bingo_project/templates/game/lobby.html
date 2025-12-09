@@ -7,168 +7,266 @@
     
     <!-- Header -->
     <header class="py-4 px-4 border-b border-slate-200 bg-white">
-        <div class="max-w-3xl mx-auto flex items-center justify-between">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
                     <span class="text-white font-bold text-sm">B</span>
                 </div>
                 <span class="font-semibold text-slate-800">Bingo</span>
             </div>
-            <div id="connection-status" class="badge badge-warning">
-                Connecting...
-            </div>
+            <div id="connection-status" class="badge badge-warning">Connecting...</div>
         </div>
     </header>
     
-    <!-- Notification Container (Stacked) -->
+    <!-- Notification Container -->
     <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Main Content -->
-    <main class="flex-1 flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-md">
+    <main class="flex-1 py-8 px-4">
+        <div class="max-w-4xl mx-auto">
             
-            <!-- Room Code Card -->
-            <div class="card p-6 mb-6 text-center">
-                <p class="text-sm text-slate-500 mb-2">Room Code</p>
-                <div class="flex items-center justify-center gap-3">
-                    <span id="room-code" class="text-3xl font-mono font-bold text-slate-900 tracking-widest">
-                        {{ room.code }}
-                    </span>
-                    <button 
-                        onclick="copyRoomCode()"
-                        class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                        title="Copy room code"
-                    >
-                        <svg id="copy-icon" class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                        </svg>
-                        <svg id="check-icon" class="w-5 h-5 text-emerald-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </button>
-                </div>
-                <p class="text-xs text-slate-400 mt-3">Share this code with friends to join</p>
-            </div>
-            
-            <!-- Players Card -->
-            <div class="card p-6 mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-semibold text-slate-900">Players</h2>
-                    <span id="player-count" class="text-sm text-slate-400">{{ players|length }} joined</span>
-                </div>
+            <div class="grid lg:grid-cols-3 gap-6">
                 
-                <div id="players-list" class="space-y-2">
-                    {% for player in players %}
-                    <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}" data-player-id="{{ player.id }}">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
-                                {% if player.is_host %}
-                                <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                </svg>
-                                {% else %}
-                                <span class="text-sm font-medium text-slate-500">{{ player.name|slice:":1"|upper }}</span>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <p class="font-medium text-slate-900 text-sm">
-                                    {{ player.name }}
-                                    {% if player.id == current_player.id %}
-                                    <span class="text-slate-400 font-normal">(You)</span>
-                                    {% endif %}
-                                </p>
-                                {% if player.is_host %}
-                                <p class="text-xs text-slate-400">Host</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="player-status">
-                            {% if player.is_ready %}
-                            <span class="badge badge-success">Ready</span>
-                            {% else %}
-                            <span class="badge badge-warning">Waiting</span>
+                <!-- Left Column:  Room Info & Share -->
+                <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- Room Code Card -->
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-semibold text-slate-900">Room Code</h2>
+                            {% if current_round %}
+                            <span class="badge badge-info">Round {{ current_round.round_number }}</span>
                             {% endif %}
                         </div>
+                        
+                        <div class="flex items-center justify-center gap-4 py-4">
+                            <span id="room-code" class="text-4xl font-mono font-bold text-slate-900 tracking-widest">{{ room.code }}</span>
+                        </div>
+                        
+                        <!-- Share Options -->
+                        <div class="flex flex-wrap gap-3 justify-center mt-4 pt-4 border-t border-slate-100">
+                            <button onclick="copyRoomCode()" class="btn-secondary flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <span id="copy-code-text">Copy Code</span>
+                            </button>
+                            <button onclick="copyShareLink()" class="btn-secondary flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13. 828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                </svg>
+                                <span id="copy-link-text">Copy Link</span>
+                            </button>
+                            <button onclick="showQRCode()" class="btn-secondary flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h. 01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                </svg>
+                                QR Code
+                            </button>
+                        </div>
                     </div>
-                    {% endfor %}
+                    
+                    <!-- Players Card -->
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-semibold text-slate-900">Players</h2>
+                            <span id="player-count" class="text-sm text-slate-400">{{ round_players|length }}/{{ room.settings_max_players }}</span>
+                        </div>
+                        
+                        <div id="players-list" class="space-y-2">
+                            {% for player in round_players %}
+                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.room_member. id == current_member.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}" data-member-id="{{ player.room_member.id }}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
+                                        {% if player.is_host %}
+                                        <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9. 049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                        </svg>
+                                        {% else %}
+                                        <span class="text-sm font-medium text-slate-500">{{ player.display_name|slice:": 1"|upper }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-900 text-sm">
+                                            {{ player.display_name }}
+                                            {% if player.room_member.id == current_member.id %}<span class="text-slate-400 font-normal">(You)</span>{% endif %}
+                                        </p>
+                                        <p class="text-xs text-slate-400">
+                                            {% if player.role == 'host' %}Host{% elif player.role == 'co-host' %}Co-Host{% else %}Player{% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="player-ready-status">
+                                        {% if player.is_ready %}
+                                        <span class="badge badge-success">Ready</span>
+                                        {% else %}
+                                        <span class="badge badge-warning">Waiting</span>
+                                        {% endif %}
+                                    </span>
+                                    {% if is_host and player.room_member.id != current_member.id %}
+                                    <button onclick="kickPlayer({{ player.room_member.id }}, '{{ player.display_name }}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <p class="text-slate-400 text-center py-4">No players yet</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
                 </div>
-            </div>
-            
-            <!-- Actions Card -->
-            <div class="card p-6">
-                {% if is_host %}
-                <button 
-                    id="start-game-btn"
-                    onclick="startGame()"
-                    class="btn-primary w-full mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    {% if players|length < 2 %}disabled{% endif %}
-                >
-                    Start Game
-                </button>
-                <p id="start-hint" class="text-xs text-slate-400 text-center mb-4">
-                    {% if players|length < 2 %}
-                    Need at least 2 players to start
-                    {% else %}
-                    Click to start when everyone is ready
-                    {% endif %}
-                </p>
-                {% else %}
-                <div class="p-4 bg-slate-50 rounded-xl mb-4 text-center">
-                    <p class="text-sm text-slate-500">Waiting for host to start the game...</p>
-                </div>
-                {% endif %}
                 
-                <form method="POST" action="{% url 'leave_room' room.code %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50 hover:border-red-200">
-                        Leave Room
-                    </button>
-                </form>
+                <!-- Right Column: Actions & Settings -->
+                <div class="space-y-4">
+                    
+                    <!-- Start Game Card -->
+                    <div class="card p-6">
+                        {% if is_host %}
+                        <button id="start-game-btn" onclick="startGame()" class="btn-primary w-full mb-3 disabled:opacity-50 disabled:cursor-not-allowed" {% if round_players|length < 2 %}disabled{% endif %}>
+                            Start Game
+                        </button>
+                        <p id="start-hint" class="text-xs text-slate-400 text-center">
+                            {% if round_players|length < 2 %}Need at least 2 players{% else %}Click to start when ready{% endif %}
+                        </p>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm text-slate-500">Waiting for host to start... </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Settings Card (Host Only) -->
+                    {% if is_host %}
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-slate-900">Settings</h3>
+                            <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c. 426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div id="settings-panel" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Setup Time</label>
+                                <select id="setup-duration" onchange="updateSettings()" class="input-field text-sm">
+                                    <option value="30" {% if room.settings_setup_duration == 30 %}selected{% endif %}>30 seconds</option>
+                                    <option value="60" {% if room.settings_setup_duration == 60 %}selected{% endif %}>60 seconds</option>
+                                    <option value="90" {% if room.settings_setup_duration == 90 %}selected{% endif %}>90 seconds</option>
+                                    <option value="120" {% if room.settings_setup_duration == 120 %}selected{% endif %}>120 seconds</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Turn Time</label>
+                                <select id="turn-duration" onchange="updateSettings()" class="input-field text-sm">
+                                    <option value="15" {% if room.settings_turn_duration == 15 %}selected{% endif %}>15 seconds</option>
+                                    <option value="30" {% if room. settings_turn_duration == 30 %}selected{% endif %}>30 seconds</option>
+                                    <option value="45" {% if room.settings_turn_duration == 45 %}selected{% endif %}>45 seconds</option>
+                                    <option value="60" {% if room. settings_turn_duration == 60 %}selected{% endif %}>60 seconds</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Max Players</label>
+                                <select id="max-players" onchange="updateSettings()" class="input-field text-sm">
+                                    {% for i in "2,3,4,5,6,7,8,9,10,11,12,13,14,15"|split:"," %}
+                                    <option value="{{ i }}" {% if room.settings_max_players == i|add:0 %}selected{% endif %}>{{ i }} players</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Leave Room -->
+                    <form method="POST" action="{% url 'leave_room' room.code %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50 hover:border-red-200">
+                            Leave Room
+                        </button>
+                    </form>
+                    
+                </div>
+                
             </div>
             
         </div>
     </main>
     
 </div>
+
+<!-- QR Code Modal -->
+<div id="qr-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="card p-8 max-w-sm mx-4 text-center">
+        <h3 class="font-semibold text-slate-900 mb-4">Scan to Join</h3>
+        <div id="qr-code" class="bg-white p-4 rounded-xl inline-block mb-4"></div>
+        <p class="text-sm text-slate-500 mb-4">Room:  {{ room.code }}</p>
+        <button onclick="hideQRCode()" class="btn-secondary w-full">Close</button>
+    </div>
+</div>
+
+<!-- Kick Confirm Modal -->
+<div id="kick-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="card p-6 max-w-sm mx-4">
+        <h3 class="font-semibold text-slate-900 mb-2">Remove Player</h3>
+        <p class="text-slate-500 mb-6">Remove <span id="kick-player-name" class="font-medium"></span> from the room?</p>
+        <div class="flex gap-3">
+            <button onclick="hideKickModal()" class="btn-secondary flex-1">Cancel</button>
+            <button onclick="confirmKick()" class="btn-primary flex-1 bg-red-500 hover: bg-red-600">Remove</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<!-- QR Code Library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
 <script>
     // ════════════════════════════════════════════════════════════
     // CONFIGURATION
     // ════════════════════════════════════════════════════════════
     
     const roomCode = "{{ room.code }}";
-    const currentPlayerId = {{ current_player.id }};
+    const currentMemberId = {{ current_member.id }};
     const isHost = {{ is_host|yesno:"true,false" }};
+    const shareUrl = "{{ share_url }}";
     
     let socket = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
-    let notificationQueue = [];
-    let isShowingNotification = false;
+    let kickTargetId = null;
     
     // ════════════════════════════════════════════════════════════
-    // WEBSOCKET CONNECTION
+    // WEBSOCKET
     // ════════════════════════════════════════════════════════════
     
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
+        const wsUrl = `${protocol}//${window.location. host}/ws/room/${roomCode}/`;
         
-        console.log('Connecting to WebSocket:', wsUrl);
         socket = new WebSocket(wsUrl);
         
-        socket.onopen = function(e) {
+        socket.onopen = function() {
             console.log('WebSocket connected');
             reconnectAttempts = 0;
             updateConnectionStatus('connected');
         };
         
-        socket.onclose = function(e) {
+        socket.onclose = function() {
             console.log('WebSocket disconnected');
             updateConnectionStatus('disconnected');
-            
             if (reconnectAttempts < maxReconnectAttempts) {
                 reconnectAttempts++;
                 setTimeout(connectWebSocket, 2000);
@@ -199,24 +297,36 @@
     
     function handleMessage(data) {
         switch (data.type) {
-            case 'player_joined':
-                updatePlayersList(data.players);
-                if (data.player_id !== currentPlayerId) {
-                    showNotification(`${data.player_name} joined`, 'success');
+            case 'player_connected':
+                updatePlayersList(data.round_players);
+                if (data.member_id !== currentMemberId) {
+                    showNotification(`${data.member_name} joined`, 'success');
                 }
                 break;
-            case 'player_left':
-                updatePlayersList(data.players);
-                showNotification(`${data.player_name} left`, 'info');
+            case 'player_disconnected':
+                if (data.member_id !== currentMemberId) {
+                    showNotification(`${data.member_name} disconnected`, 'info');
+                }
                 break;
-            case 'player_ready':
-                updatePlayersList(data.players);
+            case 'player_kicked':
+                if (data.kicked_member_id === currentMemberId) {
+                    showNotification('You have been removed from the room', 'error');
+                    setTimeout(() => window.location.href = '/', 2000);
+                } else {
+                    updatePlayersList(data.round_players);
+                    showNotification(`${data.kicked_name} was removed`, 'info');
+                }
                 break;
             case 'game_starting':
                 showNotification(data.message, 'success');
-                setTimeout(() => {
-                    window.location.href = `/room/${roomCode}/game/`;
-                }, 1000);
+                setTimeout(() => window.location.href = `/room/${roomCode}/game/`, 1000);
+                break;
+            case 'settings_updated':
+                showNotification(`Settings updated by ${data.updated_by}`, 'info');
+                break;
+            case 'new_round_created':
+                showNotification(data.message, 'success');
+                setTimeout(() => window.location. reload(), 1000);
                 break;
             case 'error':
                 showNotification(data.message, 'error');
@@ -225,13 +335,11 @@
     }
     
     // ════════════════════════════════════════════════════════════
-    // UI UPDATE FUNCTIONS
+    // UI UPDATES
     // ════════════════════════════════════════════════════════════
     
     function updateConnectionStatus(status) {
         const el = document.getElementById('connection-status');
-        if (! el) return;
-        
         el.className = 'badge';
         if (status === 'connected') {
             el.classList.add('badge-success');
@@ -240,8 +348,7 @@
             el.classList.add('badge-warning');
             el.textContent = 'Reconnecting...';
         } else {
-            el.style.background = '#fef2f2';
-            el.style.color = '#dc2626';
+            el.classList.add('badge-warning');
             el.textContent = 'Error';
         }
     }
@@ -252,107 +359,155 @@
         const startBtn = document.getElementById('start-game-btn');
         const startHint = document.getElementById('start-hint');
         
-        if (countEl) countEl.textContent = `${players.length} joined`;
+        if (countEl) {
+            countEl. textContent = `${players.length}/${document.getElementById('max-players')?.value || 6}`;
+        }
         
         if (startBtn && isHost) {
-            if (players.length >= 2) {
-                startBtn.disabled = false;
-                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                if (startHint) startHint.textContent = 'Click to start when everyone is ready';
-            } else {
-                startBtn.disabled = true;
-                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                if (startHint) startHint.textContent = 'Need at least 2 players to start';
+            startBtn. disabled = players.length < 2;
+            if (startHint) {
+                startHint.textContent = players.length < 2 ? 'Need at least 2 players' : 'Click to start when ready';
             }
         }
         
-        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
+        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-. 921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-. 38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
         
-        if (container) {
-            container.innerHTML = players.map(player => `
-                <div class="player-item flex items-center justify-between p-3 rounded-xl ${player.id === currentPlayerId ?  'bg-accent-50 border border-accent-100' : 'bg-slate-50'}" data-player-id="${player.id}">
+        container.innerHTML = players.map(player => {
+            const isMe = player.member_id === currentMemberId;
+            const roleText = player.role === 'host' ?  'Host' : player.role === 'co-host' ? 'Co-Host' : 'Player';
+            
+            return `
+                <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-accent-50 border border-accent-100' : 'bg-slate-50'}" data-member-id="${player.member_id}">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
-                            ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name.charAt(0).toUpperCase()}</span>`}
+                            ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name. charAt(0).toUpperCase()}</span>`}
                         </div>
                         <div>
                             <p class="font-medium text-slate-900 text-sm">
-                                ${player.name}
-                                ${player.id === currentPlayerId ?  '<span class="text-slate-400 font-normal">(You)</span>' : ''}
+                                ${player.name}${isMe ? '<span class="text-slate-400 font-normal"> (You)</span>' : ''}
                             </p>
-                            ${player.is_host ? '<p class="text-xs text-slate-400">Host</p>' : ''}
+                            <p class="text-xs text-slate-400">${roleText}</p>
                         </div>
                     </div>
-                    <div class="player-status">
-                        ${player.is_ready ? '<span class="badge badge-success">Ready</span>' : '<span class="badge badge-warning">Waiting</span>'}
+                    <div class="flex items-center gap-2">
+                        <span class="player-ready-status">
+                            ${player.is_ready ? '<span class="badge badge-success">Ready</span>' : '<span class="badge badge-warning">Waiting</span>'}
+                        </span>
+                        ${isHost && ! isMe ? `
+                            <button onclick="kickPlayer(${player.member_id}, '${player.name}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
-            `).join('');
-        }
+            `;
+        }).join('');
     }
     
     // ════════════════════════════════════════════════════════════
-    // STACKED NOTIFICATIONS
+    // ACTIONS
     // ════════════════════════════════════════════════════════════
-    
-    function showNotification(message, type = 'info') {
-        const container = document.getElementById('notification-container');
-        
-        const notification = document.createElement('div');
-        notification.className = 'p-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
-        
-        if (type === 'success') {
-            notification.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100');
-        } else if (type === 'error') {
-            notification.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
-        } else {
-            notification.classList.add('bg-slate-50', 'text-slate-700', 'border', 'border-slate-200');
-        }
-        
-        notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
-        container.appendChild(notification);
-        
-        // Animate in
-        setTimeout(() => notification.classList.remove('translate-x-full'), 10);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-        
-        // Limit to 5 notifications max
-        const notifications = container.children;
-        if (notifications.length > 5) {
-            notifications[0].remove();
-        }
-    }
-    
-    // ════════════════════════════════════════════════════════════
-    // USER ACTIONS
-    // ════════════════════════════════════════════════════════════
-    
-    function copyRoomCode() {
-        navigator.clipboard.writeText(roomCode).then(() => {
-            document.getElementById('copy-icon').classList.add('hidden');
-            document.getElementById('check-icon').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('copy-icon').classList.remove('hidden');
-                document.getElementById('check-icon').classList.add('hidden');
-            }, 2000);
-        });
-    }
     
     function startGame() {
         sendMessage('start_game');
     }
     
+    function updateSettings() {
+        const settings = {
+            setup_duration:  parseInt(document.getElementById('setup-duration').value),
+            turn_duration: parseInt(document.getElementById('turn-duration').value),
+            max_players: parseInt(document.getElementById('max-players').value),
+        };
+        sendMessage('update_settings', { settings });
+    }
+    
+    function copyRoomCode() {
+        navigator. clipboard.writeText(roomCode).then(() => {
+            document.getElementById('copy-code-text').textContent = 'Copied!';
+            setTimeout(() => document.getElementById('copy-code-text').textContent = 'Copy Code', 2000);
+        });
+    }
+    
+    function copyShareLink() {
+        const fullUrl = window.location.origin + shareUrl;
+        navigator.clipboard. writeText(fullUrl).then(() => {
+            document.getElementById('copy-link-text').textContent = 'Copied!';
+            setTimeout(() => document.getElementById('copy-link-text').textContent = 'Copy Link', 2000);
+        });
+    }
+    
+    function showQRCode() {
+        const modal = document.getElementById('qr-modal');
+        const qrContainer = document.getElementById('qr-code');
+        qrContainer.innerHTML = '';
+        
+        const fullUrl = window.location.origin + shareUrl;
+        QRCode.toCanvas(fullUrl, { width: 200, margin: 2 }, function(error, canvas) {
+            if (! error) qrContainer.appendChild(canvas);
+        });
+        
+        modal. classList.remove('hidden');
+    }
+    
+    function hideQRCode() {
+        document.getElementById('qr-modal').classList.add('hidden');
+    }
+    
+    function kickPlayer(memberId, name) {
+        kickTargetId = memberId;
+        document.getElementById('kick-player-name').textContent = name;
+        document.getElementById('kick-modal').classList.remove('hidden');
+    }
+    
+    function hideKickModal() {
+        document.getElementById('kick-modal').classList.add('hidden');
+        kickTargetId = null;
+    }
+    
+    function confirmKick() {
+        if (kickTargetId) {
+            sendMessage('kick_player', { member_id: kickTargetId });
+        }
+        hideKickModal();
+    }
+    
+    function toggleSettings() {
+        const panel = document.getElementById('settings-panel');
+        panel.classList.toggle('hidden');
+    }
+    
     // ════════════════════════════════════════════════════════════
-    // INITIALIZATION
+    // NOTIFICATIONS
+    // ════════════════════════════════════════════════════════════
+    
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notification-container');
+        const notification = document.createElement('div');
+        notification.className = 'p-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
+        
+        if (type === 'success') notification.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100');
+        else if (type === 'error') notification.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
+        else notification.classList.add('bg-slate-50', 'text-slate-700', 'border', 'border-slate-200');
+        
+        notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
+        container.appendChild(notification);
+        
+        setTimeout(() => notification.classList.remove('translate-x-full'), 10);
+        setTimeout(() => {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+        
+        while (container.children.length > 5) container.children[0].remove();
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // INIT
     // ════════════════════════════════════════════════════════════
     
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Lobby loaded for room:', roomCode);
         connectWebSocket();
     });
 </script>
