@@ -15,7 +15,7 @@
         border-radius: 50%;
         transition: all 0.3s ease;
     }
-    . bingo-letter-inactive { background:  #f1f5f9; color: #94a3b8; }
+    .bingo-letter-inactive { background:  #f1f5f9; color: #94a3b8; }
     .bingo-letter-active {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
@@ -36,7 +36,7 @@
     }
     .board-cell-default { background: #f8fafc; color: #334155; border: 2px solid #e2e8f0; }
     .board-cell-default: hover { background: #e2e8f0; }
-    . board-cell-marked {
+    .board-cell-marked {
         background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
         color: white;
         border: 2px solid #f59e0b;
@@ -50,7 +50,7 @@
         color: white;
         transform: scale(1.05);
     }
-    . board-cell. dragging { opacity: 0.5; }
+    .board-cell.dragging { opacity: 0.5; }
     .board-cell.drag-over { background: #dbeafe; border:  2px dashed #3b82f6; }
     
     .turn-indicator {
@@ -74,14 +74,16 @@
     <header class="py-3 px-4 border-b border-slate-200 bg-white sticky top-0 z-10">
         <div class="max-w-5xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-sm">B</span>
-                    </div>
-                    <span class="font-semibold text-slate-800">Bingo</span>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                    <img src="{% static 'pipal.png' %}" alt="Logo" class="w-6 h-6 object-contain" />
                 </div>
+                <span class=" text-slate-800" style="font-family: 'Pacifico', cursive, sans-serif;">Bingo-Champs</span>
+                <link href="https://fonts.googleapis.com/css?family=Pacifico&display=swap" rel="stylesheet">
+            </div>           
+
                 <span class="text-slate-300">|</span>
-                <span class="text-sm font-mono text-slate-500">{{ room.code }} • R{{ current_round. round_number }}</span>
+                <span class="text-sm font-mono text-slate-500">{{ room.code }} • R{{ current_round.round_number }}</span>
             </div>
             <div class="flex items-center gap-3">
                 <div id="connection-status" class="badge badge-warning">Connecting...</div>
@@ -99,14 +101,16 @@
     <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Status Banner -->
-    <div id="status-banner" class="py-3 px-4 text-white text-center {% if current_round.status == 'setup' %}bg-accent-500{% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-700{% endif %}">
+    <div id="status-banner" class="py-3 px-4 text-white text-center {% if current_round.status == 'setup' %}bg-accent-500 {% elif current_round.status == 'finished' %} bg-red-400 {% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-700{% endif %}">
         <p id="status-text" class="font-medium">
             {% if current_round.status == 'setup' %}
                 Setup Phase — Arrange your board!
+            {% elif current_round.status == 'finished' %}
+                Game Over
             {% elif is_my_turn %}
                 Your turn — Click a number on your board
             {% else %}
-                {% if current_round.current_turn %}{{ current_round.current_turn. display_name }}{% endif %}'s turn
+                {% if current_round.current_turn %}{{ current_round.current_turn.display_name }}{% endif %}'s turn
             {% endif %}
         </p>
     </div>
@@ -124,7 +128,7 @@
                         <div class="flex items-center justify-center gap-2 mb-6">
                             <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
                             <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
-                            <div id="letter-N" class="bingo-letter {% if current_player. completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
+                            <div id="letter-N" class="bingo-letter {% if current_player.completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
                             <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
                             <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
                         </div>
@@ -166,7 +170,7 @@
                                     </svg>
                                     <span class="font-medium text-sm">You're ready!</span>
                                 </div>
-                                <p id="waiting-text" class="text-xs text-slate-400 mt-2">Waiting for others... </p>
+                                <p id="waiting-text" class="text-xs text-slate-400 mt-2">Waiting for others...</p>
                             </div>
                         </div>
                         
@@ -176,7 +180,7 @@
                                 <h3 class="text-sm font-semibold text-slate-700">Called Numbers</h3>
                                 <span id="called-count" class="text-xs text-slate-400">{{ called_numbers|length }}/25</span>
                             </div>
-                            <div id="called-numbers" class="flex flex-wrap gap-1. 5">
+                            <div id="called-numbers" class="flex flex-wrap gap-1.5">
                                 {% for num in called_numbers %}
                                 <span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">{{ num }}</span>
                                 {% empty %}
@@ -190,40 +194,37 @@
                 
                 <!-- Players Column -->
                 <div class="space-y-4">
-                    
                     <!-- Players List -->
                     <div class="card p-5">
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
                         <div id="players-list" class="space-y-2">
                             {% for player in all_players %}
-                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50{% else %}bg-slate-50{% endif %}" data-player-id="{{ player. id }}">
+                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-accent-50{% else %}bg-slate-50{% endif %}" data-player-id="{{ player.id }}">
                                 <div class="flex items-center gap-2">
                                     {% if player.is_host %}
                                     <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-. 755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                     </svg>
                                     {% endif %}
-                                    <span class="text-sm font-medium text-slate-700">{{ player. display_name }}{% if player.id == current_player.id %} (You){% endif %}</span>
+                                    <span class="text-sm font-medium text-slate-700">{{ player.display_name }}{% if player.id == current_player.id %} (You){% endif %}</span> <span class="ml-1 bg-green-400 p-1 rounded-full"> {% if current_round.winner_id == player.id %} 🏆 {% endif %} </span>
                                     {% if current_round.current_turn_id == player.id %}
                                     <div class="turn-indicator"></div>
                                     {% endif %}
-                                </div>
-                                <!-- BINGO Letters -->
-                                <div class="flex gap-0.5">
-                                    {% for letter in "BINGO" %}
-                                    <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if forloop.counter <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ letter }}</span>
-                                    {% endfor %}
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
                     
-                    <!-- Leave -->
+                    <!-- Leave & back to lobby-->
                     <form method="POST" action="{% url 'leave_room' room.code %}">
                         {% csrf_token %}
                         <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50">Leave Game</button>
                     </form>
+                    {% if current_round.status == 'finished' %}
+                    <button onclick="startNewRound()" class="btn-primary flex-1">Play Again</button>
+                    {% endif %}
+
                     
                 </div>
             </div>
@@ -235,23 +236,27 @@
 <div id="winner-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
     <div class="card p-8 max-w-md mx-4 transform scale-95 opacity-0 transition-all" id="winner-content">
         <div class="text-center mb-6">
-            <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c. 969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-. 57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                </svg>
+            <!-- Container for dynamic icon - no default styling here -->
+            <div id="winner-icon-container">
+                <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    
+                </div>
             </div>
             <h2 id="winner-title" class="text-2xl font-bold text-slate-900 mb-2">Game Over!</h2>
             <p id="winner-message" class="text-slate-500"></p>
         </div>
         <div id="final-scores" class="bg-slate-50 rounded-xl p-4 mb-6 space-y-2"></div>
         <div class="flex gap-3">
-            {% if is_host %}
             <button onclick="startNewRound()" class="btn-primary flex-1">Play Again</button>
-            {% endif %}
-            <a href="{% url 'lobby' room.code %}" class="btn-secondary flex-1 text-center">Back to Lobby</a>
+            <form method="POST" action="{% url 'leave_room' room.code %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50">Leave Game</button>
+            </form>
         </div>
     </div>
 </div>
+
+
 {% endblock %}
 
 {% block scripts %}
@@ -294,8 +299,8 @@
     }
     
     function sendMessage(type, payload = {}) {
-        if (socket?. readyState === WebSocket. OPEN) {
-            socket.send(JSON.stringify({ type, ... payload }));
+        if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type, ...payload }));
         }
     }
     
@@ -307,7 +312,7 @@
         console.log('Received:', data);
         switch (data.type) {
             case 'player_ready':
-                updatePlayersList(data.round_players);
+                updatePlayersList(data.round_players, playing=false);
                 document.getElementById('waiting-text').textContent = `${data.ready_count}/${data.total_count} ready`;
                 break;
             case 'game_started':
@@ -315,7 +320,7 @@
                 document.getElementById('setup-actions').classList.add('hidden');
                 document.getElementById('called-section').classList.remove('hidden');
                 updateStatusBanner(data.current_turn);
-                updatePlayersList(data.round_players);
+                updatePlayersList(data.round_players, playing=true);
                 startTimer(data.duration);
                 showNotification('Game started!', 'success');
                 break;
@@ -323,10 +328,10 @@
                 calledNumbers = data.called_numbers;
                 markNumber(data.number);
                 updateCalledNumbers();
-                updatePlayersList(data.round_players);
+                updatePlayersList(data.round_players, playing=true);
                 updateStatusBanner(data.next_turn);
                 startTimer(data.duration);
-                if (data.called_by. member_id !== currentMemberId) {
+                if (data.called_by.member_id !== currentMemberId) {
                     showNotification(`${data.called_by.name} called ${data.number}`, 'info');
                 }
                 break;
@@ -350,7 +355,7 @@
     function updateConnectionStatus(status) {
         const el = document.getElementById('connection-status');
         el.className = 'badge ' + (status === 'connected' ? 'badge-success' : 'badge-warning');
-        el.textContent = status === 'connected' ? 'Connected' : 'Reconnecting... ';
+        el.textContent = status === 'connected' ? 'Connected' : 'Reconnecting...';
     }
     
     function updateStatusBanner(turnPlayer) {
@@ -360,10 +365,10 @@
         isMyTurn = turnPlayer && turnPlayer.member_id === currentMemberId;
         
         banner.className = 'py-3 px-4 text-white text-center ' + (isMyTurn ? 'bg-emerald-500' : 'bg-slate-700');
-        text.textContent = isMyTurn ? "Your turn — Click a number on your board" : `${turnPlayer?. name || ''}'s turn`;
+        text.textContent = isMyTurn ? "Your turn — Click a number on your board" : `${turnPlayer?.name || ''}'s turn`;
         
         updateBoardInteractivity();
-        updateTurnIndicators(turnPlayer?. id);
+        updateTurnIndicators(turnPlayer?.id);
     }
     
     function updateBoardInteractivity() {
@@ -385,7 +390,7 @@
         const cell = document.querySelector(`.board-cell[data-number="${number}"]`);
         if (cell) {
             cell.classList.remove('board-cell-default', 'board-cell-selectable');
-            cell.classList. add('board-cell-marked');
+            cell.classList.add('board-cell-marked');
             cell.onclick = null;
             cell.style.transform = 'scale(1.1)';
             setTimeout(() => cell.style.transform = '', 200);
@@ -400,30 +405,52 @@
         ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';
     }
     
-    function updatePlayersList(players) {
+    function updatePlayersList(players, player = false) {
         const container = document.getElementById('players-list');
-        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c. 3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-. 38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
+        const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
         
         container.innerHTML = players.map(p => {
             const isMe = p.id === currentPlayerId;
-            const bingoLetters = 'BINGO'.split('').map((l, i) => 
-                `<span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center ${i < p.completed_lines ?  'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${l}</span>`
-            ).join('');
+            let bingoLetters = '';
+            let show_score = false;
+            // let bingo_username = localStorage.getItem('bingo_username') || '';
+            // if (bingo_username == "Rujal-K"){
+            //     show_score = true;
+            // }else{
+            //     show_score = false;
+            // }
+            // console.log("Bingo Username:", bingo_username, "Show Score:", show_score, p.completed_lines);
+
+            
+            if (show_score){
+                bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
+                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                ).join('');
+            }
+
             
             // Update my lines
             if (isMe) {
                 myCompletedLines = p.completed_lines;
                 updateMyBingoLetters();
             }
-            
             return `
-                <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-accent-50' : 'bg-slate-50'}" data-player-id="${p. id}">
+                <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-accent-50' : 'bg-slate-50'}" data-player-id="${p.id}">
                     <div class="flex items-center gap-2">
                         ${p.is_host ? crownSvg : ''}
                         <span class="text-sm font-medium text-slate-700">${p.name}${isMe ? ' (You)' : ''}</span>
                         <div class="turn-indicator-${p.id} turn-indicator hidden"></div>
                     </div>
-                    <div class="flex gap-0.5">${bingoLetters}</div>
+                    ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
+
+                    ${ (playing === false && p.is_ready) ? `
+                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Ready
+                    </div>
+                    ` : '' }
                 </div>
             `;
         }).join('');
@@ -501,11 +528,11 @@
             cell.addEventListener('dragstart', e => {
                 if (roomStatus !== 'setup' || isReady) { e.preventDefault(); return; }
                 draggedCell = cell;
-                cell.classList. add('dragging');
+                cell.classList.add('dragging');
             });
             
             cell.addEventListener('dragend', () => {
-                cell.classList. remove('dragging');
+                cell.classList.remove('dragging');
                 document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('drag-over'));
             });
             
@@ -615,40 +642,74 @@
     function handleGameWon(data) {
         roomStatus = 'finished';
         if (timerInterval) clearInterval(timerInterval);
+
+        const LOST_ICON = `
+            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" stroke-width="1. 5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 16.318A4.486 4.486 0 0 0 12.016 15a4.486 4.486 0 0 0-3.198 1.318M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" />
+                </svg>
+            </div>`;
+
+        const WIN_ICON = `
+            <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                </svg>
+            </div>`;
+
+        const TIE_ICON = `
+            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-. 003c0-1.113-. 285-2.16-. 786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                </svg>
+            </div>`;
+
         
         const modal = document.getElementById('winner-modal');
         const content = document.getElementById('winner-content');
         const title = document.getElementById('winner-title');
         const message = document.getElementById('winner-message');
         const scores = document.getElementById('final-scores');
-        
+        const winnerIconContainer = document.getElementById('winner-icon-container');
+
         const winner = data.winners[0];
-        const iWon = winner.member_id === currentMemberId;
-        
+        const iWon = data.winners.some(w => w.member_id === currentMemberId);
+
         if (data.is_tie) {
+            winnerIconContainer.innerHTML = iWon ? WIN_ICON : TIE_ICON;
             title.textContent = "🎉 It's a Tie!";
             message.textContent = data.winners.map(w => w.name).join(' & ') + ' win together!';
         } else if (iWon) {
+            winnerIconContainer.innerHTML = WIN_ICON;
             title.textContent = '🎉 You Won!';
             message.textContent = 'Congratulations! ';
         } else {
+            winnerIconContainer.innerHTML = LOST_ICON;
             title.textContent = `${winner.name} Wins!`;
             message.textContent = 'Better luck next time!';
         }
         
         // Sort players by lines
         const sortedPlayers = [...data.round_players].sort((a, b) => b.completed_lines - a.completed_lines);
-        scores.innerHTML = sortedPlayers.map((p, i) => `
-            <div class="flex items-center justify-between p-2 rounded-lg ${i === 0 ? 'bg-amber-50' : ''}">
-                <div class="flex items-center gap-2">
-                    <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${i + 1}</span>
-                    <span class="text-sm font-medium text-slate-700">${p.name}${p.member_id === currentMemberId ?  ' (You)' : ''}</span>
+        scores.innerHTML = sortedPlayers.map((player, index) =>{ 
+            const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, idx) =>
+                        `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${idx < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                    ).join('');
+            
+            
+            return `
+                <div class="flex items-center justify-between p-2 rounded-lg ${index === 0 ? 'bg-amber-50' : ''}">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${index + 1}</span>
+                        <span class="text-sm font-medium text-slate-700">${player.name}${player.id === currentPlayerId ? ' (You)' : ''}</span>
+                    </div>
+                    <div class="flex gap-2 pl-2">
+                        ${bingoLetters}
+                    </div>
                 </div>
-                <span class="text-sm font-semibold text-slate-900">${p.completed_lines} lines</span>
-            </div>
-        `).join('');
+        `}).join('');
         
-        modal.classList. remove('hidden');
+        modal.classList.remove('hidden');
         setTimeout(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
@@ -669,7 +730,7 @@
             error: 'bg-red-50 text-red-700 border border-red-100',
             info: 'bg-slate-50 text-slate-700 border border-slate-200'
         };
-        notification.classList.add(... (colors[type] || colors.info).split(' '));
+        notification.classList.add(...(colors[type] || colors.info).split(' '));
         
         notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
         container.appendChild(notification);

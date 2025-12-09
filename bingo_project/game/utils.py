@@ -99,7 +99,7 @@ def determine_winners(game_round, calling_player):
     
     # First check the caller
     caller_lines, _ = check_completed_lines(calling_player.board, called_numbers)
-    calling_player. completed_lines = caller_lines
+    calling_player.completed_lines = caller_lines
     calling_player.save(update_fields=['completed_lines'])
     
     if caller_lines >= lines_to_win:
@@ -131,7 +131,7 @@ def update_all_players_lines(game_round):
     
     for player in game_round.players.all():
         old_lines = player.completed_lines
-        new_lines, completed = check_completed_lines(player. board, called_numbers)
+        new_lines, completed = check_completed_lines(player.board, called_numbers)
         
         if new_lines != old_lines: 
             player.completed_lines = new_lines
