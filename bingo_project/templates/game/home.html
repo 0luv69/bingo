@@ -166,6 +166,68 @@
 </style>
 {% endblock %}
 
+{% block header %}
+    <!-- Toggle Tree Logo Button -->
+    <div class="flex justify-center mb-4">
+        <label class="flex items-center cursor-pointer gap-2.5">
+            <input type="checkbox" id="toggle-tree-logo" class="sr-only" checked>
+            <div id="toggle-switch" class="relative w-11 h-6 bg-slate-800 rounded-full transition-all duration-300 ease-in-out shadow-inner">
+                <div id="toggle-knob" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 ease-in-out"></div>
+            </div>
+        </label>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkbox = document.getElementById('toggle-tree-logo');
+            const logo = document.getElementById('tree-logo');
+            const switchEl = document.getElementById('toggle-switch');
+            const knob = document.getElementById('toggle-knob');
+            const simpleLogo = document.getElementById('simple-logo');
+            const label = document.querySelector('label[for="toggle-tree-logo"]');
+            
+            function updateSwitch() {
+                if (checkbox.checked) {
+                    // ON state
+                    if (logo) logo.style.display = '';
+                    if (simpleLogo) {
+                        simpleLogo.classList.add('hidden');
+                        simpleLogo.classList.remove('inline-flex');
+                    }
+
+
+                    switchEl.classList.remove('bg-slate-300');
+                    switchEl.classList.add('bg-slate-800');
+                    knob.style.transform = 'translateX(20px)';
+                } else {
+                    // OFF state
+                    if (logo) logo.style.display = 'none';
+                    if (simpleLogo) {
+                        simpleLogo.classList.remove('hidden');
+                        simpleLogo.classList.add('inline-flex');
+                    }
+                    switchEl.classList.remove('bg-slate-800');
+                    switchEl.classList.add('bg-slate-300');
+                    knob.style.transform = 'translateX(0)';
+                }
+            }
+            
+            // Listen to checkbox change
+            checkbox.addEventListener('change', updateSwitch);
+            
+            // Make the switch clickable
+            switchEl.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkbox.checked = !checkbox.checked;
+                updateSwitch();
+            });
+            
+            // Initialize on page load
+            updateSwitch();
+        });
+    </script>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen flex flex-col">
     
@@ -177,7 +239,7 @@
         <div class="w-full max-w-4xl">
 
             <!-- Logo -->
-            <div class="flex justify-center relative -top-12">
+            <div id="tree-logo" class="flex justify-center relative -top-12">
                 <div class="rope-swing relative inline-block">
                     <div class="rope rope-gradient w-1 h-12 mx-auto relative rounded-sm"></div>
                     <div class="wood-gradient wood-grain relative px-4 py-3 sm:px-6 sm:py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl border-2 md:border-[3px] border-[#5a4a2a]">
@@ -199,7 +261,12 @@
                 </div>
             </div>
             <!-- Hero Section -->
-            <div class="text-center mb-12">
+            <div class="text-center mb-20">
+                <div id="simple-logo" class="hidden  items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-indigo-100 mb-2">
+                    <span class="text-sm font-medium bg-gradient-to-r from-green-600 to-green-600 bg-clip-text text-transparent" style="font-family: 'Pacifico', cursive, sans-serif;">
+                        Bingo Champs
+                    </span>
+                </div>
                 <div class="text-center">
                     <h1 class="text-4xl md:text-5xl mb-4 font-sans font-semibold" style="font-family: cursive;">
                         Play Bingo Online
@@ -266,7 +333,7 @@
                             <label for="room_code" class="block text-sm font-medium text-slate-700 mb-2">Room code</label>
                             <input type="text" id="room_code" name="room_code" required maxlength="6" placeholder="ABC123" class="input-field uppercase tracking-widest text-center font-mono">
                         </div>
-                        <button type="submit" class="btn-secondary w-full bg-green-500 text-white hover:bg-green-600">Join Room</button>
+                        <button type="submit" class="btn-primary w-full">Join Room</button>
                     </form>
                 </div>
                 
