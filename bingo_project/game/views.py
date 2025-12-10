@@ -324,7 +324,7 @@ def game_view(request, room_code):
     if current_round.turn_deadline:
         delta = current_round.turn_deadline - timezone.now()
         remaining_seconds = max(0, int(delta.total_seconds()))
-    
+    print(current_member.is_host)
     context = {
         'room': room,
         'current_round': current_round,
