@@ -67,36 +67,21 @@
 </style>
 {% endblock %}
 
+{% block header %}
+<div class="flex items-center gap-3">
+    <span class="text-sm font-mono text-slate-500 bg-slate-100 p-1 rounded-lg">{{ room.code }} - R{{ current_round.round_number }}</span>
+    <div id="connection-status" class="badge badge-warning">Connecting...</div>
+    <div id="timer-container" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span id="timer" class="text-sm font-mono font-medium text-slate-700">{{ remaining_seconds }}s</span>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen flex flex-col bg-slate-50">
-    
-    <!-- Header -->
-    <header class="py-3 px-4 border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div class="max-w-5xl mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                    <img src="{% static 'pipal.png' %}" alt="Logo" class="w-6 h-6 object-contain" />
-                </div>
-                <span class=" text-slate-800" style="font-family: 'Pacifico', cursive, sans-serif;">Bingo-Champs</span>
-                <link href="https://fonts.googleapis.com/css?family=Pacifico&display=swap" rel="stylesheet">
-            </div>           
-
-                <span class="text-slate-300">|</span>
-                <span class="text-sm font-mono text-slate-500">{{ room.code }} • R{{ current_round.round_number }}</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div id="connection-status" class="badge badge-warning">Connecting...</div>
-                <div id="timer-container" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
-                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span id="timer" class="text-sm font-mono font-medium text-slate-700">{{ remaining_seconds }}s</span>
-                </div>
-            </div>
-        </div>
-    </header>
-    
     <!-- Notification Container -->
     <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
