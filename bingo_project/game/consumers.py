@@ -313,9 +313,9 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
         member = await self.get_member()
-        if not member or not member.is_host:
-            await self.send_error('Only host can start new round')
-            return
+        # if not member or not member.is_host:
+        #     await self.send_error('Only host can start new round')
+        #     return
         
         current_round = await self.get_current_round()
         if current_round and current_round.status != 'finished':

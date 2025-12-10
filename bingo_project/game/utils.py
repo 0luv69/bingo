@@ -95,7 +95,7 @@ def determine_winners(game_round, calling_player):
         list: List of winning RoundPlayer instances (empty if no winner)
     """
     called_numbers = game_round.called_numbers
-    lines_to_win = 5
+    lines_to_win = 1
     
     # First check the caller
     caller_lines, _ = check_completed_lines(calling_player.board, called_numbers)
