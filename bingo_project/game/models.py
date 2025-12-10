@@ -231,7 +231,7 @@ class GameRound(models.Model):
     
     def get_next_turn_player(self):
         """Get next player in turn order."""
-        players = list(self.players.order_by('joined_at'))
+        players = list(self.players.order_by('turn_order'))
         if not players:
             return None
         
@@ -309,6 +309,7 @@ class RoundPlayer(models.Model):
     board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
     is_ready = models.BooleanField(default=False)
     completed_lines = models.IntegerField(default=0, help_text="Number of completed lines (0-5+)")
+    turn_order = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
     
     class Meta: 

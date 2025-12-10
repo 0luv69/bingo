@@ -689,13 +689,16 @@ class GameConsumer(AsyncWebsocketConsumer):
     def create_new_round(self):
         room = Room.objects.get(code=self.room_code)
         new_round = GameRound.create_new_round(room)
-        
-        # Add all active members as players
-        for member in room.get_active_members():
+
+
+        members = list(room.get_active_members())
+        random.shuffle(members)
+        for order, member in enumerate(members, start=1):
             RoundPlayer.objects.create(
                 game_round=new_round,
                 room_member=member,
-                board=RoundPlayer.generate_board()
+                board=RoundPlayer.generate_board(),
+                turn_order=order
             )
         
         return {
