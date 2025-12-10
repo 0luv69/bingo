@@ -51,7 +51,7 @@ LINE_NAMES = [
 BINGO_LETTERS = ['B', 'I', 'N', 'G', 'O']
 
 
-def check_completed_lines(board, called_numbers):
+def check_completed_lines(board, called_numbers, completed_line_indices=None):
     """
     Check how many lines are completed on a board.
     
@@ -60,22 +60,36 @@ def check_completed_lines(board, called_numbers):
         called_numbers: List of integers - Numbers that have been called
     
     Returns:
-        tuple: (count, completed_lines_info)
+        tuple: (count, new_completed_lines list, updated_completed_line_indices)
     """
-    called_set = set(called_numbers)
-    completed_lines_info = []
+
+    if completed_line_indices is None: 
+        completed_line_indices = []
+
+    called_set = set(called_numbers) 
+    new_completed_lines  = []
+    updated_indices = completed_line_indices.copy()
     
     for line_index, line in enumerate(WINNING_LINES):
+        if line_index in updated_indices:
+            print ("Skipping line index:", line_index)
+            continue  # Skip already completed lines
+
+
         line_complete = all(board[row][col] in called_set for row, col in line)
         
         if line_complete:
-            completed_lines_info.append({
+            new_completed_lines.append({
                 'index': line_index,
                 'name': LINE_NAMES[line_index],
                 'positions': line
             })
+            updated_indices.append(line_index)
+            
+
     
-    return len(completed_lines_info), completed_lines_info
+    return len(new_completed_lines ), new_completed_lines , updated_indices or []
+
 
 
 def determine_winners(game_round, calling_player):
@@ -95,12 +109,14 @@ def determine_winners(game_round, calling_player):
         list: List of winning RoundPlayer instances (empty if no winner)
     """
     called_numbers = game_round.called_numbers
+    completed_line_indices = calling_player.completed_line_indices
     lines_to_win = 1
     
     # First check the caller
-    caller_lines, _ = check_completed_lines(calling_player.board, called_numbers)
+    caller_lines, new_lines_info, updated_indices = check_completed_lines(calling_player.board, called_numbers, completed_line_indices)
     calling_player.completed_lines = caller_lines
-    calling_player.save(update_fields=['completed_lines'])
+    calling_player.completed_line_indices = updated_indices
+    calling_player.save(update_fields=['completed_lines', 'completed_line_indices'])
     
     if caller_lines >= lines_to_win:
         return [calling_player]  # Caller wins alone

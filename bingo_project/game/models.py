@@ -309,6 +309,7 @@ class RoundPlayer(models.Model):
     board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
     is_ready = models.BooleanField(default=False)
     completed_lines = models.IntegerField(default=0, help_text="Number of completed lines (0-5+)")
+    completed_line_indices = models.JSONField(default=list, help_text="List of completed line indices from winning lines [0,1,5,8]") 
     turn_order = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
     
