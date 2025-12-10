@@ -83,19 +83,24 @@ def join_room_view(request):
         messages.error(request, 'Please enter your name.')
         return redirect('home')
     
-    if len(player_name) > 30:
-        messages.error(request, 'Name must be 30 characters or less.')
+    if len(player_name) > 20:
+        messages.error(request, 'Name must be 20 characters or less.')
         return redirect('home')
     
     if not room_code:
         messages.error(request, 'Please enter a room code.')
         return redirect('home')
-    
+      
     # Find room
     try:
         room = Room.objects.get(code=room_code)
     except Room.DoesNotExist:
         messages.error(request, f'Room {room_code} not found.')
+        return redirect('home')
+    
+    # Check if player name already exists in this room (case-insensitive)
+    if room.members.filter(display_name__iexact=player_name, is_active=True).exists():
+        messages.error(request, f'"{player_name}" Name already taken. Choose another.')
         return redirect('home')
     
     # Check if can join
