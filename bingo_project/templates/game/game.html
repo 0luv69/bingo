@@ -398,18 +398,18 @@
             const isMe = p.id === currentPlayerId;
             let bingoLetters = '';
             let show_score = false;
-            // let bingo_username = localStorage.getItem('bingo_username') || '';
-            // if (bingo_username == "Rujal-K"){
-            //     show_score = true;
-            // }else{
-            //     show_score = false;
-            // }
-            // console.log("Bingo Username:", bingo_username, "Show Score:", show_score, p.completed_lines);
+            
+            let bingo_username = localStorage.getItem('bingo_username') || '';
+            if (bingo_username == "Rujal-K"){
+                show_score = true;
+            }else{
+                show_score = false;
+            }
 
             
             if (show_score){
                 bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
-                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < p.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
                 ).join('');
             }
 
