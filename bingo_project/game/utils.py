@@ -105,9 +105,8 @@ def determine_winners(game_round, calling_player):
     
     # First check the caller
     updated_finished_lines = check_completed_lines(calling_player.board, called_numbers, calling_player.finished_lines)
-    calling_player.completed_lines = len(updated_finished_lines)
     calling_player.finished_lines = updated_finished_lines
-    calling_player.save(update_fields=['completed_lines', 'finished_lines'])
+    calling_player.save(update_fields=['finished_lines'])
     
     if len(updated_finished_lines) >= lines_to_win:
         return [calling_player]  # Caller wins alone
@@ -116,45 +115,13 @@ def determine_winners(game_round, calling_player):
     winners = []
     for player in game_round.players.exclude(id=calling_player.id):
         updated_finished_lines = check_completed_lines(player.board, called_numbers, player.finished_lines)
-        player.completed_lines = len(updated_finished_lines)
         player.finished_lines = updated_finished_lines
-        player.save(update_fields=['completed_lines', 'finished_lines'])
+        player.save(update_fields=['finished_lines'])
         
         if len(updated_finished_lines) >= lines_to_win:
             winners.append(player)
     
     return winners
-
-
-def update_all_players_lines(game_round):
-    """
-    Update completed lines for all players in a round. 
-    Called after each number is called.
-    
-    Returns:
-        list: List of dicts with player line updates
-    """
-    called_numbers = game_round.called_numbers
-    updates = []
-    
-    for player in game_round.players.all():
-        old_lines = player.completed_lines
-        new_lines, completed = check_completed_lines(player.board, called_numbers)
-        
-        if new_lines != old_lines: 
-            player.completed_lines = new_lines
-            player.save(update_fields=['completed_lines'])
-            
-            updates.append({
-                'player_id': player.id,
-                'player_name': player.display_name,
-                'old_lines':  old_lines,
-                'new_lines': new_lines,
-                'completed_line_names': [c['name'] for c in completed[old_lines: ]]
-            })
-    
-    return updates
-
 
 def get_bingo_progress(completed_lines):
     """

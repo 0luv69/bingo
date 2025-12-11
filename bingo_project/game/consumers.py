@@ -5,7 +5,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from datetime import timedelta
 from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
-from .utils import determine_winners, update_all_players_lines, validate_board
+from .utils import determine_winners, validate_board
 
 
 class GameConsumer(AsyncWebsocketConsumer):

@@ -308,18 +308,20 @@ class RoundPlayer(models.Model):
     room_member = models.ForeignKey(RoomMember, on_delete=models.CASCADE, related_name='round_participations')
     board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
     is_ready = models.BooleanField(default=False)
-    completed_lines = models.IntegerField(default=0, help_text="Number of completed lines (0-5+)")
     finished_lines = models.JSONField(default=list, help_text="List of completed line indices from winning lines [0,1,5,8]") 
     turn_order = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
     
     class Meta: 
-        ordering = ['joined_at']
+        ordering = ['turn_order']
         unique_together = ['game_round', 'room_member']
     
     def __str__(self):
         return f"{self.room_member.display_name} in Round {self.game_round.round_number}"
-    
+    @property
+    def completed_lines(self):
+        return len(self.finished_lines)
+
     @property
     def display_name(self):
         return self.room_member.display_name
