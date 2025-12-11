@@ -61,11 +61,9 @@ def check_completed_lines(board, called_numbers, finished_lines):
     
     Returns:
         tuple: (count, completed_lines_info)
-
-        eck_completed_lines() missing 1 required positional argument: 'finished_lines'
     """
     called_set = set(called_numbers)
-    new_lines_info = []
+    completed_lines_info = []
     updated_finished_lines = finished_lines.copy()
     
     for line_index, line in enumerate(WINNING_LINES):
@@ -76,14 +74,14 @@ def check_completed_lines(board, called_numbers, finished_lines):
         line_complete = all(board[row][col] in called_set for row, col in line)
         
         if line_complete:
-            new_lines_info.append({
+            completed_lines_info.append({
                 'index': line_index,
                 'name': LINE_NAMES[line_index],
                 'positions': line
             })
             updated_finished_lines.append(line_index)
     
-    return len(new_lines_info), new_lines_info, list(updated_finished_lines)
+    return list(updated_finished_lines)
 
 
 def determine_winners(game_round, calling_player):
@@ -106,23 +104,23 @@ def determine_winners(game_round, calling_player):
     lines_to_win = 5
     
     # First check the caller
-    caller_lines, new_lines_info , updated_finished_lines = check_completed_lines(calling_player.board, called_numbers, calling_player.finished_lines  )
-    calling_player.completed_lines = caller_lines
+    updated_finished_lines = check_completed_lines(calling_player.board, called_numbers, calling_player.finished_lines)
+    calling_player.completed_lines = len(updated_finished_lines)
     calling_player.finished_lines = updated_finished_lines
     calling_player.save(update_fields=['completed_lines', 'finished_lines'])
     
-    if caller_lines >= lines_to_win:
+    if len(updated_finished_lines) >= lines_to_win:
         return [calling_player]  # Caller wins alone
     
     # Check all other players
     winners = []
     for player in game_round.players.exclude(id=calling_player.id):
-        player_lines, new_lines_info , updated_finished_lines = check_completed_lines(player.board, called_numbers, player.finished_lines)
-        player.completed_lines = player_lines
+        updated_finished_lines = check_completed_lines(player.board, called_numbers, player.finished_lines)
+        player.completed_lines = len(updated_finished_lines)
         player.finished_lines = updated_finished_lines
         player.save(update_fields=['completed_lines', 'finished_lines'])
         
-        if player_lines >= lines_to_win:
+        if len(updated_finished_lines) >= lines_to_win:
             winners.append(player)
     
     return winners
