@@ -165,8 +165,13 @@ def join_room_direct_view(request, room_code):
         if not can_join: 
             messages.error(request, reason)
             return redirect('home')
-        
         player_name = request.POST.get('player_name', '').strip()
+        
+        # Check if player name already exists in this room (case-insensitive)
+        if room.members.filter(display_name__iexact=player_name, is_active=True).exists():
+            reason = f'"{player_name}" Name already taken. Choose another.'
+            messages.error(request, reason)
+            return render(request, 'game/join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
         
         if not player_name:
             messages.error(request, 'Please enter your name.')
