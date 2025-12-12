@@ -324,6 +324,9 @@ def game_view(request, room_code):
     # Determine if it's current player's turn
     is_my_turn = (current_round.current_turn_id == current_player.id) if current_round.current_turn else False
     
+
+    round_history = room.rounds.filter(status='finished').order_by('-round_number').select_related('winner__room_member')[:10]
+
     # Calculate remaining time
     remaining_seconds = 0
     if current_round.turn_deadline:
@@ -340,6 +343,7 @@ def game_view(request, room_code):
         'is_host': current_member.is_host,
         'called_numbers': current_round.called_numbers,
         'remaining_seconds': remaining_seconds,
+        'round_history': round_history,
     }
     
     return render(request, 'game/game.html', context)

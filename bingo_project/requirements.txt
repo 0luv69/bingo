@@ -29,4 +29,3 @@ typing_extensions==4.15.0
 tzdata==2025.2
 ujson==5.11.0
 zope.interface==8.1.1
-numpy==2.2.0

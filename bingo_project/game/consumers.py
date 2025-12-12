@@ -20,7 +20,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         # Get member from session
         session = self.scope.get('session', {})
         self.member_id = session.get('current_member_id')
-        
+
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -230,6 +230,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         # Get updated data
         round_players = await self.get_round_players_data()
         called_numbers = await self.get_called_numbers()
+
+        show_score = room.settings_show_score
         
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -246,6 +248,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'duration': room.settings_turn_duration,
                 'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                 'round_players': round_players,
+                'show_score': show_score,
             }
         )
         
@@ -278,6 +281,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'setup_duration':  room.settings_setup_duration,
                     'turn_duration':  room.settings_turn_duration,
                     'max_players':  room.settings_max_players,
+                    'show_score': room.settings_show_score,
                 },
                 'updated_by': member.display_name,
             }
@@ -352,17 +356,21 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Transition from setup to playing phase."""
         room = await self.get_room()
         first_player = await self.start_playing_phase()
+
+        show_score = room.settings_show_score
         
         if first_player:
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
+                    'calling':1,
                     'type': 'game_started',
                     'status': 'playing',
                     'current_turn': first_player,
                     'duration': room.settings_turn_duration,
                     'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                     'round_players': await self.get_round_players_data(),
+                    'show_score': show_score,
                 }
             )
     
@@ -408,12 +416,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def game_started(self, event):
         await self.send(text_data=json.dumps({
+            'calling':2,
             'type': 'game_started',
             'status': event['status'],
             'current_turn': event['current_turn'],
             'duration': event['duration'],
             'deadline': event['deadline'],
             'round_players':  event['round_players'],
+            'show_score': event['show_score'],
         }))
     
     async def number_called(self, event):
@@ -426,6 +436,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'duration': event['duration'],
             'deadline': event['deadline'],
             'round_players': event['round_players'],
+            'show_score': event['show_score'],
         }))
     
     async def game_won(self, event):
@@ -524,6 +535,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'name': p.display_name,
                 'role':  p.role,
                 'is_host': p.is_host,
+                'is_co_host': p.is_co_host,
                 'is_ready': p.is_ready,
                 'completed_lines': p.completed_lines,
             } for p in current_round.players.select_related('room_member').all()]
@@ -661,7 +673,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             room.settings_turn_duration = max(10, min(90, int(settings['turn_duration'])))
         if 'max_players' in settings:
             room.settings_max_players = max(2, min(15, int(settings['max_players'])))
-        
+        if 'show_score' in settings:
+            room.settings_show_score = bool(settings['show_score'])
+
         room.save()
     
     @database_sync_to_async

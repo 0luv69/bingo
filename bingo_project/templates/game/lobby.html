@@ -175,6 +175,7 @@
                                 <select id="turn-duration" onchange="updateSettings()" class="input-field text-sm">
                                     <option value="10" {% if room.settings_turn_duration == 10 %}selected{% endif %}>10 seconds</option>
                                     <option value="15" {% if room.settings_turn_duration == 15 %}selected{% endif %}>15 seconds</option>
+                                    <option value="15" {% if room.settings_turn_duration == 15 %}selected{% endif %}>20 seconds</option>
                                     <option value="30" {% if room.settings_turn_duration == 30 %}selected{% endif %}>30 seconds</option>
                                     <option value="45" {% if room.settings_turn_duration == 45 %}selected{% endif %}>45 seconds</option>
                                     <option value="60" {% if room.settings_turn_duration == 60 %}selected{% endif %}>60 seconds</option>
@@ -186,6 +187,13 @@
                                     {% for i in "2,3,4,5,6,7,8,9,10,11,12,13,14,15"|split:"," %}
                                     <option value="{{ i }}" {% if room.settings_max_players == i|add:0 %}selected{% endif %}>{{ i }} players</option>
                                     {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Share Score</label>
+                                <select id="show-score" onchange="updateSettings()" class="input-field text-sm">
+                                    <option value="true" {% if room.settings_show_score %}selected{% endif %}>Yes, share among players</option>
+                                    <option value="false" {% if not room.settings_show_score %}selected{% endif %}>No, Keep secret</option>
                                 </select>
                             </div>
                         </div>
@@ -459,6 +467,7 @@
             setup_duration:  parseInt(document.getElementById('setup-duration').value),
             turn_duration: parseInt(document.getElementById('turn-duration').value),
             max_players: parseInt(document.getElementById('max-players').value),
+            show_score: document.getElementById('show-score').value === 'true'
         };
         sendMessage('update_settings', { settings });
     }

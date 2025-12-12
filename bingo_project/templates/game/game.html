@@ -182,9 +182,9 @@
                     <!-- Players List -->
                     <div class="card p-5">
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
-                        <div id="players-list" class="space-y-2">
+                        <div id="players-list" class="space-y-3">
                             {% for player in all_players %}
-                            <div class="player-item flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
+                            <div class="player-item relative flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
                                 <div class="flex items-center gap-2">
                                     {% if player.is_host %}
                                     <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
@@ -195,11 +195,70 @@
                                     {% if current_round.current_turn_id == player.id %}
                                     <div class="turn-indicator"></div>
                                     {% endif %}
+
+                                    
+                                </div>
+                                
+
+
+                                {% if show_score %}
+                                <!-- BINGO Letters -->
+                                <div class="flex gap-0.5">
+                                    {% for letter in "BINGO" %}
+                                    <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if forloop.counter <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ letter }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                {% if player.is_ready and player.game_round.status == "setup" %}
+                                <div class="absolute right-2 -top-[14px] border border-emerald-500 inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Ready
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Round History Card -->
+                    {% if round_history %}
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-slate-900">Round History <span class="text-xs font-normal text-slate-700">(Last 10)</span></h3>
+                            <span class="text-xs text-slate-400">{{ round_history|length }} round{{ round_history|length|pluralize }}</span>
+                        </div>
+                        
+                        <div class="space-y-3 max-h-64 overflow-y-auto">
+                            {% for round in round_history %}
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full {% if round.winner %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
+                                       <span class= "text-xs font-medium text-amber-700 p-2">R{{ round.round_number }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-400">
+                                            {% if round.winner %}
+                                            🏆 {{ round.winner.display_name }}
+                                            {% else %}
+                                            No winner
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    {% if round.finished_at %}
+                                    <p class="text-xs text-slate-400">{{ round.finished_at|timesince }} ago</p>
+                                    {% endif %}
+                                    <p class="text-xs text-slate-500">{{ round.called_numbers|length }} calls</p>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                     
                     <!-- Leave & back to lobby-->
                     <form method="POST" action="{% url 'leave_room' room.code %}">
@@ -297,7 +356,7 @@
         console.log('Received:', data);
         switch (data.type) {
             case 'player_ready':
-                updatePlayersList(data.round_players, playing=false);
+                updatePlayersList(data.round_players, show_score=false);
                 document.getElementById('waiting-text').textContent = `${data.ready_count}/${data.total_count} ready`;
                 break;
             case 'game_started':
@@ -305,7 +364,7 @@
                 document.getElementById('setup-actions').classList.add('hidden');
                 document.getElementById('called-section').classList.remove('hidden');
                 updateStatusBanner(data.current_turn);
-                updatePlayersList(data.round_players, playing=true);
+                updatePlayersList(data.round_players, show_score=data.show_score, playing = true);
                 startTimer(data.duration);
                 showNotification('Game started!', 'success');
                 break;
@@ -313,7 +372,7 @@
                 calledNumbers = data.called_numbers;
                 markNumber(data.number);
                 updateCalledNumbers();
-                updatePlayersList(data.round_players, playing=true);
+                updatePlayersList(data.round_players, show_score=data.show_score, playing = true);
                 updateStatusBanner(data.next_turn);
                 startTimer(data.duration);
                 if (data.called_by.member_id !== currentMemberId) {
@@ -390,29 +449,18 @@
         ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';
     }
     
-    function updatePlayersList(players, player = false) {
+    function updatePlayersList(players, show_score = false, playing = false) {
         const container = document.getElementById('players-list');
         const crownSvg = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>`;
         
         container.innerHTML = players.map(p => {
             const isMe = p.id === currentPlayerId;
-            let bingoLetters = '';
-            let show_score = false;
-            
-            let bingo_username = localStorage.getItem('bingo_username') || '';
-            if (bingo_username == "Rujal-K"){
-                show_score = true;
-            }else{
-                show_score = false;
-            }
-
-            
+            let bingoLetters = '';       
             if (show_score){
                 bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
                     `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < p.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
                 ).join('');
             }
-
             
             // Update my lines
             if (isMe) {
@@ -420,16 +468,19 @@
                 updateMyBingoLetters();
             }
             return `
-                <div class="player-item flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'}" data-player-id="${p.id}">
+                <div class="player-item relative flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'}" data-player-id="${p.id}">
                     <div class="flex items-center gap-2">
                         ${p.is_host ? crownSvg : ''}
                         <span class="text-sm font-medium ">${p.name}${isMe ? ' (You)' : ''}</span>
-                        <div class="turn-indicator-${p.id} turn-indicator hidden"></div>
+                        <div class="turn-box-${p.id} hidden absolute right-2 -top-[14px] border border-sky-500 inline-flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 rounded-lg text-xs font-medium">
+                            <div class=" turn-indicator"></div>
+                            Turn
+                        </div>
                     </div>
                     ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
 
                     ${ (playing === false && p.is_ready) ? `
-                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
+                    <div class="absolute right-2 -top-[14px] border border-emerald-500 inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
@@ -442,9 +493,9 @@
     }
     
     function updateTurnIndicators(currentTurnId) {
-        document.querySelectorAll('[class*="turn-indicator-"]').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('[class*="turn-box-"]').forEach(el => el.classList.add('hidden'));
         if (currentTurnId) {
-            const indicator = document.querySelector(`.turn-indicator-${currentTurnId}`);
+            const indicator = document.querySelector(`.turn-box-${currentTurnId}`);
             if (indicator) indicator.classList.remove('hidden');
         }
     }

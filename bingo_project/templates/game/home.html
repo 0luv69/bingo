@@ -150,6 +150,24 @@
         animation: textGlow 3s ease-in-out infinite;
     }
 
+    #simple-logo:hover,
+    #simple-logo:active {
+        animation: bordlean 0.6s ease-in-out;
+    }
+
+    @keyframes bordlean{
+        0%, 100% { 
+            rotate: 0deg;
+        }
+        30%{
+            rotate: 10deg;
+        }
+        60% { 
+            rotate: -10deg;
+        }
+        
+    }
+
     @keyframes textGlow {
         0%, 100% { 
             text-shadow: 
@@ -167,38 +185,20 @@
 {% endblock %}
 
 {% block header %}
-    <!-- Toggle Tree Logo Button -->
-    <div class="flex justify-center mb-4">
-        <label class="flex items-center cursor-pointer gap-2.5">
-            <input type="checkbox" id="toggle-tree-logo" class="sr-only" checked>
-            <div id="toggle-switch" class="relative w-11 h-6 bg-slate-800 rounded-full transition-all duration-300 ease-in-out shadow-inner">
-                <div id="toggle-knob" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 ease-in-out"></div>
-            </div>
-        </label>
-    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const checkbox = document.getElementById('toggle-tree-logo');
             const logo = document.getElementById('tree-logo');
-            const switchEl = document.getElementById('toggle-switch');
-            const knob = document.getElementById('toggle-knob');
             const simpleLogo = document.getElementById('simple-logo');
-            const label = document.querySelector('label[for="toggle-tree-logo"]');
             
-            function updateSwitch() {
-                if (!checkbox.checked) {
+            function updateSwitch(state) {
+                if (!state) {
                     // ON state
                     if (logo) logo.style.display = '';
                     if (simpleLogo) {
                         simpleLogo.classList.add('hidden');
                         simpleLogo.classList.remove('inline-flex');
                     }
-
-
-                    switchEl.classList.remove('bg-slate-300');
-                    switchEl.classList.add('bg-slate-800');
-                    knob.style.transform = 'translateX(20px)';
                 } else {
                     // OFF state
                     if (logo) logo.style.display = 'none';
@@ -206,24 +206,18 @@
                         simpleLogo.classList.remove('hidden');
                         simpleLogo.classList.add('inline-flex');
                     }
-                    switchEl.classList.remove('bg-slate-800');
-                    switchEl.classList.add('bg-slate-300');
-                    knob.style.transform = 'translateX(0)';
                 }
             }
             
-            // Listen to checkbox change
-            checkbox.addEventListener('change', updateSwitch);
-            
             // Make the switch clickable
-            switchEl.addEventListener('click', function(e) {
+            simpleLogo.addEventListener('click', function(e) {
                 e.preventDefault();
-                checkbox.checked = !checkbox.checked;
-                updateSwitch();
+                updateSwitch(false);
             });
-            
-            // Initialize on page load
-            updateSwitch();
+            logo.addEventListener('click', function(e) {
+                e.preventDefault();
+                updateSwitch(true);
+            });
         });
     </script>
 {% endblock %}
@@ -241,7 +235,7 @@
             <!-- Logo -->
             <div id="tree-logo" class="flex justify-center relative -top-12" style="display: none;">
                 <div class="rope-swing relative inline-block">
-                    <div class="rope rope-gradient w-1 h-12 mx-auto relative rounded-sm"></div>
+                    <div class="rope rope-gradient w-1 h-10 mx-auto relative rounded-sm"></div>
                     <div class="wood-gradient wood-grain relative px-4 py-3 sm:px-6 sm:py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl border-2 md:border-[3px] border-[#5a4a2a]">
                         <!-- Screws: adjust position based on padding -->
                         <!-- Top Left -->
@@ -254,7 +248,7 @@
                         <div class="screw-gradient absolute bottom-1.5 right-2 sm:bottom-2 sm:right-2.5 md:right-3 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm"></div>
                         
                         <!-- Text: responsive sizing -->
-                        <div class="text-glow relative z-10 text-sm sm:text-base md:text-lg tracking-wide whitespace-nowrap" style="font-family: 'Pacifico', cursive; color: #f5e6d3;">
+                        <div class="cursor-pointer select-none no-callout text-glow relative z-10 text-sm sm:text-base md:text-lg tracking-wide whitespace-nowrap" style="font-family: 'Pacifico', cursive; color: #f5e6d3;">
                             Bingo Champs
                         </div>
                     </div>
@@ -262,7 +256,7 @@
             </div>
             <!-- Hero Section -->
             <div class="text-center mb-10">
-                <div id="simple-logo" class="inline-flex  items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-indigo-100 mb-6">
+                <div id="simple-logo" class="inline-flex cursor-pointer select-none no-callout items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-indigo-100 mb-6">
                     <span class="text-sm font-medium bg-gradient-to-r from-green-600 to-green-600 bg-clip-text text-transparent" style="font-family: 'Pacifico', cursive, sans-serif;">
                         Bingo Champs
                     </span>
