@@ -18,3 +18,20 @@ Bingo/
 │       └── views.py
 |    ├── manage.py
 └── requirements.txt
+
+
+
+
+My another problem or need help for are in: or following are the features i need to add
+
+1) The notification tost, getting populated. I am thinking to switch it downwards. give you suggestions
+2) in join page, the progress svg not as progress its shattered
+3) leaveing, user disconnedted, connecting waiting and all here: Right now, when user just close the tab or click at any other page, it shows that the player is still there and like the playing game would be difficult, I was thinking of showing disconnected and wait for 15 sec to connect again and tell other user this is not available, and for that player if he close and goes back to home page show a box saying get back to game kind off. are you getting it right. And if there are only 2 player give him a box to exit or to keep waiting
+
+4) a page that shows list of public room, future plan
+
+5) when game finish, and we click play again it takes a while so when user click show them progress thing so they know they have clicked, since they are clicking numbers of time
+
+6) leader board, we have the player history shown I want to display the leader board in room who has won what many time
+
+7) 
