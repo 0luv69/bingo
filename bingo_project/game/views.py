@@ -13,6 +13,21 @@ def home_view(request):
     return render(request,'game/home.html')
 
 
+def login_view(request):
+    """
+    Login page view. 
+    If user is already authenticated, redirect to home.
+    """
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    # Get the 'next' parameter for redirect after login
+    next_url = request.GET.get('next', '/')
+    
+    return render(request, 'login.html', {
+        'next':  next_url,
+    })
+
 def create_room_view(request):
     """
     Create a new room and join as host.
