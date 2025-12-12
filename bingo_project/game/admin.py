@@ -63,7 +63,10 @@ class RoomMemberAdmin(admin.ModelAdmin):
     def identifier_type(self, obj):
         if obj.user:
             return f"User:  {obj.user.username}"
-        return f"Session: {obj.session_key[: 8]}..."
+        elif obj.session_key:  # ✅ Check if session_key exists
+            return f"Session: {obj.session_key[: 8]}..."
+        else:
+            return "No identifier" 
     identifier_type.short_description = 'Identifier'
 
 

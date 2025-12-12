@@ -29,8 +29,9 @@ class Room(models.Model):
     
     # Room Settings
     settings_setup_duration = models.IntegerField(default=60, help_text="Seconds for board arrangement phase")
-    settings_turn_duration = models.IntegerField(default=30, help_text="Seconds per turn")
-    settings_max_players = models.IntegerField(default=6, help_text="Maximum players allowed (2-15)")
+    settings_turn_duration = models.IntegerField(default=20, help_text="Seconds per turn")
+    settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
+    settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
     
     class Meta:
         ordering = ['-created_at']
@@ -146,6 +147,10 @@ class RoomMember(models.Model):
     @property
     def is_co_host(self):
         return self.role == 'co-host'
+    
+    @property
+    def show_score(self):
+        return self.room.settings_show_score
     
     def get_identifier(self):
         """Get unique identifier for this member."""
@@ -333,6 +338,14 @@ class RoundPlayer(models.Model):
     @property
     def is_host(self):
         return self.room_member.is_host
+    
+    @property
+    def is_co_host(self):
+        return self.room_member.is_co_host
+    
+    @property
+    def show_score(self):
+        return self.game_round.room.settings_show_score
     
     @staticmethod
     def generate_board():
