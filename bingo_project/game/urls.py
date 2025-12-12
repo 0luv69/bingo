@@ -11,11 +11,12 @@ from game. views import (
     room_settings_view,
     kick_player_view,
     room_status_api,
+    login_view,
 )
 
 urlpatterns = [
-    # Admin
-    path('admin/', admin.site.urls),
+    path('login/', login_view, name='login'),
+
     
     # Main pages
     path('', home_view, name='home'),
