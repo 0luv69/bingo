@@ -12,6 +12,16 @@ def home_view(request):
     """
     return render(request,'game/home.html')
 
+def logout_view(request):
+    """
+    Logout view. Clears session and redirects to home.
+    """
+    # Clear session
+    request.session.flush()
+    messages.warning(request, 'You have been logged out.')
+    return redirect('home')
+
+
 
 def login_view(request):
     """
@@ -340,14 +350,13 @@ def game_view(request, room_code):
     is_my_turn = (current_round.current_turn_id == current_player.id) if current_round.current_turn else False
     
 
-    round_history = room.rounds.filter(status='finished').order_by('-round_number').select_related('winner__room_member')[:10]
+    round_history = room.rounds.filter(status='finished').order_by('-round_number').prefetch_related('winners__room_member')
 
     # Calculate remaining time
     remaining_seconds = 0
     if current_round.turn_deadline:
         delta = current_round.turn_deadline - timezone.now()
         remaining_seconds = max(0, int(delta.total_seconds()))
-    print(current_member.is_host)
     context = {
         'room': room,
         'current_round': current_round,
@@ -359,6 +368,7 @@ def game_view(request, room_code):
         'called_numbers': current_round.called_numbers,
         'remaining_seconds': remaining_seconds,
         'round_history': round_history,
+        'show_login': False
     }
     
     return render(request, 'game/game.html', context)
