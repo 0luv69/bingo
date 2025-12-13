@@ -235,13 +235,13 @@
                             {% for round in round_history %}
                             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full {% if round.winner %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
+                                    <div class="w-8 h-8 rounded-full {% if round.winners %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
                                        <span class= "text-xs font-medium text-amber-700 p-2">R{{ round.round_number }}</span>
                                     </div>
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            {% if round.winner %}
-                                            🏆 {{ round.winner.display_name }}
+                                            {% if round.winners.exists %}
+                                            🏆 {% for winner in round.winners.all %}{{ winner.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                                             {% else %}
                                             No winner
                                             {% endif %}
@@ -695,8 +695,8 @@
 
         const TIE_ICON = `
             <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-. 003c0-1.113-. 285-2.16-. 786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                <svg viewBox="0 0 122.88 122.88" class="w-10 h-10 text-purple-500" fill="currentColor" stroke-width="1.5">
+                    <path d="M0,61.44C0,44.47,6.88,29.11,18,18C29.11,6.88,44.47,0,61.44,0c16.97,0,32.33,6.88,43.44,18c11.12,11.12,18,26.48,18,43.44 c0,16.97-6.88,32.33-18,43.44c-11.12,11.12-26.48,18-43.44,18c-16.97,0-32.33-6.88-43.44-18C6.88,93.77,0,78.41,0,61.44L0,61.44z M39.47,80.58V66.99h43.95l0,13.59H39.47L39.47,80.58L39.47,80.58z M39.47,55.89V42.3h43.95l0,13.59H39.47L39.47,55.89L39.47,55.89 z M25.46,25.46c-9.21,9.21-14.9,21.93-14.9,35.98c0,14.05,5.7,26.78,14.9,35.98c9.21,9.21,21.93,14.9,35.98,14.9 c14.05,0,26.78-5.7,35.98-14.9c9.21-9.21,14.9-21.93,14.9-35.98c0-14.05-5.7-26.78-14.9-35.98c-9.21-9.21-21.93-14.9-35.98-14.9 C47.39,10.55,34.66,16.25,25.46,25.46L25.46,25.46z"/>
                 </svg>
             </div>`;
 
@@ -708,23 +708,34 @@
         const scores = document.getElementById('final-scores');
         const winnerIconContainer = document.getElementById('winner-icon-container');
 
-        const winner = data.winners[0];
+        
+        const multipleWinners = data.winners.length > 1;
         const iWon = data.winners.some(w => w.member_id === currentMemberId);
 
-        if (data.is_tie) {
-            winnerIconContainer.innerHTML = iWon ? WIN_ICON : TIE_ICON;
-            title.textContent = "🎉 It's a Tie!";
-            message.textContent = data.winners.map(w => w.name).join(' & ') + ' win together!';
-        } else if (iWon) {
-            winnerIconContainer.innerHTML = WIN_ICON;
-            title.textContent = '🎉 You Won!';
-            message.textContent = 'Congratulations! ';
+        if (multipleWinners) {
+            if (iWon) {
+                winnerIconContainer.innerHTML = TIE_ICON;
+                title.textContent = "🎉 It's a Tie!";
+                message.textContent = data.winners.map(w => w.name).join(' & ') + ' won together!';
+            } else {
+                winnerIconContainer.innerHTML = LOST_ICON;
+                title.textContent = `Better luck next time!`;
+                message.textContent = data.winners.map(w => w.name).join(' & ') + ' won together!';
+            }
+           
         } else {
-            winnerIconContainer.innerHTML = LOST_ICON;
-            title.textContent = `${winner.name} Wins!`;
-            message.textContent = 'Better luck next time!';
+            const winner = data.winners[0];
+            if (iWon) {
+                winnerIconContainer.innerHTML = WIN_ICON;
+                title.textContent = '🎉 You Won!';
+                message.textContent = 'Congratulations! ';
+            } else {
+                winnerIconContainer.innerHTML = LOST_ICON;
+                title.textContent = `${winner.name} Wins!`;
+                message.textContent = 'Better luck next time!';
+            }
         }
-        
+                  
         // Sort players by lines
         const sortedPlayers = [...data.round_players].sort((a, b) => b.completed_lines - a.completed_lines);
         scores.innerHTML = sortedPlayers.map((player, index) =>{ 

@@ -212,13 +212,13 @@
                             {% for round in round_history %}
                             <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full {% if round.winner %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
+                                    <div class="w-8 h-8 rounded-full {% if round.winners %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
                                        <span class= "text-xs font-medium text-amber-700 p-2">R{{ round.round_number }}</span>
                                     </div>
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            {% if round.winner %}
-                                            🏆 {{ round.winner.display_name }}
+                                            {% if round.winners.exists %}
+                                            🏆 {% for winner in round.winners.all %}{{ winner.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                                             {% else %}
                                             No winner
                                             {% endif %}

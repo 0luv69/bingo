@@ -198,7 +198,7 @@ class GameRound(models.Model):
     called_numbers = models.JSONField(default=list, help_text="List of called numbers [5, 13, 21]")
     current_turn = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_turn_round', help_text="Whose turn is it")
     turn_deadline = models.DateTimeField(null=True, blank=True, help_text="When current turn/phase expires")
-    winner = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='won_rounds')
+    winners = models.ManyToManyField('RoundPlayer', blank=True, related_name='won_rounds')
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     
