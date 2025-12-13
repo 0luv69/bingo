@@ -285,7 +285,7 @@ def lobby_view(request, room_code):
         round_players = current_round.players.select_related('room_member').all()
         current_round_player = current_round.players.filter(room_member=current_member).first()
     
-    round_history = room.rounds.filter(status='finished').order_by('-round_number').select_related('winner__room_member')
+    round_history = room.rounds.filter(status='finished').order_by('-round_number').prefetch_related('winners__room_member')
 
     context = {
         'room': room,

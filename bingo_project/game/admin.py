@@ -104,8 +104,9 @@ class GameRoundAdmin(admin.ModelAdmin):
     current_turn_display.short_description = 'Turn'
     
     def winner_display(self, obj):
-        if obj.winner:
-            return format_html('<span style="color:  #f59e0b;">🏆 {}</span>', obj.winner.display_name)
+        if obj.winners.exists():
+            winners = ", ".join([winner.display_name for winner in obj.winners.all()])
+            return format_html('<span style="color:  #f59e0b;">🏆 {}</span>', winners)
         return "-"
     winner_display.short_description = 'Winner'
 

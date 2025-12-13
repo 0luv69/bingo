@@ -340,8 +340,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def handle_game_won(self, winners):
         """Handle game won."""
-        await self.end_game(winners[0]['id'])
-        
+        await self.end_game([w['id'] for w in winners])
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -652,13 +651,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         return None
     
     @database_sync_to_async
-    def end_game(self, winner_id):
+    def end_game(self, winner_ids:list):
         room = Room.objects.get(code=self.room_code)
         current_round = room.get_current_round()
-        winner = RoundPlayer.objects.get(id=winner_id)
+        winners = RoundPlayer.objects.filter(id__in=winner_ids)
         
         current_round.status = 'finished'
-        current_round.winner = winner
+        current_round.winners.set(winners)
         current_round.finished_at = timezone.now()
         current_round.turn_deadline = None
         current_round.save()
