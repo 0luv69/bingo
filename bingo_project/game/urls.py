@@ -13,13 +13,13 @@ from game. views import (
     room_status_api,
     login_view,
     logout_view,
-    merge_account,
+  
 )
 
 urlpatterns = [
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
-    path("merge-account/", merge_account, name="merge_account"),
+
 
     
     # Main pages

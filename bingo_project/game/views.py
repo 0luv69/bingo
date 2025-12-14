@@ -21,7 +21,7 @@ def home_view(request):
 
 def logout_view(request):
     """
-    Logout view. Clears session and redirects to home.
+    Logout view.Clears session and redirects to home.
     """
     # Clear session
     request.session.flush()
@@ -30,7 +30,7 @@ def logout_view(request):
 
 def login_view(request):
     """
-    Login page view. 
+    Login page view.
     If user is already authenticated, redirect to home.
     """
     if request.user.is_authenticated:
@@ -43,52 +43,117 @@ def login_view(request):
         'next':  next_url,
     })
 
-def merge_account(request):
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.views.decorators.http import require_http_methods
+from allauth.socialaccount.models import SocialLogin, SocialAccount
+from allauth.account.models import EmailAddress
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+def account_conflict_view(request):
     """
-    Resolve email conflicts during social login by 
-    offering merge and login options.
-    """
-    email = request.session.get("merge_conflict_email")
-    provider = request.session.get("merge_conflict_provider")
-
-    if not email or not provider:
-        # If no conflict information exists, redirect to home
-        return redirect("/")
-
-    if request.method == "POST":
-        action = request.POST.get("action")
-        if action == "merge":
-            try:
-                # Associate the new social account with the existing user
-                existing_user = User.objects.get(email=email)
-
-                # If sociallogin is available in session, link it
-                sociallogin = request.session.get("sociallogin")
-                if sociallogin:
-                    social_account = SocialAccount.objects.create(
-                        user=existing_user,
-                        provider=sociallogin.account.provider,
-                        uid=sociallogin.account.uid,
-                    )
-                    social_account.save()
-
-                # Log in the existing user
-                login(request, existing_user)
-                request.session.flush()
-                return redirect("/")
-
-            except User.DoesNotExist:
-                pass  # Should not happen under normal circumstances
-        elif action == "login":
-            # Redirect the user to the login page of their existing provider
-            return redirect("/accounts/login/")
+    Display the account conflict resolution page.
     
-    # On GET, render the conflict page
-    return render(request, "merge_account.html", {"email": email, "provider": provider})
+    Shows options to either: 
+    1.Merge the new social account with the existing account
+    2.Login with the existing account's provider
+    """
+    # Check if we have conflict data in session
+    sociallogin_data = request.session.get('socialaccount_sociallogin')
+    conflict_email = request.session.get('conflict_email')
+    existing_providers = request.session.get('existing_providers', [])
+    
+    if not sociallogin_data or not conflict_email:
+        messages.error(request, "No account conflict to resolve.")
+        return redirect('home')
+
+    # Deserialize the sociallogin to get provider info
+    sociallogin = SocialLogin.deserialize(sociallogin_data)
+    new_provider = sociallogin.account.provider
+
+    context = {
+        'conflict_email': conflict_email,
+        'new_provider': new_provider,
+        'new_provider_display': new_provider.title(),
+        'existing_providers':  existing_providers,
+        'existing_providers_display': [p.title() for p in existing_providers],
+    }
+    
+    return render(request, 'accounts/account_conflict.html', context)
 
 
+@require_http_methods(["POST"])
+def merge_accounts_view(request):
+    """
+    Handle the account merge action.
+    
+    This connects the new social account to the existing user account.
+    The user must confirm they own the existing account (we verify via email match).
+    """
+    sociallogin_data = request.session.get('socialaccount_sociallogin')
+    conflicting_user_id = request.session.get('conflicting_user_id')
+    
+    if not sociallogin_data or not conflicting_user_id:
+        messages.error(request, "Session expired.Please try signing in again.")
+        return redirect('home')
+
+    try:
+        # Get the existing user
+        existing_user = User.objects.get(pk=conflicting_user_id)
+        
+        # Deserialize the social login
+        sociallogin = SocialLogin.deserialize(sociallogin_data)
+        
+        # Connect the social account to the existing user
+        sociallogin.connect(request, existing_user)
+        
+        # Log the user in
+        login(request, existing_user, backend='allauth.account.auth_backends.AuthenticationBackend')
+        
+        # Clear the session data
+        _clear_conflict_session(request)
+        
+        messages.success(
+            request, 
+            f"Success! Your {sociallogin.account.provider.title()} account has been "
+            f"linked to your existing account."
+        )
+        return redirect('dashboard')  # Change to your desired redirect
+
+    except User.DoesNotExist:
+        messages.error(request, "User not found.Please try again.")
+        _clear_conflict_session(request)
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        _clear_conflict_session(request)
+        return redirect('home')
 
 
+def cancel_merge_view(request):
+    """Cancel the merge operation and clear session data."""
+    _clear_conflict_session(request)
+    messages.info(request, "Account linking cancelled.")
+    return redirect('home')
+
+
+def _clear_conflict_session(request):
+    """Helper to clear all conflict-related session data."""
+    keys_to_clear = [
+        'socialaccount_sociallogin',
+        'conflicting_user_id', 
+        'conflict_email',
+        'existing_providers'
+    ]
+    for key in keys_to_clear: 
+        request.session.pop(key, None)
 
 
 
@@ -187,7 +252,7 @@ def join_room_view(request):
     
     # Check if player name already exists in this room (case-insensitive)
     if room.members.filter(display_name__iexact=player_name, is_active=True).exists():
-        messages.error(request, f'"{player_name}" Name already taken. Choose another.')
+        messages.error(request, f'"{player_name}" Name already taken.Choose another.')
         return redirect('home')
     
     # Check if can join
@@ -242,7 +307,7 @@ def join_room_direct_view(request, room_code):
     try:
         room = Room.objects.get(code=room_code)
     except Room.DoesNotExist:
-        messages. error(request, f'Room {room_code} not found.')
+        messages.error(request, f'Room {room_code} not found.')
         return redirect('home')
     
     # Check if can join
@@ -256,7 +321,7 @@ def join_room_direct_view(request, room_code):
         
         # Check if player name already exists in this room (case-insensitive)
         if room.members.filter(display_name__iexact=player_name, is_active=True).exists():
-            reason = f'"{player_name}" Name already taken. Choose another.'
+            reason = f'"{player_name}" Name already taken.Choose another.'
             messages.error(request, reason)
             return render(request, 'game/join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
         
@@ -273,7 +338,7 @@ def join_room_direct_view(request, room_code):
             request.session.create()
         
         user = request.user if request.user.is_authenticated else None
-        session_key = request.session. session_key if not user else None
+        session_key = request.session.session_key if not user else None
         
         # Try to find existing member (including inactive/kicked ones)
         existing_member = None
@@ -290,7 +355,7 @@ def join_room_direct_view(request, room_code):
             member = existing_member
         else: 
             # Create new member
-            member = RoomMember.objects. create(
+            member = RoomMember.objects.create(
                 room=room,
                 user=user,
                 session_key=session_key,
@@ -299,7 +364,7 @@ def join_room_direct_view(request, room_code):
             )
         
         # Add to current round if waiting
-        current_round = room. get_current_round()
+        current_round = room.get_current_round()
         if current_round and current_round.status == 'waiting': 
             existing_round_player = current_round.players.filter(room_member=member).first()
             if not existing_round_player: 
@@ -467,9 +532,9 @@ def leave_room_view(request, room_code):
     if was_host:
         new_host = room.get_host()
         if new_host: 
-            messages.info(request, f'You left the room. {new_host.display_name} is now the host.')
+            messages.info(request, f'You left the room.{new_host.display_name} is now the host.')
         else:
-            messages.info(request, 'You left the room. Room is now empty.')
+            messages.info(request, 'You left the room.Room is now empty.')
     else:
         messages.info(request, 'You left the room.')
     

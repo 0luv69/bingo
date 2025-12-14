@@ -49,7 +49,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend', # ← ADD THIS
 ]
-SOCIALACCOUNT_ADAPTER = 'game.adapter.CustomSocialAccountAdapter'
 ACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_EMAIL_REQUIRED = True
@@ -58,6 +57,17 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Set to 'mandatory' in production
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
+
+ACCOUNT_ADAPTER = 'game.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'game.adapters.CustomSocialAccountAdapter'
+
+# Store the social login in session (needed for merge functionality)
+SOCIALACCOUNT_STORE_TOKENS = True
+
+# Don't automatically connect accounts - we handle this manually
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = False
 
 # Redirect URLs
 LOGIN_REDIRECT_URL = '/'
