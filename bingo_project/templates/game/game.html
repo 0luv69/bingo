@@ -375,9 +375,9 @@
                 updatePlayersList(data.round_players, show_score=data.show_score, playing = true);
                 updateStatusBanner(data.next_turn);
                 startTimer(data.duration);
-                if (data.called_by.member_id !== currentMemberId) {
-                    showNotification(`${data.called_by.name} called ${data.number}`, 'info');
-                }
+                //if (data.called_by.member_id !== currentMemberId) {
+                   // showNotification(`${data.called_by.name} called ${data.number}`, 'info');
+                //}
                 break;
             case 'game_won':
                 handleGameWon(data);
