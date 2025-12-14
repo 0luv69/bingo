@@ -49,7 +49,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend', # ← ADD THIS
 ]
-
+SOCIALACCOUNT_ADAPTER = 'game.adapter.CustomSocialAccountAdapter'
 ACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_EMAIL_REQUIRED = True

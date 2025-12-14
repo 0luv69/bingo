@@ -4,6 +4,13 @@ from django.contrib import messages
 from django.utils import timezone
 from .models import Room, RoomMember, GameRound, RoundPlayer
 from .utils import get_room_member, get_or_create_room_member, get_or_create_round_player
+from django.contrib.auth import login
+from allauth.socialaccount.models import SocialLogin, SocialAccount
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
 
 
 def home_view(request):
@@ -21,8 +28,6 @@ def logout_view(request):
     messages.warning(request, 'You have been logged out.')
     return redirect('home')
 
-
-
 def login_view(request):
     """
     Login page view. 
@@ -37,6 +42,63 @@ def login_view(request):
     return render(request, 'login.html', {
         'next':  next_url,
     })
+
+def merge_account(request):
+    """
+    Resolve email conflicts during social login by 
+    offering merge and login options.
+    """
+    email = request.session.get("merge_conflict_email")
+    provider = request.session.get("merge_conflict_provider")
+
+    if not email or not provider:
+        # If no conflict information exists, redirect to home
+        return redirect("/")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "merge":
+            try:
+                # Associate the new social account with the existing user
+                existing_user = User.objects.get(email=email)
+
+                # If sociallogin is available in session, link it
+                sociallogin = request.session.get("sociallogin")
+                if sociallogin:
+                    social_account = SocialAccount.objects.create(
+                        user=existing_user,
+                        provider=sociallogin.account.provider,
+                        uid=sociallogin.account.uid,
+                    )
+                    social_account.save()
+
+                # Log in the existing user
+                login(request, existing_user)
+                request.session.flush()
+                return redirect("/")
+
+            except User.DoesNotExist:
+                pass  # Should not happen under normal circumstances
+        elif action == "login":
+            # Redirect the user to the login page of their existing provider
+            return redirect("/accounts/login/")
+    
+    # On GET, render the conflict page
+    return render(request, "merge_account.html", {"email": email, "provider": provider})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def create_room_view(request):
     """
