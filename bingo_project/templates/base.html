@@ -137,23 +137,42 @@
                     <div class="flex items-center gap-4 relative group">
                         <div class="relative">
                             <!-- Profile Picture -->
-                            <img src="{% if user.socialaccount_set.first.extra_data.picture %}{{ user.socialaccount_set.first.extra_data.picture }}{% elif user.profile.image %}{{ user.profile.image.url }}{% else %}{% static 'default-avatar.png' %}{% endif %}"
+                            <img src="
+                                {% if user.socialaccount_set.first.provider == 'google' %}
+                                    {% if user.socialaccount_set.first.extra_data.picture %}{{ user.socialaccount_set.first.extra_data.picture }} {% else %}{% static 'default-avatar.jpg' %}{% endif %}"
+                                {% elif user.socialaccount_set.first.provider == 'github' %}
+                                    {% if user.socialaccount_set.first.extra_data.avatar_url %}{{ user.socialaccount_set.first.extra_data.avatar_url }} {% else %}{% static 'default-avatar.jpg' %}{% endif %}"
+                                {% endif %}
                                 alt="Account"
                                 class="w-10 h-10 rounded-full border-2 border-sky-400 shadow cursor-pointer object-cover" />
-                            
                             <!-- Dropdown -->
-                            <div class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-slate-200 p-4 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200"
+                            <div class="absolute right-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-slate-200 p-4 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200"
                                 style="min-width: 220px;">
                                 
                                 <div class="flex items-center gap-3 mb-2">
                                     <!-- Dropdown Profile Picture -->
-                                    <img src="{% if user.socialaccount_set.first.extra_data.picture %}{{ user.socialaccount_set.first.extra_data.picture }}{% elif user.profile.image %}{{ user.profile.image.url }}{% else %}{% static 'default-avatar.png' %}{% endif %}"
+                                    <img src="
+                                    {% if user.socialaccount_set.first.provider == 'google' %}
+                                        {% if user.socialaccount_set.first.extra_data.picture %}{{ user.socialaccount_set.first.extra_data.picture }} {% else %} {% static 'default-avatar.jpg' %}{% endif %}"
+                                    {% elif user.socialaccount_set.first.provider == 'github' %}
+                                        {% if user.socialaccount_set.first.extra_data.avatar_url %}{{ user.socialaccount_set.first.extra_data.avatar_url }} {% else %} {% static 'default-avatar.jpg' %}{% endif %}"
+                                    {% endif %}
                                         alt="Avatar"
                                         class="w-10 h-10 rounded-full border border-slate-200 object-cover" />
-                                    
                                     <!-- User Info -->
                                     <div>
-                                        <div class="font-semibold text-slate-800">{{ user.get_full_name|default:user.username }}</div>
+                                        <div class="font-semibold text-slate-800">
+                                            {{ user.get_full_name|default:user.username }}
+                                            <span class="inline-block align-middle ml-1">
+                                                {% if user.socialaccount_set.first.provider == 'google' %}
+                                                    <!-- Google SVG -->
+                                                    <svg width="18" height="18" viewBox="0 0 48 48" class="inline" aria-hidden="true"><g><path fill="#4285F4" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.3-5.7 7-11.3 7-6.6 0-12-5.4-12-12s5.4-12 12-12c2.7 0 5.2.9 7.2 2.5l6-6C34.1 5.1 29.3 3 24 3 12.9 3 4 11.9 4 23s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.2-.3-3.5z"/><path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.4 16.1 18.8 13 24 13c2.7 0 5.2.9 7.2 2.5l6-6C34.1 5.1 29.3 3 24 3c-7.2 0-13.4 4-16.7 9.7z"/><path fill="#FBBC05" d="M24 43c5.3 0 10.1-1.7 13.8-4.7l-6.4-5c-2 1.4-4.6 2.2-7.4 2.2-5.6 0-10.3-3.7-12-8.7l-6.6 5.1C7.9 39.1 15.3 43 24 43z"/><path fill="#EA4335" d="M43.6 20.5h-1.9V20H24v8h11.3c-0.7 2-2.1 3.7-4.1 5l6.4 5C39.9 40.3 44 36.1 44 29.5c0-1.3-.1-2.2-.3-3.5z"/></g></svg>
+                                                {% elif user.socialaccount_set.first.provider == 'github' %}
+                                                    <!-- GitHub SVG -->
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" class="inline" aria-hidden="true"><path fill="#181717" d="M12 2C6.48 2 2 6.58 2 12.26c0 4.49 2.87 8.3 6.84 9.64.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.36-3.37-1.36-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05A9.38 9.38 0 0 1 12 6.84c.85.004 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.07.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.58.69.48A10.01 10.01 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"/></svg>
+                                                {% endif %}
+                                            </span>
+                                        </div>
                                         <div class="text-xs text-slate-500">{{ user.email }}</div>
                                     </div>
                                 </div>

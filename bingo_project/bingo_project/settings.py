@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'allauth.account',       # ← ADD THIS
     'allauth.socialaccount', # ← ADD THIS
     'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
 
     # self added apps
     'channels', 
@@ -73,6 +74,12 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'online',
         },
+        'OAUTH_PKCE_ENABLED':  True,
+    },
+    'github': {
+        'SCOPE': [
+            'user:email',
+        ],
         'OAUTH_PKCE_ENABLED':  True,
     }
 }
