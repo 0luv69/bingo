@@ -43,7 +43,8 @@ class Room(models.Model):
     settings_turn_duration = models.IntegerField(default=20, help_text="Seconds per turn")
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
     settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
-    
+    settings_grace_period = models.IntegerField(default=10, help_text="Seconds of grace period")
+
     class Meta:
         ordering = ['-created_at']
     
@@ -132,6 +133,11 @@ class RoomMember(models.Model):
         ('co-host', 'Co-Host'),
         ('player', 'Player'),
     ]
+
+    CONNECTION_STATUS_CHOICES = [
+        ('connected', 'Connected'),
+        ('disconnected', 'Disconnected'),
+    ]
     
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='room_memberships', help_text="Logged in user (null for guests)")
@@ -140,6 +146,10 @@ class RoomMember(models.Model):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='player')
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="False when member leaves room")
+
+    connection_status = models. CharField(max_length=15, choices=CONNECTION_STATUS_CHOICES, default='connected')
+    disconnected_at = models.DateTimeField(null=True, blank=True, help_text="When player disconnected")
+    channel_name = models.CharField(max_length=255, blank=True, null=True, help_text="Current WebSocket channel")
     
     class Meta:
         ordering = ['joined_at']
@@ -158,6 +168,10 @@ class RoomMember(models.Model):
     @property
     def is_co_host(self):
         return self.role == 'co-host'
+    
+    @property
+    def is_disconnected(self):
+        return self.connection_status == 'disconnected'
     
     @property
     def show_score(self):
@@ -183,6 +197,19 @@ class RoomMember(models.Model):
             self.room.is_active = False
             self.room.save()
 
+    def mark_disconnected(self):
+        """Mark member as disconnected."""
+        self. connection_status = 'disconnected'
+        self.disconnected_at = timezone.now()
+        self.save(update_fields=['connection_status', 'disconnected_at'])
+    
+    def mark_connected(self, channel_name=None):
+        """Mark member as connected."""
+        self.connection_status = 'connected'
+        self.disconnected_at = None
+        if channel_name:
+            self. channel_name = channel_name
+        self.save(update_fields=['connection_status', 'disconnected_at', 'channel_name'])
 
 class GameRound(models.Model):
     """

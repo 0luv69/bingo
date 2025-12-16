@@ -6,7 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 from .utils import determine_winners, validate_board
-
+import asyncio
 
 class GameConsumer(AsyncWebsocketConsumer):
     """
@@ -40,19 +40,54 @@ class GameConsumer(AsyncWebsocketConsumer):
             )
     
     async def disconnect(self, close_code):
-        member = await self.get_member()
-        if member:
+        user = self.scope["user"] if self.scope["user"].is_authenticated else None
+        player_name = user.username if user else self.get_local_name()
+
+        # Notify the group that the user is getting disconnected
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "player_disconnected",
+                "player": player_name,
+                "status": "disconnected"
+            },
+        )
+
+        # Start the 15-second countdown for removal
+        await asyncio.sleep(15)
+
+        # Check if the user has reconnected; if not, remove from group
+        if self.channel_name in self.channel_layer.groups.get(self.room_group_name, set()):
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+            # Notify the group that the user was removed
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'player_disconnected',
-                    'member_id': member.id,
-                    'member_name':  member.display_name,
-                }
+                    "type": "player_removed",
+                    "player": player_name,
+                    "status": "removed"
+                },
             )
-        
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
+    # Message handlers for disconnection
+    async def player_disconnected(self, event):
+        player_name = event["player"]
+        # Notify connected clients about the player disconnection
+        await self.send(text_data=json.dumps({
+            "type": "notification",
+            "message": f"{player_name} is disconnecting. Waiting for reconnection..."
+        }))
+    
+    async def player_removed(self, event):
+        player_name = event["player"]
+        # Notify connected clients about the player being removed
+        await self.send(text_data=json.dumps({
+            "type": "notification",
+            "message": f"{player_name} has been removed from the game."
+        }))
+
+
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
