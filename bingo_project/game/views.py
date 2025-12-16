@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
 from .models import Room, RoomMember, GameRound, RoundPlayer
-from .utils import get_room_member, get_or_create_room_member, get_or_create_round_player
+from .utils import get_room_member, get_or_create_round_player, get_or_create_room_member
 from django.contrib.auth import login
 from allauth.socialaccount.models import SocialLogin, SocialAccount
 from django.contrib.auth import get_user_model
@@ -42,126 +42,6 @@ def login_view(request):
     return render(request, 'login.html', {
         'next':  next_url,
     })
-
-
-
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.views.decorators.http import require_http_methods
-from allauth.socialaccount.models import SocialLogin, SocialAccount
-from allauth.account.models import EmailAddress
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-
-def account_conflict_view(request):
-    """
-    Display the account conflict resolution page.
-    
-    Shows options to either: 
-    1.Merge the new social account with the existing account
-    2.Login with the existing account's provider
-    """
-    # Check if we have conflict data in session
-    sociallogin_data = request.session.get('socialaccount_sociallogin')
-    conflict_email = request.session.get('conflict_email')
-    existing_providers = request.session.get('existing_providers', [])
-    
-    if not sociallogin_data or not conflict_email:
-        messages.error(request, "No account conflict to resolve.")
-        return redirect('home')
-
-    # Deserialize the sociallogin to get provider info
-    sociallogin = SocialLogin.deserialize(sociallogin_data)
-    new_provider = sociallogin.account.provider
-
-    context = {
-        'conflict_email': conflict_email,
-        'new_provider': new_provider,
-        'new_provider_display': new_provider.title(),
-        'existing_providers':  existing_providers,
-        'existing_providers_display': [p.title() for p in existing_providers],
-    }
-    
-    return render(request, 'accounts/account_conflict.html', context)
-
-
-@require_http_methods(["POST"])
-def merge_accounts_view(request):
-    """
-    Handle the account merge action.
-    
-    This connects the new social account to the existing user account.
-    The user must confirm they own the existing account (we verify via email match).
-    """
-    sociallogin_data = request.session.get('socialaccount_sociallogin')
-    conflicting_user_id = request.session.get('conflicting_user_id')
-    
-    if not sociallogin_data or not conflicting_user_id:
-        messages.error(request, "Session expired.Please try signing in again.")
-        return redirect('home')
-
-    try:
-        # Get the existing user
-        existing_user = User.objects.get(pk=conflicting_user_id)
-        
-        # Deserialize the social login
-        sociallogin = SocialLogin.deserialize(sociallogin_data)
-        
-        # Connect the social account to the existing user
-        sociallogin.connect(request, existing_user)
-        
-        # Log the user in
-        login(request, existing_user, backend='allauth.account.auth_backends.AuthenticationBackend')
-        
-        # Clear the session data
-        _clear_conflict_session(request)
-        
-        messages.success(
-            request, 
-            f"Success! Your {sociallogin.account.provider.title()} account has been "
-            f"linked to your existing account."
-        )
-        return redirect('dashboard')  # Change to your desired redirect
-
-    except User.DoesNotExist:
-        messages.error(request, "User not found.Please try again.")
-        _clear_conflict_session(request)
-        return redirect('home')
-    except Exception as e:
-        messages.error(request, f"An error occurred: {str(e)}")
-        _clear_conflict_session(request)
-        return redirect('home')
-
-
-def cancel_merge_view(request):
-    """Cancel the merge operation and clear session data."""
-    _clear_conflict_session(request)
-    messages.info(request, "Account linking cancelled.")
-    return redirect('home')
-
-
-def _clear_conflict_session(request):
-    """Helper to clear all conflict-related session data."""
-    keys_to_clear = [
-        'socialaccount_sociallogin',
-        'conflicting_user_id', 
-        'conflict_email',
-        'existing_providers'
-    ]
-    for key in keys_to_clear: 
-        request.session.pop(key, None)
-
-
-
-
-
-
-
-
 
 
 

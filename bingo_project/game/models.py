@@ -6,6 +6,17 @@ from django.utils import timezone
 from datetime import timedelta
 
 
+
+
+# class Profile(models.Model):
+#     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+#     game_won = models.IntegerField(default=0)
+#     game_played = models.IntegerField(default=0)
+
+#     def __str__(self):
+#         return self.user.username
+
+
 class Room(models.Model):
     """
     Persistent room container that survives multiple game rounds.

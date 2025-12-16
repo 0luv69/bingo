@@ -59,8 +59,6 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 
-ACCOUNT_ADAPTER = 'game.adapters.CustomAccountAdapter'
-SOCIALACCOUNT_ADAPTER = 'game.adapters.CustomSocialAccountAdapter'
 
 # Store the social login in session (needed for merge functionality)
 SOCIALACCOUNT_STORE_TOKENS = True
