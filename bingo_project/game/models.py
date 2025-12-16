@@ -183,23 +183,9 @@ class RoomMember(models.Model):
             return f"user_{self.user.id}"
         return f"session_{self.session_key}"
     
-    def leave_room(self):
-        """Handle member leaving the room."""
-        was_host = self.is_host
-        self.is_active = False
-        self.save()
-        
-        if was_host:
-            self.room.transfer_host(exclude_member=self)
-        
-        # Check if room should be deactivated
-        if self.room.get_active_members_count() == 0:
-            self.room.is_active = False
-            self.room.save()
-
     def mark_disconnected(self):
         """Mark member as disconnected."""
-        self. connection_status = 'disconnected'
+        self.connection_status = 'disconnected'
         self.disconnected_at = timezone.now()
         self.save(update_fields=['connection_status', 'disconnected_at'])
     
@@ -210,6 +196,34 @@ class RoomMember(models.Model):
         if channel_name:
             self. channel_name = channel_name
         self.save(update_fields=['connection_status', 'disconnected_at', 'channel_name'])
+    
+    def get_grace_period_remaining(self):
+        """Get remaining grace period in seconds."""
+        if not self.disconnected_at:
+            return 0
+        
+        room = self.room
+        grace_period = room.settings_grace_period
+        
+        elapsed = (timezone.now() - self.disconnected_at).total_seconds()
+        remaining = grace_period - elapsed
+        return max(0, remaining)
+    
+    def leave_room(self):
+        """Handle member leaving the room."""
+        was_host = self.is_host
+        self.is_active = False
+        self.connection_status = 'connected'  # Reset on leave
+        self.disconnected_at = None
+        self.save()
+        
+        if was_host:
+            self.room.transfer_host(exclude_member=self)
+        
+        # Check if room should be deactivated
+        if self.room.get_active_members_count() == 0:
+            self.room.is_active = False
+            self.room.save()
 
 class GameRound(models.Model):
     """
@@ -354,6 +368,8 @@ class RoundPlayer(models.Model):
     finished_lines = models.JSONField(default=list, help_text="List of completed line indices from winning lines [0,1,5,8]") 
     turn_order = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
+
+    is_bot_controlled = models.BooleanField(default=False, help_text="True when player disconnected and bot takes over")
     
     class Meta: 
         ordering = ['turn_order']
@@ -384,6 +400,10 @@ class RoundPlayer(models.Model):
     @property
     def show_score(self):
         return self.game_round.room.settings_show_score
+
+    @property
+    def is_disconnected(self):
+        return self.room_member.is_disconnected
     
     @staticmethod
     def generate_board():
@@ -400,6 +420,16 @@ class RoundPlayer(models.Model):
                     return (row_idx, col_idx)
         return None
     
+    def get_unmarked_numbers(self):
+        """Get numbers on this player's board that haven't been called."""
+        called = set(self.game_round.called_numbers)
+        unmarked = []
+        for row in self.board:
+            for num in row:
+                if num not in called:
+                    unmarked.append(num)
+        return unmarked
+    
     def mark_ready(self):
         """Mark player as ready."""
         self.is_ready = True
@@ -409,6 +439,11 @@ class RoundPlayer(models.Model):
         """Update player's board arrangement."""
         self.board = new_board
         self.save(update_fields=['board'])
+
+    def set_bot_controlled(self, value=True):
+        """Set bot control status."""
+        self.is_bot_controlled = value
+        self. save(update_fields=['is_bot_controlled'])
 
 
 class CalledNumberHistory(models.Model):
@@ -421,6 +456,7 @@ class CalledNumberHistory(models.Model):
     number = models.IntegerField(help_text="The number called (1-25)")
     called_by = models.ForeignKey(RoundPlayer, on_delete=models.CASCADE, related_name='calls_made')
     called_at = models.DateTimeField(auto_now_add=True)
+    is_bot_call = models.BooleanField(default=False, help_text="True if called by bot")
     
     class Meta:
         ordering = ['called_at']
