@@ -2,3 +2,4 @@ venv
 .env
 bingo_project/__pycache__/
 db.sqlite3
+*.sqlite3
