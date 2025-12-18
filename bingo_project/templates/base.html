@@ -87,7 +87,7 @@
             box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
         }
         
-        . badge {
+        .badge {
             display: inline-flex;
             align-items: center;
             padding: 4px 10px;
@@ -96,10 +96,20 @@
             font-weight: 500;
             
         }
-        . badge-success { background: #ecfdf5; color: #059669; }
+        .badge-success { background: #ecfdf5; color: #059669; }
         .badge-warning { background: #fffbeb; color: #d97706; }
         .badge-info { background: #f0f9ff; color: #0284c7; }
+        .badge-danger { background: #fef2f2; color: #b91c1c; }
+        .badge-secondary { background: #f3f4f6; color: #6b7280; }
 
+        .disconnected {
+            opacity: 0.5;
+            animation: disconnected-blink 1s steps(2, start) infinite;
+        }
+        @keyframes disconnected-blink {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
 
         .float-animation {
             animation: float 6s ease-in-out infinite;

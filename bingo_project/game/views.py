@@ -318,6 +318,57 @@ def lobby_view(request, room_code):
     
     return render(request, 'game/lobby.html', context)
 
+def lobby_view2(request, room_code):
+    """
+    Waiting room before game starts.
+    Shows players, settings, share options.
+    """
+    room = get_object_or_404(Room, code=room_code)
+    
+    # Get current member
+    member_id = request.session.get('current_member_id')
+    current_member = None
+    
+    if member_id:
+        current_member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
+    
+    if not current_member:
+        messages.error(request, 'You are not in this room.')
+        return redirect('home')
+    
+    # Get current round
+    current_round = room.get_current_round()
+    
+    # If game in progress, redirect to game
+    if current_round and current_round.status in ['setup', 'playing']: 
+        return redirect('game', room_code=room.code)
+    
+    # Get all active members
+    members = room.get_active_members()
+    
+    # Get round players if round exists
+    round_players = []
+    current_round_player = None
+    if current_round:
+        round_players = current_round.players.select_related('room_member').all()
+        current_round_player = current_round.players.filter(room_member=current_member).first()
+    
+    round_history = room.rounds.filter(status='finished').order_by('-round_number').prefetch_related('winners__room_member')
+
+    context = {
+        'room': room,
+        'current_member': current_member,
+        'current_round':  current_round,
+        'current_round_player': current_round_player,
+        'members':  members,
+        'round_players': round_players,
+        'is_host': current_member.is_host,
+        'share_url': request.build_absolute_uri(f'/join/{room.code}/'),
+        'round_history': round_history,
+    }
+    
+    return render(request, 'game/new.html', context)
+
 
 def game_view(request, room_code):
     """

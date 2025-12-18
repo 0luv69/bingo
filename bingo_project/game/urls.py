@@ -13,6 +13,7 @@ from game. views import (
     room_status_api,
     login_view,
     logout_view,
+    lobby_view2,
   
 )
 
@@ -31,6 +32,7 @@ urlpatterns = [
     
     # Room pages
     path('room/<str:room_code>/lobby/', lobby_view, name='lobby'),
+    path('room/<str:room_code>/lobby2/', lobby_view2, name='lobby2'),
     path('room/<str:room_code>/game/', game_view, name='game'),
     path('room/<str:room_code>/leave/', leave_room_view, name='leave_room'),
     path('room/<str:room_code>/settings/', room_settings_view, name='room_settings'),

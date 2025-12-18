@@ -1,0 +1,861 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lobby - {{ room.code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .player-card { transition: all 0.3s ease; }
+    .player-card.disconnected { opacity: 0.5; border: 2px solid #f87171; }
+    .tooltip-container { position: relative; display: inline-flex; }
+    .tooltip-content {
+        visibility: hidden;
+        width: 220px;
+        background-color:  #1e293b;
+        color: #fff;
+        text-align: left;
+        border-radius: 8px;
+        padding: 10px 12px;
+        position: absolute;
+        z-index: 100;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.2s, visibility 0.2s;
+        font-size: 12px;
+        line-height: 1.4;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .tooltip-content:: after {
+        content: "";
+        position: absolute;
+        top:  100%;
+        left: 50%;
+        margin-left: -6px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: #1e293b transparent transparent transparent;
+    }
+    .tooltip-container:hover .tooltip-content { visibility: visible; opacity: 1; }
+</style>
+{% endblock %}
+
+{% block header %}
+<div id="connection-status" class="badge badge-warning">Connecting...</div>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col">
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
+    
+    <main class="flex-1 py-8 px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="grid lg:grid-cols-3 gap-6">
+                
+                <!-- Left:  Room Info & Players -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Room Code Card -->
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-semibold text-slate-900">Room Code</h2>
+                            {% if current_round %}
+                            <span class="badge badge-info">Round {{ current_round.round_number }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex items-center justify-center gap-4 py-4">
+                            <span id="room-code" class="text-4xl font-mono font-bold text-slate-900 tracking-widest">{{ room.code }}</span>
+                            <button onclick="copyRoomCode()" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors" title="Copy code">
+                                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-3 justify-center mt-4 pt-4 border-t border-slate-100">
+                            <button onclick="copyShareLink()" class="btn-secondary flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                </svg>
+                                Copy Link
+                            </button>
+                            <button onclick="showQRModal()" class="btn-secondary flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                                </svg>
+                                QR Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Players List -->
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-semibold text-slate-900">Players</h2>
+                            <span id="player-count" class="text-sm text-slate-500">{{ members|length }}/{{ room.settings_max_players }}</span>
+                        </div>
+                        
+                        <div id="players-list" class="space-y-2">
+                            {% for member in members %}
+                            <div class="player-card flex items-center justify-between p-3 bg-slate-50 rounded-lg {% if member.is_disconnected %}disconnected{% endif %}" data-member-id="{{ member.id }}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center text-white font-bold">
+                                        {{ member.display_name|slice:": 1"|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-900 player-name">
+                                            {{ member.display_name }}
+                                            {% if member.id == current_member.id %}<span class="text-xs text-slate-400">(You)</span>{% endif %}
+                                        </div>
+                                        <div class="text-xs text-slate-500">{{ member.role|title }}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    {% if member.role == 'host' %}<span class="badge badge-warning">Host</span>{% endif %}
+                                    {% if member.role == 'co-host' %}<span class="badge badge-info">Co-Host</span>{% endif %}
+                                    {% if current_member.is_host and member.id != current_member.id %}
+                                    <button onclick="showKickModal({{ member.id }}, '{{ member.display_name }}')" 
+                                            class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right: Settings & Actions -->
+                <div class="space-y-6">
+                    {% if current_member.is_host %}
+                    <!-- Host Settings -->
+                    <div class="card p-6">
+                        <h2 class="font-semibold text-slate-900 mb-4">Game Settings</h2>
+                        
+                        <div class="space-y-4">
+                            <!-- Setup Duration -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label class="text-sm text-slate-600">Setup Time</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Setup Time</strong><br>
+                                            Time players have to arrange their bingo board before the game starts. Drag numbers to customize your board layout.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="flex-1" oninput="updateDisplay('setup-duration')">
+                                    <span id="setup-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_setup_duration }}s</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Turn Duration -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label class="text-sm text-slate-600">Turn Time</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Turn Time</strong><br>
+                                            Time each player has to pick a number on their turn.If time runs out, a random number is auto-selected.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="flex-1" oninput="updateDisplay('turn-duration')">
+                                    <span id="turn-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_turn_duration }}s</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Max Players -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label class="text-sm text-slate-600">Max Players</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Max Players</strong><br>
+                                            Maximum number of players allowed in this room.New players cannot join once the limit is reached.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="flex-1" oninput="updateDisplay('max-players')">
+                                    <span id="max-players-display" class="text-sm font-medium w-12 text-right">{{ room.settings_max_players }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Grace Period -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <label class="text-sm text-slate-600">Disconnect Grace</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Disconnect Grace Period</strong><br>
+                                            Time to wait before taking action when a player disconnects.<br><br>
+                                            • <strong>In Lobby/Setup:</strong> Vote kick starts after this time<br>
+                                            • <strong>In Game:</strong> Bot takes over after this time
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="flex-1" oninput="updateDisplay('grace-period')">
+                                    <span id="grace-period-display" class="text-sm font-medium w-12 text-right">{{ room.settings_grace_period }}s</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Show Score -->
+                            <div class="flex items-center justify-between pt-2">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-sm text-slate-600">Show Scores</label>
+                                    <div class="tooltip-container">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Show Scores</strong><br>
+                                            When enabled, players can see how many lines other players have completed (BINGO progress).
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %}>
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                                </label>
+                            </div>
+                            
+                            <button onclick="saveSettings()" class="w-full btn-secondary text-sm mt-2">
+                                Save Settings
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Actions -->
+                    <div class="card p-6">
+                        <h2 class="font-semibold text-slate-900 mb-4">Actions</h2>
+                        
+                        <div class="space-y-3">
+                            {% if current_member.is_host %}
+                            <button id="start-game-btn" onclick="startGame()" class="w-full btn-primary">
+                                Start Game
+                            </button>
+                            {% else %}
+                            <div class="text-center text-slate-500 text-sm py-4">
+                                Waiting for host to start the game...
+                            </div>
+                            {% endif %}
+                            
+                            <button onclick="showLeaveModal()" class="w-full btn-secondary text-red-600 hover:bg-red-50 border-red-200">
+                                Leave Room
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODALS -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<!-- QR Code Modal -->
+<div id="qr-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="closeModal('qr-modal', event)">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full" onclick="event.stopPropagation()">
+        <h3 class="text-lg font-bold text-center mb-4">Scan to Join</h3>
+        <div id="qr-code" class="flex justify-center mb-4"></div>
+        <button onclick="closeModal('qr-modal')" class="w-full btn-secondary">Close</button>
+    </div>
+</div>
+
+<!-- Kick Player Modal -->
+<div id="kick-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="closeModal('kick-modal', event)">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full" onclick="event.stopPropagation()">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Kick Player</h3>
+            <p class="text-slate-600 mt-2">Are you sure you want to kick <strong id="kick-player-name"></strong>?</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeModal('kick-modal')" class="flex-1 btn-secondary">Cancel</button>
+            <button onclick="confirmKick()" class="flex-1 btn-primary bg-red-500 hover:bg-red-600">Kick</button>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Room Modal -->
+<div id="leave-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="closeModal('leave-modal', event)">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full" onclick="event.stopPropagation()">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Leave Room</h3>
+            <p class="text-slate-600 mt-2">Are you sure you want to leave this room?</p>
+            {% if current_member.is_host %}
+            <p class="text-amber-600 text-sm mt-2">As host, leadership will transfer to another player.</p>
+            {% endif %}
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeModal('leave-modal')" class="flex-1 btn-secondary">Stay</button>
+            <button onclick="confirmLeave()" class="flex-1 btn-primary bg-red-500 hover:bg-red-600">Leave</button>
+        </div>
+    </div>
+</div>
+
+<!-- Vote Kick Modal -->
+<div id="vote-kick-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Player Disconnected</h3>
+            <p id="vote-kick-message" class="text-slate-600 mt-2"></p>
+        </div>
+        
+        <div id="vote-progress" class="mb-5">
+            <div class="flex justify-between text-sm font-medium mb-2">
+                <span class="text-red-600">Kick:  <span id="kick-votes">0</span></span>
+                <span class="text-emerald-600">Keep: <span id="keep-votes">0</span></span>
+            </div>
+            <div class="h-3 bg-slate-200 rounded-full overflow-hidden flex">
+                <div id="vote-bar-kick" class="h-full bg-red-500 transition-all duration-300" style="width: 0%"></div>
+                <div id="vote-bar-keep" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-2 text-center">
+                <span id="votes-cast">0</span> / <span id="total-voters">0</span> voted
+            </p>
+        </div>
+        
+        <div id="vote-buttons" class="flex gap-3">
+            <button onclick="castVote('kick')" class="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors">
+                Kick
+            </button>
+            <button onclick="castVote('keep')" class="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold transition-colors">
+                Keep
+            </button>
+        </div>
+        
+        <div id="vote-waiting" class="hidden text-center py-4 text-slate-500">
+            <svg class="w-5 h-5 animate-spin inline mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Waiting for other votes...
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script>
+    // ═══════════════════════════════════════════════════════════════
+    // CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════
+    const roomCode = '{{ room.code }}';
+    const currentMemberId = {{ current_member.id }};
+    const isHost = {{ current_member.is_host|yesno:"true,false" }};
+    let maxPlayers = {{ room.settings_max_players }};
+    
+    // State
+    let kickTargetId = null;
+    let activeVoteKick = null;
+    let disconnectedTimers = new Map();
+    
+    // ═══════════════════════════════════════════════════════════════
+    // WEBSOCKET CONNECTION
+    // ═══════════════════════════════════════════════════════════════
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // const gameSocket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/game/${roomCode}/`);
+    const gameSocket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/room/${roomCode}/`);
+    
+    gameSocket.onopen = function(e) {
+        console.log('WebSocket connected');
+        updateConnectionStatus('connected');
+    };
+    
+    gameSocket.onclose = function(e) {
+        console.log('WebSocket disconnected');
+        updateConnectionStatus('disconnected');
+    };
+    
+    gameSocket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+        updateConnectionStatus('error');
+    };
+    
+    gameSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log('Received:', data);
+        
+        switch(data.type) {
+            case 'player_connected':
+                handlePlayerConnected(data);
+                break;
+            case 'player_disconnected':
+                handlePlayerDisconnected(data);
+                break;
+            case 'player_left':
+                handlePlayerLeft(data);
+                break;
+            case 'player_kicked':
+                handlePlayerKicked(data);
+                break;
+            case 'vote_kick_started':
+                handleVoteKickStarted(data);
+                break;
+            case 'vote_updated':
+                handleVoteUpdated(data);
+                break;
+            case 'vote_kick_completed':
+                handleVoteKickCompleted(data);
+                break;
+            case 'vote_kick_cancelled':
+                handleVoteKickCancelled(data);
+                break;
+            case 'settings_updated':
+                handleSettingsUpdated(data);
+                break;
+            case 'game_starting':
+                handleGameStarting(data);
+                break;
+            case 'leave_confirmed':
+                window.location.href = data.redirect_url;
+                break;
+            case 'error':
+                showNotification(data.message, 'error');
+                break;
+        }
+    };
+    
+    // ═══════════════════════════════════════════════════════════════
+    // MESSAGE HANDLERS
+    // ═══════════════════════════════════════════════════════════════
+    
+    function handlePlayerConnected(data) {
+        const { member_id, member_name, is_reconnection, members } = data;
+        
+        // Clear disconnect timer
+        clearDisconnectTimer(member_id);
+        
+        updatePlayersList(members);
+        
+        if (is_reconnection) {
+            showNotification(`${member_name} reconnected! `, 'success');
+        } else if (member_id !== currentMemberId) {
+            showNotification(`${member_name} joined the room`, 'info');
+        }
+    }
+    
+    function handlePlayerDisconnected(data) {
+        const { member_id, member_name, grace_period, deadline } = data;
+        
+        showNotification(`${member_name} disconnected. Waiting ${grace_period}s...`, 'warning');
+        
+        // Start countdown display
+        startDisconnectTimer(member_id, member_name, deadline, grace_period);
+        
+        // Update player card
+        const card = document.querySelector(`[data-member-id="${member_id}"]`);
+        if (card) card.classList.add('disconnected');
+    }
+    
+    function handlePlayerLeft(data) {
+        const { member_id, member_name, was_host, new_host_name, members } = data;
+        
+        clearDisconnectTimer(member_id);
+        updatePlayersList(members);
+        
+        showNotification(`${member_name} left the room`, 'info');
+        
+        if (was_host && new_host_name) {
+            showNotification(`${new_host_name} is now the host`, 'info');
+            // Reload if we became host
+            setTimeout(() => location.reload(), 1000);
+        }
+    }
+    
+    function handlePlayerKicked(data) {
+        const { kicked_member_id, kicked_name, members } = data;
+        
+        if (kicked_member_id === currentMemberId) {
+            showNotification('You have been kicked from the room', 'error');
+            setTimeout(() => window.location.href = '/', 2000);
+        } else {
+            showNotification(`${kicked_name} was kicked`, 'info');
+            updatePlayersList(members);
+        }
+        
+        closeModal('kick-modal');
+    }
+    
+    function handleVoteKickStarted(data) {
+        const { target_member_id, target_member_name, message, total_voters } = data;
+        
+        if (target_member_id === currentMemberId) return;
+        
+        activeVoteKick = { targetId: target_member_id, hasVoted: false };
+        
+        document.getElementById('vote-kick-message').textContent = message;
+        document.getElementById('kick-votes').textContent = '0';
+        document.getElementById('keep-votes').textContent = '0';
+        document.getElementById('votes-cast').textContent = '0';
+        document.getElementById('total-voters').textContent = total_voters;
+        document.getElementById('vote-bar-kick').style.width = '0%';
+        document.getElementById('vote-bar-keep').style.width = '0%';
+        document.getElementById('vote-buttons').classList.remove('hidden');
+        document.getElementById('vote-waiting').classList.add('hidden');
+        
+        document.getElementById('vote-kick-modal').classList.remove('hidden');
+        
+        clearDisconnectTimer(target_member_id);
+    }
+    
+    function handleVoteUpdated(data) {
+        const { votes, total_voters, total_voted } = data;
+        
+        document.getElementById('kick-votes').textContent = votes.kick;
+        document.getElementById('keep-votes').textContent = votes.keep;
+        document.getElementById('votes-cast').textContent = total_voted;
+        document.getElementById('total-voters').textContent = total_voters;
+        
+        const total = votes.kick + votes.keep;
+        const kickPct = total > 0 ? (votes.kick / total) * 100 : 0;
+        const keepPct = total > 0 ? (votes.keep / total) * 100 : 0;
+        document.getElementById('vote-bar-kick').style.width = `${kickPct}%`;
+        document.getElementById('vote-bar-keep').style.width = `${keepPct}%`;
+    }
+    
+    function handleVoteKickCompleted(data) {
+        const { result, target_member_name, message, members, grace_period } = data;
+        
+        document.getElementById('vote-kick-modal').classList.add('hidden');
+        activeVoteKick = null;
+        
+        showNotification(message, result === 'kick' ? 'info' : 'warning');
+        
+        if (members) updatePlayersList(members);
+    }
+    
+    function handleVoteKickCancelled(data) {
+        document.getElementById('vote-kick-modal').classList.add('hidden');
+        activeVoteKick = null;
+        showNotification(data.message, 'success');
+    }
+    
+    function handleSettingsUpdated(data) {
+        const { settings, updated_by } = data;
+        
+        if (settings.setup_duration) {
+            const el = document.getElementById('setup-duration');
+            if (el) el.value = settings.setup_duration;
+            const disp = document.getElementById('setup-duration-display');
+            if (disp) disp.textContent = settings.setup_duration + 's';
+        }
+        if (settings.turn_duration) {
+            const el = document.getElementById('turn-duration');
+            if (el) el.value = settings.turn_duration;
+            const disp = document.getElementById('turn-duration-display');
+            if (disp) disp.textContent = settings.turn_duration + 's';
+        }
+        if (settings.max_players) {
+            const el = document.getElementById('max-players');
+            if (el) el.value = settings.max_players;
+            const disp = document.getElementById('max-players-display');
+            if (disp) disp.textContent = settings.max_players;
+            maxPlayers = settings.max_players;
+        }
+        if (settings.grace_period) {
+            const el = document.getElementById('grace-period');
+            if (el) el.value = settings.grace_period;
+            const disp = document.getElementById('grace-period-display');
+            if (disp) disp.textContent = settings.grace_period + 's';
+        }
+        if (settings.show_score !== undefined) {
+            const el = document.getElementById('show-score');
+            if (el) el.checked = settings.show_score;
+        }
+        
+        showNotification(`Settings updated by ${updated_by}`, 'info');
+    }
+    
+    function handleGameStarting(data) {
+        showNotification(data.message, 'success');
+        setTimeout(() => {
+            window.location.href = `/game/${roomCode}/`;
+        }, 500);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // DISCONNECT TIMER UI
+    // ═══════════════════════════════════════════════════════════════
+    
+    function startDisconnectTimer(memberId, memberName, deadline, gracePeriod) {
+        clearDisconnectTimer(memberId);
+        
+        const deadlineTime = new Date(deadline).getTime();
+        
+        // Create countdown element
+        const el = document.createElement('div');
+        el.id = `disconnect-timer-${memberId}`;
+        el.className = 'fixed bottom-4 left-4 bg-amber-500 text-white px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2';
+        el.innerHTML = `
+            <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span><strong>${memberName}</strong>: <span class="timer-value">${gracePeriod}</span>s</span>
+        `;
+        document.body.appendChild(el);
+        
+        const update = () => {
+            const remaining = Math.max(0, Math.ceil((deadlineTime - Date.now()) / 1000));
+            const timerSpan = el.querySelector('.timer-value');
+            if (timerSpan) timerSpan.textContent = remaining;
+            
+            if (remaining <= 5) {
+                el.classList.remove('bg-amber-500');
+                el.classList.add('bg-red-500');
+            }
+            
+            if (remaining <= 0) clearDisconnectTimer(memberId);
+        };
+        
+        update();
+        const timer = setInterval(update, 1000);
+        disconnectedTimers.set(memberId, { timer, element: el });
+    }
+    
+    function clearDisconnectTimer(memberId) {
+        const data = disconnectedTimers.get(memberId);
+        if (data) {
+            clearInterval(data.timer);
+            if (data.element) data.element.remove();
+            disconnectedTimers.delete(memberId);
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // UI UPDATES
+    // ═══════════════════════════════════════════════════════════════
+    
+    function updateConnectionStatus(status) {
+        const badge = document.getElementById('connection-status');
+        badge.className = 'badge';
+        
+        switch(status) {
+            case 'connected':
+                badge.classList.add('badge-success');
+                badge.textContent = 'Connected';
+                break;
+            case 'disconnected':
+                badge.classList.add('badge-error');
+                badge.textContent = 'Disconnected';
+                break;
+            default:
+                badge.classList.add('badge-warning');
+                badge.textContent = 'Connecting...';
+        }
+    }
+    
+    function updatePlayersList(members) {
+        const container = document.getElementById('players-list');
+        const countEl = document.getElementById('player-count');
+        
+        countEl.textContent = `${members.length}/${maxPlayers}`;
+        
+        container.innerHTML = members.map(m => `
+            <div class="player-card flex items-center justify-between p-3 bg-slate-50 rounded-lg ${m.is_disconnected ? 'disconnected' : ''}" data-member-id="${m.id}">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center text-white font-bold">
+                        ${m.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <div class="font-medium text-slate-900 player-name">
+                            ${m.name}
+                            ${m.id === currentMemberId ? '<span class="text-xs text-slate-400">(You)</span>' : ''}
+                            ${m.is_disconnected ?  '<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Offline</span>' : ''}
+                        </div>
+                        <div class="text-xs text-slate-500">${m.role.charAt(0).toUpperCase() + m.role.slice(1)}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${m.role === 'host' ? '<span class="badge badge-warning">Host</span>' : ''}
+                    ${m.role === 'co-host' ? '<span class="badge badge-info">Co-Host</span>' : ''}
+                    ${isHost && m.id !== currentMemberId ? `
+                        <button onclick="showKickModal(${m.id}, '${m.name}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function updateDisplay(id) {
+        const input = document.getElementById(id);
+        const display = document.getElementById(id + '-display');
+        const suffix = id === 'max-players' ? '' : 's';
+        display.textContent = input.value + suffix;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ACTIONS
+    // ═══════════════════════════════════════════════════════════════
+    
+    function startGame() {
+        gameSocket.send(JSON.stringify({ type: 'start_game' }));
+    }
+    
+    function saveSettings() {
+        const settings = {
+            setup_duration: parseInt(document.getElementById('setup-duration').value),
+            turn_duration: parseInt(document.getElementById('turn-duration').value),
+            max_players: parseInt(document.getElementById('max-players').value),
+            grace_period: parseInt(document.getElementById('grace-period').value),
+            show_score: document.getElementById('show-score').checked,
+        };
+        
+        gameSocket.send(JSON.stringify({ type: 'update_settings', settings }));
+        showNotification('Settings saved', 'success');
+    }
+    
+    function castVote(vote) {
+        if (! activeVoteKick || activeVoteKick.hasVoted) return;
+        
+        gameSocket.send(JSON.stringify({
+            type: 'cast_vote',
+            target_member_id: activeVoteKick.targetId,
+            vote: vote
+        }));
+        
+        activeVoteKick.hasVoted = true;
+        document.getElementById('vote-buttons').classList.add('hidden');
+        document.getElementById('vote-waiting').classList.remove('hidden');
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // MODALS
+    // ═══════════════════════════════════════════════════════════════
+    
+    function showModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    
+    function closeModal(id, event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById(id).classList.add('hidden');
+    }
+    
+    function showQRModal() {
+        const container = document.getElementById('qr-code');
+        container.innerHTML = '';
+        
+        const link = `${window.location.origin}/join/${roomCode}/`;
+        QRCode.toCanvas(link, { width: 200 }, (err, canvas) => {
+            if (! err) container.appendChild(canvas);
+        });
+        
+        showModal('qr-modal');
+    }
+    
+    function showKickModal(memberId, memberName) {
+        kickTargetId = memberId;
+        document.getElementById('kick-player-name').textContent = memberName;
+        showModal('kick-modal');
+    }
+    
+    function confirmKick() {
+        if (!kickTargetId) return;
+        
+        gameSocket.send(JSON.stringify({
+            type: 'kick_player',
+            member_id: kickTargetId
+        }));
+        
+        kickTargetId = null;
+    }
+    
+    function showLeaveModal() {
+        showModal('leave-modal');
+    }
+    
+    function confirmLeave() {
+        gameSocket.send(JSON.stringify({ type: 'leave_room' }));
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════
+    
+    function copyRoomCode() {
+        navigator.clipboard.writeText(roomCode);
+        showNotification('Room code copied! ', 'success');
+    }
+    
+    function copyShareLink() {
+        const link = `${window.location.origin}/join/${roomCode}/`;
+        navigator.clipboard.writeText(link);
+        showNotification('Link copied!', 'success');
+    }
+    
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notification-container');
+        
+        const colors = {
+            success: 'bg-emerald-500',
+            error:  'bg-red-500',
+            warning: 'bg-amber-500',
+            info:  'bg-sky-500'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transform transition-all duration-300 translate-x-full`;
+        notification.innerHTML = `<span class="text-sm font-medium">${message}</span>`;
+        
+        container.appendChild(notification);
+        
+        requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
+        
+        setTimeout(() => {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => notification.remove(), 300);
+        }, 4000);
+    }
+    
+    // Cleanup on unload
+    window.addEventListener('beforeunload', () => {
+        disconnectedTimers.forEach((_, id) => clearDisconnectTimer(id));
+    });
+</script>
+{% endblock %}

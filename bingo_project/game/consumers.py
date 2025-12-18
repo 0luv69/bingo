@@ -34,7 +34,6 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'type': 'player_connected',
                     'member_id': member.id,
                     'member_name': member.display_name,
-                    'members': await self.get_all_members_data(),
                     'round_players': await self.get_round_players_data(),
                 }
             )
@@ -309,10 +308,11 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'type': 'player_kicked',
                     'kicked_member_id': kick_member_id,
                     'kicked_name': kicked_member['name'],
-                    'members': await self.get_all_members_data(),
                     'round_players': await self.get_round_players_data(),
                 }
             )
+
+
     
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
@@ -382,7 +382,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_connected',
             'member_id': event['member_id'],
             'member_name':  event['member_name'],
-            'members': event['members'],
             'round_players': event['round_players'],
         }))
     
@@ -458,7 +457,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_kicked',
             'kicked_member_id': event['kicked_member_id'],
             'kicked_name': event['kicked_name'],
-            'members': event['members'],
             'round_players': event['round_players'],
         }))
     
@@ -517,8 +515,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'name': m.display_name,
                 'role': m.role,
                 'is_host': m.is_host,
+                'connection_status': m.connection_status,
             } for m in room.get_active_members()]
-        except:
+        except Exception as e:
             return []
     
     @database_sync_to_async
@@ -534,11 +533,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'name': p.display_name,
                 'role':  p.role,
                 'is_host': p.is_host,
-                'is_co_host': p.is_co_host,
                 'is_ready': p.is_ready,
                 'completed_lines': p.completed_lines,
+                'connection_status': p.connection_status,
+                'user': {
+                    'id': p.room_member.user.id,
+                    'username': p.room_member.user.username,
+                } if getattr(p.room_member, 'user', None) else None
             } for p in current_round.players.select_related('room_member').all()]
-        except:
+        except Exception as e:
+            print(e)
             return []
     
     @database_sync_to_async

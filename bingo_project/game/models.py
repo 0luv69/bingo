@@ -43,7 +43,7 @@ class Room(models.Model):
     settings_turn_duration = models.IntegerField(default=20, help_text="Seconds per turn")
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
     settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
-    settings_grace_period = models.IntegerField(default=10, help_text="Seconds of grace period")
+    settings_grace_period = models.IntegerField(default=15, help_text="Seconds of grace period")
 
     class Meta:
         ordering = ['-created_at']
@@ -137,6 +137,10 @@ class RoomMember(models.Model):
     CONNECTION_STATUS_CHOICES = [
         ('connected', 'Connected'),
         ('disconnected', 'Disconnected'),
+        ('removed', 'Removed'),
+        ('left', 'Left'),
+        ('kicked', 'Kicked'),
+        ('banned', 'Banned'),
     ]
     
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='members')
@@ -172,7 +176,7 @@ class RoomMember(models.Model):
     @property
     def is_disconnected(self):
         return self.connection_status == 'disconnected'
-    
+
     @property
     def show_score(self):
         return self.room.settings_show_score
@@ -349,7 +353,6 @@ class GameRound(models.Model):
         
         return cls.objects.create(room=room, round_number=round_number)
 
-
 class RoundPlayer(models.Model):
     """
     Represents a player's participation in a specific game round.
@@ -405,6 +408,10 @@ class RoundPlayer(models.Model):
     def is_disconnected(self):
         return self.room_member.is_disconnected
     
+    @property
+    def connection_status(self):
+        return self.room_member.connection_status
+    
     @staticmethod
     def generate_board():
         """Generate random 5x5 board with numbers 1-25."""
@@ -444,7 +451,6 @@ class RoundPlayer(models.Model):
         """Set bot control status."""
         self.is_bot_controlled = value
         self. save(update_fields=['is_bot_controlled'])
-
 
 class CalledNumberHistory(models.Model):
     """
