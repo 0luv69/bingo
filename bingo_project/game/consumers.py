@@ -65,6 +65,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'update_settings': self.handle_update_settings,
                 'kick_player':  self.handle_kick_player,
                 'new_round': self.handle_new_round,
+                'leave_room': self.handle_leave_room,
             }
             
             handler = handlers.get(message_type)
@@ -270,18 +271,13 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         settings = data.get('settings', {})
-        await self.update_room_settings(settings)
+        setting_data = await self.update_room_settings(settings)
         
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'settings_updated',
-                'settings': {
-                    'setup_duration':  room.settings_setup_duration,
-                    'turn_duration':  room.settings_turn_duration,
-                    'max_players':  room.settings_max_players,
-                    'show_score': room.settings_show_score,
-                },
+                'settings': setting_data,
                 'updated_by': member.display_name,
             }
         )
@@ -312,7 +308,38 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-
+    async def handle_leave_room(self, data):
+        """Handle player intentionally leaving."""
+        member = await self.get_member()
+        if not member:
+            return
+        
+        member_name = member.display_name
+        member_id = member.id
+        was_host = member.is_host
+        
+        # Remove from room
+        new_host_name = await self.leave_room_db(member_id)
+        
+        # Send confirmation to leaving player
+        await self.send(text_data=json.dumps({
+            'type': 'leave_confirmed',
+            'redirect_url': f'/room/{self.room_code}/leave/',
+        }))
+        
+        # Notify others
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'player_left',
+                'member_id': member_id,
+                'member_name': member_name,
+                'was_host': was_host,
+                'new_host_name': new_host_name,
+                'round_players': await self.get_round_players_data(),
+            }
+        )
+    
     
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
@@ -392,6 +419,17 @@ class GameConsumer(AsyncWebsocketConsumer):
             'member_name': event['member_name'],
         }))
     
+    async def player_left(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_left',
+            'member_id': event['member_id'],
+            'member_name': event['member_name'],
+            'was_host':  event['was_host'],
+            'new_host_name': event['new_host_name'],
+            'round_players': event['round_players'],
+        }))
+
+
     async def game_starting(self, event):
         await self.send(text_data=json.dumps({
             'type': 'game_starting',
@@ -540,7 +578,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'id': p.room_member.user.id,
                     'username': p.room_member.user.username,
                 } if getattr(p.room_member, 'user', None) else None
-            } for p in current_round.players.select_related('room_member').all()]
+            } for p in current_round.players.select_related('room_member').all().filter(room_member__is_active=True)]
         except Exception as e:
             print(e)
             return []
@@ -553,6 +591,24 @@ class GameConsumer(AsyncWebsocketConsumer):
             return current_round.get_players_count() if current_round else 0
         except:
             return 0
+        
+
+    @database_sync_to_async
+    def leave_room_db(self, member_id):
+        """Remove member from room. Returns new host name if host changed."""
+        try:
+            member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
+            was_host = member.is_host
+            member.leave_room()
+
+            if was_host:
+                room = Room.objects.get(code=self.room_code)
+                new_host_member = room.transfer_host()
+                return new_host_member.display_name if new_host_member else None
+            return None
+        except:
+            return None
+    
     
     @database_sync_to_async
     def start_setup_phase(self, duration):
@@ -676,10 +732,19 @@ class GameConsumer(AsyncWebsocketConsumer):
             room.settings_turn_duration = max(10, min(90, int(settings['turn_duration'])))
         if 'max_players' in settings:
             room.settings_max_players = max(2, min(15, int(settings['max_players'])))
+        if 'grace_period' in settings:
+            room.settings_grace_period = max(5, min(60, int(settings['grace_period'])))
         if 'show_score' in settings:
             room.settings_show_score = bool(settings['show_score'])
 
         room.save()
+        return {
+            'setup_duration': room.settings_setup_duration,
+            'turn_duration': room.settings_turn_duration,
+            'max_players': room.settings_max_players,
+            'grace_period': room.settings_grace_period,
+            'show_score': room.settings_show_score,
+        }
     
     @database_sync_to_async
     def kick_member(self, member_id):

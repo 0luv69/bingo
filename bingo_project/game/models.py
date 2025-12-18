@@ -72,7 +72,7 @@ class Room(models.Model):
     def get_host(self):
         """Get current host of the room."""
         return self.members.filter(is_active=True, role='host').first()
-    
+
     def get_current_round(self):
         """Get the current (latest) game round."""
         return self.rounds.order_by('-round_number').first()
@@ -100,18 +100,11 @@ class Room(models.Model):
         query = self.members.filter(is_active=True, role='player')
         if exclude_member:
             query = query.exclude(id=exclude_member.id)
-        
-        # First try co-hosts
-        co_host = self.members.filter(is_active=True, role='co-host').first()
-        if co_host:
-            co_host.role = 'host'
-            co_host.save()
-            return co_host
-        
-        # Then regular players
+
+        # regular players
         new_host = query.order_by('joined_at').first()
         if new_host:
-            new_host.role = 'host'
+            new_host.role = 'co-host'
             new_host.save()
             return new_host
         
@@ -217,7 +210,7 @@ class RoomMember(models.Model):
         """Handle member leaving the room."""
         was_host = self.is_host
         self.is_active = False
-        self.connection_status = 'connected'  # Reset on leave
+        self.connection_status = 'left'  # Reset on leave
         self.disconnected_at = None
         self.save()
         

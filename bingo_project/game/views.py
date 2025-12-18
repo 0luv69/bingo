@@ -151,15 +151,15 @@ def join_room_view(request):
     
     # Check if already a member
     existing_member = get_room_member(room, user, session_key)
-    
     if existing_member:
         member = existing_member
         if not member.is_active:
             member.is_active = True
+            member.connection_status = 'connected'
             member.display_name = player_name
             member.save()
     else:
-        member = RoomMember.objects.create(
+        member, created = RoomMember.objects.get_or_create(
             room=room,
             user=user,
             session_key=session_key,
@@ -437,38 +437,7 @@ def leave_room_view(request, room_code):
     Leave the current room.
     Handles host transfer if needed.
     """
-    if request.method != 'POST': 
-        return redirect('home')
-    
-    room = get_object_or_404(Room, code=room_code)
-    
-    member_id = request.session.get('current_member_id')
-    if not member_id:
-        return redirect('home')
-    
-    member = RoomMember.objects.filter(id=member_id, room=room).first()
-    if not member:
-        return redirect('home')
-    
-    member_name = member.display_name
-    was_host = member.is_host
-    
-    # Leave room (handles host transfer internally)
-    member.leave_room()
-    
-    # Clear session
-    request.session.pop('current_room_code', None)
-    request.session.pop('current_member_id', None)
-    
-    if was_host:
-        new_host = room.get_host()
-        if new_host: 
-            messages.info(request, f'You left the room.{new_host.display_name} is now the host.')
-        else:
-            messages.info(request, 'You left the room.Room is now empty.')
-    else:
-        messages.info(request, 'You left the room.')
-    
+    messages.info(request, 'You left the room.')
     return redirect('home')
 
 

@@ -113,7 +113,7 @@ class GameRoundAdmin(admin.ModelAdmin):
 
 @admin.register(RoundPlayer)
 class RoundPlayerAdmin(admin.ModelAdmin):
-    list_display = ['player_display', 'round_display', 'is_ready_badge', 'lines_progress', 'joined_at']
+    list_display = ['player_display', 'round_display', 'room_member__connection_status', 'lines_progress', 'joined_at']
     list_filter = ['is_ready', 'game_round__room']
     search_fields = ['room_member__display_name', 'game_round__room__code']
     readonly_fields = ['joined_at', 'board_display']

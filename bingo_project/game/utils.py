@@ -168,9 +168,9 @@ def get_room_member(room, user=None, session_key=None):
         RoomMember or None
     """
     if user and user.is_authenticated:
-        return room.members.filter(user=user, is_active=True).first()
+        return room.members.filter(user=user).first()
     elif session_key: 
-        return room.members.filter(session_key=session_key, is_active=True).first()
+        return room.members.filter(session_key=session_key).first()
     return None
 
 
