@@ -5,7 +5,7 @@
 {% block title %}Lobby - {{ room.code }}{% endblock %}
 
 {% block header %}
-<div id="connection-status" class="badge badge-warning">Connecting...</div>
+<div id="connection-status" class="badge badge-warning" title=' "ROOM" Connection status'>Connecting...</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -48,7 +48,8 @@
 <div class="min-h-screen flex flex-col">
 
     <!-- Notification Container -->
-    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
+    <div id="notification-container-top" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
+    <div id="notification-container-bottom" class="fixed bottom-20 left-0 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Main Content -->
     <main class="flex-1 py-8 px-4">
@@ -58,7 +59,11 @@
                 <!-- Left Column:  Room Info & Share -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Room Code Card -->
-                    <div class="card p-6">
+
+                    
+
+
+                    <div class="card p-6 relative">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-semibold text-slate-900">Room Code</h2>
                             {% if current_round %}
@@ -501,9 +506,10 @@
     <div class="card p-6 max-w-sm mx-4">
         <h3 class="font-semibold text-slate-900 mb-2">Remove Player</h3>
         <p class="text-slate-500 mb-6">Remove <span id="kick-player-name" class="font-medium"></span> from the room?</p>
+        <p class="text-xs text-red-500 mb-4">Once kicked, this player cannot join again.</p>
         <div class="flex gap-3">
             <button onclick="hideKickModal()" class="btn-secondary flex-1">Cancel</button>
-            <button onclick="confirmKick()" class="btn-primary flex-1 bg-red-500 hover:bg-red-600">Remove</button>
+            <button onclick="confirmKick()" class="btn-primary flex-1 bg-red-500 hover:bg-red-600">Kick 👟</button>
         </div>
     </div>
 </div>
@@ -604,15 +610,20 @@
             case 'player_connected':
                 updatePlayersList(data.round_players);
                 if (data.member_id !== currentMemberId) {
-                    showNotification(`${data.member_name} joined`, 'success');
-                }
+                    if (data.is_reconnection) {
+                        showNotification(`${data.member_name} Reconnected to the room`, 'info');
+                    }
+                    else{
+                        showNotification(`${data.member_name} joined`, 'success_light');
+                    }
+                } 
+                
                 break;
             case 'player_disconnected':
                 if (data.member_id !== currentMemberId) {
-                    showNotification(`${data.member_name} disconnected`, 'info');
+                    showNotification(`${data.member_name} disconnected`, 'error_light', position='bottom');
                 }
                 break;
-            
             case 'player_left':
                 updatePlayersList(data.round_players);
                 if (data.was_host && data.new_host_name) {
@@ -620,7 +631,7 @@
                     // Reload if we became host
                     setTimeout(() => location.reload(), 1000);
                 }else{
-                    showNotification(`${data.member_name} left the room`, 'info');
+                    showNotification(`${data.member_name} left the room`, 'warning_light', position='bottom');
                 }
                 break;
             
@@ -654,6 +665,74 @@
             case 'error':
                 showNotification(data.message, 'error');
                 break;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MESSAGE HANDLERS
+    // ═══════════════════════════════════════════════════════════════
+    
+    function handlePlayerDisconnected(data) {
+        const { member_id, member_name, grace_period, deadline } = data;
+        
+        showNotification(`${member_name} disconnected. Waiting ${grace_period}s...`, 'warning', position='bottom');
+        
+        // Start countdown display
+        // startDisconnectTimer(member_id, member_name, deadline, grace_period);
+        
+        // Update player card
+        const card = document.querySelector(`[data-member-id="${member_id}"]`);
+        if (card) card.classList.add('disconnected');
+    }
+
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // DISCONNECT TIMER UI
+    // ═══════════════════════════════════════════════════════════════
+    
+    function startDisconnectTimer(memberId, memberName, deadline, gracePeriod) {
+        clearDisconnectTimer(memberId);
+        
+        const deadlineTime = new Date(deadline).getTime();
+        
+        // Create countdown element
+        const el = document.createElement('div');
+        el.id = `disconnect-timer-${memberId}`;
+        el.className = 'fixed bottom-4 left-4 bg-amber-500 text-white px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2';
+        el.innerHTML = `
+            <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span><strong>${memberName}</strong>: <span class="timer-value">${gracePeriod}</span>s</span>
+        `;
+        document.body.appendChild(el);
+        
+        const update = () => {
+            const remaining = Math.max(0, Math.ceil((deadlineTime - Date.now()) / 1000));
+            const timerSpan = el.querySelector('.timer-value');
+            if (timerSpan) timerSpan.textContent = remaining;
+            
+            if (remaining <= 5) {
+                el.classList.remove('bg-amber-500');
+                el.classList.add('bg-red-500');
+            }
+            
+            if (remaining <= 0) clearDisconnectTimer(memberId);
+        };
+        
+        update();
+        const timer = setInterval(update, 1000);
+        disconnectedTimers.set(memberId, { timer, element: el });
+    }
+
+
+    function clearDisconnectTimer(memberId) {
+        const data = disconnectedTimers.get(memberId);
+        if (data) {
+            clearInterval(data.timer);
+            if (data.element) data.element.remove();
+            disconnectedTimers.delete(memberId);
         }
     }
     
@@ -907,8 +986,9 @@
     // ════════════════════════════════════════════════════════════
     // NOTIFICATIONS
     // ════════════════════════════════════════════════════════════
-    function showNotification(message, type = 'info') {
-        const container = document.getElementById('notification-container');
+    function showNotification(message, type = 'info', position='top', title=null, timeout=4000) {
+
+        const container = document.getElementById('notification-container-' + position);
         
         const colors = {
             success: 'bg-emerald-500 text-white',
@@ -922,8 +1002,19 @@
         };
         
         const notification = document.createElement('div');
-        notification.className = `${colors[type]}  px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transform transition-all duration-300 translate-x-full`;
-        notification.innerHTML = `<span class="text-sm font-medium">${message}</span>`;
+        notification.className = `${colors[type]} px-4 py-3 rounded-lg shadow-lg flex items-start gap-2 transform transition-all duration-300 translate-x-full`;
+        if (title) {
+            notification.innerHTML = `
+            <div>
+                <div class="font-semibold text-base mb-0.5">${title}</div>
+                <div class="text-sm">${message}</div>
+            </div>
+            `
+            timeout += 3000
+            ;
+        } else {
+            notification.innerHTML = `<span class="text-sm font-medium">${message}</span>`;
+        }
         
         container.appendChild(notification);
         
@@ -932,7 +1023,7 @@
         setTimeout(() => {
             notification.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => notification.remove(), 300);
-        }, 4000);
+        }, timeout);
     }
     
     // Cleanup on unload
@@ -947,4 +1038,10 @@
         connectWebSocket();
     });
 </script>
+
+{% if is_host %}
+    <script>
+        showNotification('With Great Power Comes, Great Responsibility', 'success_light', position='top', title='⭐!! You are the Host !!⭐');
+    </script>
+{% endif %}
 {% endblock %}

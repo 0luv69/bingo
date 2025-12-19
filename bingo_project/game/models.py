@@ -209,7 +209,6 @@ class RoomMember(models.Model):
     def leave_room(self):
         """Handle member leaving the room."""
         was_host = self.is_host
-        self.is_active = False
         self.connection_status = 'left'  # Reset on leave
         self.disconnected_at = None
         self.save()

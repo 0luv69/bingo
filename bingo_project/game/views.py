@@ -153,7 +153,7 @@ def join_room_view(request):
     existing_member = get_room_member(room, user, session_key)
     if existing_member:
         member = existing_member
-        if not member.is_active:
+        if not member.connection_status != 'connected':
             member.is_active = True
             member.connection_status = 'connected'
             member.display_name = player_name
@@ -229,7 +229,6 @@ def join_room_direct_view(request, room_code):
         
         if existing_member: 
             # Reactivate if was kicked/left
-            existing_member.is_active = True
             existing_member.display_name = player_name
             existing_member.save()
             member = existing_member
@@ -279,10 +278,14 @@ def lobby_view(request, room_code):
     current_member = None
     
     if member_id:
-        current_member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
+        current_member = RoomMember.objects.filter(id=member_id, room=room).first()
+
+    if not current_member.is_active:
+        messages.error(request, 'You have been removed from this room. Please contact the host to rejoin.')
+        return redirect('home')
     
     if not current_member:
-        messages.error(request, 'You are not in this room.')
+        messages.error(request, 'You are not in this room. Please join the room first.')
         return redirect('home')
     
     # Get current round
@@ -382,7 +385,11 @@ def game_view(request, room_code):
     current_member = None
     
     if member_id:
-        current_member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
+        current_member = RoomMember.objects.filter(id=member_id, room=room).first()
+
+    if not current_member.is_active:
+        messages.error(request, 'You have been removed from this room. Please contact the host to rejoin.')
+        return redirect('home')
     
     if not current_member:
         messages.error(request, 'You are not in this room.')

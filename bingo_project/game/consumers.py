@@ -21,9 +21,23 @@ class GameConsumer(AsyncWebsocketConsumer):
         session = self.scope.get('session', {})
         self.member_id = session.get('current_member_id')
 
+        if not self.member_id:
+            await self.close()
+            return
+        
+        # Verify member exists and is active
+        member = await self.get_member()
+        if not member:
+            await self.close()
+            return
+
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
+
+        was_disconnected = member.connection_status == 'disconnected'
+
+        await self.mark_member_connected(member.id, self.channel_name)
         
         # Broadcast player connected
         member = await self.get_member()
@@ -34,21 +48,54 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'type': 'player_connected',
                     'member_id': member.id,
                     'member_name': member.display_name,
+                    'is_reconnection': was_disconnected,
                     'round_players': await self.get_round_players_data(),
                 }
             )
     
     async def disconnect(self, close_code):
+
+        # Removing if member_id is not set for this consumer
+        if not hasattr(self, 'member_id') or not self.member_id:
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+            return
+
         member = await self.get_member()
-        if member:
+
+        # If member not found, just remove from group
+        if not member:
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+            return
+
+        # Check if member has left (not intentionally left)
+        has_left = await self.has_member_left(member.id)
+
+        if not has_left:
+            # Unexpected disconnect - start grace period
+            await self.mark_member_disconnected(member.id)
+            grace_period = await self.get_grace_period()
+
+            # Notify others
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'player_disconnected',
+                    'type':  'player_disconnected',
                     'member_id': member.id,
-                    'member_name':  member.display_name,
+                    'member_name': member.display_name,
+                    'grace_period': grace_period,
+                    'deadline': (timezone.now() + timedelta(seconds=grace_period)).isoformat(),
                 }
             )
+
+        # if member:
+        #     await self.channel_layer.group_send(
+        #         self.room_group_name,
+        #         {
+        #             'type': 'player_disconnected',
+        #             'member_id': member.id,
+        #             'member_name':  member.display_name,
+        #         }
+        #     )
         
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
@@ -409,6 +456,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_connected',
             'member_id': event['member_id'],
             'member_name':  event['member_name'],
+            'is_reconnection': event['is_reconnection'],
             'round_players': event['round_players'],
         }))
     
@@ -524,6 +572,30 @@ class GameConsumer(AsyncWebsocketConsumer):
             return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True)
         except RoomMember.DoesNotExist:
             return None
+
+    
+    @database_sync_to_async
+    def get_member_by_id(self, member_id):
+        try:
+            return RoomMember.objects.get(id=member_id, room__code=self.room_code)
+        except RoomMember.DoesNotExist:
+            return None
+    
+    @database_sync_to_async
+    def is_member_active(self, member_id):
+        try:
+            return RoomMember.objects.filter(id=member_id, is_active=True).exists()
+        except: 
+            return False
+
+    @database_sync_to_async
+    def has_member_left(self, member_id):
+        try:
+            member = RoomMember.objects.get(id=member_id)
+            return member.connection_status == 'left'
+        except:
+            return True
+
     
     @database_sync_to_async
     def get_current_round(self):
@@ -591,7 +663,32 @@ class GameConsumer(AsyncWebsocketConsumer):
             return current_round.get_players_count() if current_round else 0
         except:
             return 0
+
+    @database_sync_to_async
+    def get_grace_period(self):
+        try:
+            room = Room.objects.get(code=self.room_code)
+            return room.settings_grace_period
+        except: 
+            return 10
         
+
+    @database_sync_to_async
+    def mark_member_connected(self, member_id, channel_name):
+        try:
+            member = RoomMember.objects.get(id=member_id)
+            member.mark_connected(channel_name)
+        except: 
+            pass
+
+    @database_sync_to_async
+    def mark_member_disconnected(self, member_id):
+        try:
+            member = RoomMember.objects.get(id=member_id)
+            member.mark_disconnected()
+        except:
+            pass
+    
 
     @database_sync_to_async
     def leave_room_db(self, member_id):
