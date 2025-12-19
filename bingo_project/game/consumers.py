@@ -84,18 +84,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'member_name': member.display_name,
                     'grace_period': grace_period,
                     'deadline': (timezone.now() + timedelta(seconds=grace_period)).isoformat(),
+                    'round_players': await self.get_round_players_data(),
                 }
             )
-
-        # if member:
-        #     await self.channel_layer.group_send(
-        #         self.room_group_name,
-        #         {
-        #             'type': 'player_disconnected',
-        #             'member_id': member.id,
-        #             'member_name':  member.display_name,
-        #         }
-        #     )
         
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
@@ -465,6 +456,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_disconnected',
             'member_id': event['member_id'],
             'member_name': event['member_name'],
+            'grace_period': event['grace_period'],
+            'deadline': event['deadline'],
+            'round_players': event['round_players'],
         }))
     
     async def player_left(self, event):

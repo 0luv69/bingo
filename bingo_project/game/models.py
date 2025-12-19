@@ -142,7 +142,7 @@ class RoomMember(models.Model):
     display_name = models.CharField(max_length=30, help_text="Player's display name")
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='player')
     joined_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True, help_text="False when member leaves room")
+    is_active = models.BooleanField(default=True, help_text="False when member is Kicked or Removed")
 
     connection_status = models. CharField(max_length=15, choices=CONNECTION_STATUS_CHOICES, default='connected')
     disconnected_at = models.DateTimeField(null=True, blank=True, help_text="When player disconnected")

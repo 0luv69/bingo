@@ -59,10 +59,6 @@
                 <!-- Left Column:  Room Info & Share -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Room Code Card -->
-
-                    
-
-
                     <div class="card p-6 relative">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="font-semibold text-slate-900">Room Code</h2>
@@ -117,9 +113,9 @@
                                 {% if player.room_member.id == current_member.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}
                                 {% if player.connection_status == 'disconnected' %} border border-dashed border-slate-900{% endif %}" 
                                 data-member-id="{{ player.room_member.id }} ">
-                                    <div class="flex items-center gap-3  {% if player.connection_status == 'disconnected' %}disconnected {% endif %}">
+                                    <div id="player-Binfo-{{ player.room_member.id }}" class="flex items-center gap-3  {% if player.connection_status == 'disconnected' %}disconnected {% endif %}">
                                         <!--Disconnect Icon-->
-                                        <span class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %} " title="Player disconnected">
+                                        <span id="disconnect-icon-{{ player.room_member.id }}" class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %} " title="Player disconnected">
                                             <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
                                                 <g transform="matrix(0.69 0 0 0.69 12 12)" >
                                                     <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
@@ -620,9 +616,7 @@
                 
                 break;
             case 'player_disconnected':
-                if (data.member_id !== currentMemberId) {
-                    showNotification(`${data.member_name} disconnected`, 'error_light', position='bottom');
-                }
+                handlePlayerDisconnected(data);
                 break;
             case 'player_left':
                 updatePlayersList(data.round_players);
@@ -673,16 +667,26 @@
     // ═══════════════════════════════════════════════════════════════
     
     function handlePlayerDisconnected(data) {
-        const { member_id, member_name, grace_period, deadline } = data;
-        
-        showNotification(`${member_name} disconnected. Waiting ${grace_period}s...`, 'warning', position='bottom');
+        showNotification(`${data.member_name} disconnected. Waiting ${data.grace_period}s...`, 'warning', position='bottom');
         
         // Start countdown display
-        // startDisconnectTimer(member_id, member_name, deadline, grace_period);
+        // startDisconnectTimer(data.member_id, data.member_name, data.deadline, data.grace_period);
         
-        // Update player card
-        const card = document.querySelector(`[data-member-id="${member_id}"]`);
-        if (card) card.classList.add('disconnected');
+        const playercard = document.querySelector(`[data-member-id="${data.member_id}"]`);
+        if (playercard) playercard.classList.add('border', 'border-dashed', 'border-slate-900');
+
+        disconnectedIcon = document.getElementById(`disconnected-icon-${data.member_id}`);
+        if (disconnectedIcon) {
+            disconnectedIcon.classList.remove('hidden');
+        }
+
+        playerBinfo = document.getElementById(`player-binfo-${data.member_id}`);
+        if (playerBinfo) {
+            playerBinfo.classList.add('disconnected');
+        }
+
+
+        
     }
 
 
@@ -783,9 +787,9 @@
                 ${isMe ? 'bg-accent-50 border border-accent-100' : 'bg-slate-50'} 
                 ${player.connection_status === 'disconnected' ? 'border border-dashed border-slate-900' : ''}" 
                 data-member-id="${player.member_id}">
-                    <div class="flex items-center gap-3 ${player.connection_status === 'disconnected' ? 'disconnected' : ''}">
+                    <div id="player-binfo-${player.member_id}" class="flex items-center gap-3 ${player.connection_status === 'disconnected' ? 'disconnected' : ''}">
                         <!--Disconnect Icon-->
-                        <span class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected">
+                        <span id="disconnected-icon-${player.member_id}" class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected">
                             <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
                                 <g transform="matrix(0.69 0 0 0.69 12 12)" >
                                     <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
