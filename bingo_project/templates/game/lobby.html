@@ -667,10 +667,10 @@
     // ═══════════════════════════════════════════════════════════════
     
     function handlePlayerDisconnected(data) {
-        showNotification(`${data.member_name} disconnected. Waiting ${data.grace_period}s...`, 'warning', position='bottom');
+        // showNotification(`${data.member_name} disconnected. Waiting ${data.grace_period}s...`, 'warning', position='bottom');
         
         // Start countdown display
-        // startDisconnectTimer(data.member_id, data.member_name, data.deadline, data.grace_period);
+        startDisconnectTimer(data.member_id, data.member_name, data.deadline, data.grace_period);
         
         const playercard = document.querySelector(`[data-member-id="${data.member_id}"]`);
         if (playercard) playercard.classList.add('border', 'border-dashed', 'border-slate-900');
@@ -696,7 +696,7 @@
     // ═══════════════════════════════════════════════════════════════
     
     function startDisconnectTimer(memberId, memberName, deadline, gracePeriod) {
-        clearDisconnectTimer(memberId);
+        //clearDisconnectTimer(memberId);
         
         const deadlineTime = new Date(deadline).getTime();
         
