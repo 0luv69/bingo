@@ -1,0 +1,162 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vote Bar Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+!-- Vote Bar Section (Hidden by default, shown when disconnected) -->
+<div id="vote-bar-{{ player.room_member.id }}" 
+     class="{% if player.connection_status != 'disconnected' %}hidden{% endif %} border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+    
+    <!-- Voting Timer Progress Bar -->
+    <div class="relative h-1 bg-slate-200 overflow-hidden">
+        <div id="vote-timer-bar-{{ player.room_member.id }}" 
+             class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 ease-linear" 
+             style="width: 100%;">
+        </div>
+    </div>
+    
+    <!-- Compact Vote Section -->
+    <div class="flex items-center justify-between gap-2 px-3 py-1.5">
+        <!-- Timer Display -->
+        <div class="flex items-center gap-1 text-xs text-slate-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span id="vote-timer-{{ player.room_member.id }}" class="font-semibold">30s</span>
+        </div>
+        
+        <!-- Vote Buttons -->
+        <div class="flex items-center gap-1.5">
+            <button onclick="voteKeep({{ player.room_member.id }})" 
+                    class="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors text-xs font-medium">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span id="keep-count-{{ player.room_member.id }}" class="font-semibold">2</span>
+            </button>
+            
+            <div class="h-4 w-px bg-slate-300"></div>
+            
+            <button onclick="voteKick({{ player.room_member.id }})" 
+                    class="flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors text-xs font-medium">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                <span id="kick-count-{{ player.room_member.id }}" class="font-semibold">1</span>
+            </button>
+        </div>
+        
+        <!-- Total Votes Indicator -->
+        <div class="flex items-center gap-1 text-xs text-slate-500">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+            </svg>
+            <span id="total-votes-{{ player.room_member.id }}" class="font-semibold">3</span>
+        </div>
+    </div>
+</div>
+
+<div id="vote-bar-{{ player.room_member.id }}" 
+    class="{% if player.connection_status != 'disconnected' %}hidden{% endif %} border-t border-slate-200 bg-white">
+    
+    <!-- Vote Progress Bar -->
+    <div class="relative h-1.5 bg-slate-100 overflow-hidden">
+        <div id="vote-progress-{{ player.room_member.id }}" 
+            class="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-300" 
+            style="width: 67%;">
+        </div>
+    </div>
+    
+    <!-- Vote Buttons and Counts -->
+    <div class="flex items-center justify-between px-3 py-2">
+        <button onclick="voteKeep({{ player.room_member.id }})" 
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-md transition-colors text-sm font-medium">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span>Keep</span>
+            <span id="keep-count-{{ player.room_member.id }}" class="ml-1 px-1.5 py-0.5 bg-green-100 rounded text-xs font-semibold">2</span>
+        </button>
+        
+        <div class="text-xs text-slate-500 font-medium">
+            <span id="total-votes-{{ player.room_member.id }}">3</span> votes
+        </div>
+        
+        <button onclick="voteKick({{ player.room_member.id }})" 
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-md transition-colors text-sm font-medium">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <span>Kick</span>
+            <span id="kick-count-{{ player.room_member.id }}" class="ml-1 px-1.5 py-0.5 bg-red-100 rounded text-xs font-semibold">1</span>
+        </button>
+    </div>
+</div>
+
+<script>
+    // JavaScript Timer Logic
+    function startVoteTimer(memberId, totalSeconds) {
+        let remainingSeconds = totalSeconds;
+        const timerBar = document.getElementById(`vote-timer-bar-${memberId}`);
+        const timerText = document.getElementById(`vote-timer-${memberId}`);
+        
+        // Update immediately
+        updateTimerDisplay();
+        
+        const interval = setInterval(() => {
+            remainingSeconds--;
+            
+            if (remainingSeconds <= 0) {
+                clearInterval(interval);
+                remainingSeconds = 0;
+                // Handle vote timeout
+                handleVoteTimeout(memberId);
+            }
+            
+            updateTimerDisplay();
+        }, 1000);
+        
+        function updateTimerDisplay() {
+            // Update text
+            timerText.textContent = `${remainingSeconds}s`;
+            
+            // Update progress bar (reverse - starts at 100%, goes to 0%)
+            const percentage = (remainingSeconds / totalSeconds) * 100;
+            timerBar.style.width = `${percentage}%`;
+            
+            // Change color based on urgency
+            if (remainingSeconds <= 5) {
+                timerBar.className = 'h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-1000 ease-linear';
+            } else if (remainingSeconds <= 10) {
+                timerBar.className = 'h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-1000 ease-linear';
+            } else {
+                timerBar.className = 'h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 ease-linear';
+            }
+        }
+        
+        // Return interval ID so it can be cleared if needed
+        return interval;
+    }
+
+    // Update vote counts
+    function updateVoteCounts(memberId, keepCount, kickCount) {
+        document.getElementById(`keep-count-${memberId}`).textContent = keepCount;
+        document.getElementById(`kick-count-${memberId}`).textContent = kickCount;
+        document.getElementById(`total-votes-${memberId}`).textContent = keepCount + kickCount;
+    }
+
+    // Handle vote timeout
+    function handleVoteTimeout(memberId) {
+        console.log(`Vote timeout for member ${memberId}`);
+        // Add your logic here (e.g., auto-decide based on votes, hide vote bar, etc.)
+    }
+
+    // Example usage:
+     // Start 30 second timer for member ID 123
+    //updateVoteCounts(123, 5, 2); // Update to 5 keep, 2 kick votes
+</script>
+
+</html>

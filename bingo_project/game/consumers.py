@@ -1,5 +1,6 @@
 import json
 import random
+import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
@@ -7,6 +8,88 @@ from datetime import timedelta
 from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 from .utils import determine_winners, validate_board
 
+
+class DisconnectionManager:
+    """
+    Manages disconnection timers and vote kicks across all rooms.
+    Uses class-level storage to persist across consumer instances.
+    """
+
+    # {room_code: {member_id: asyncio.Task}}
+    disconnection_timers = {}
+    
+    # {room_code: {round_player_id: asyncio.Task}}
+    bot_timers = {}
+    
+    # {room_code: {target_member_id: {'votes': {'kick': set(), 'keep': set()}, 'target_name': str}}}
+    vote_kicks = {}
+
+
+    @classmethod
+    def get_disconnection_timer(cls, room_code, member_id):
+        return cls.disconnection_timers.get(room_code, {}).get(member_id)
+    
+    @classmethod
+    def set_disconnection_timer(cls, room_code, member_id, task):
+        if room_code not in cls.disconnection_timers:
+            cls.disconnection_timers[room_code] = {}
+        cls.disconnection_timers[room_code][member_id] = task
+    
+    @classmethod
+    def cancel_disconnection_timer(cls, room_code, member_id):
+        if room_code in cls.disconnection_timers:
+            task = cls.disconnection_timers.get(room_code, {}).get(member_id)
+            if task:
+                task.cancel()
+                del cls.disconnection_timers[room_code][member_id]
+                return True
+        return False
+    
+    @classmethod
+    def get_vote_kick(cls, room_code, member_id):
+        return cls.vote_kicks.get(room_code, {}).get(member_id)
+    
+
+    @classmethod
+    def start_vote_kick(cls, room_code, member_id, target_name):
+        if room_code not in cls.vote_kicks:
+            cls.vote_kicks[room_code] = {}
+        cls.vote_kicks[room_code][member_id] = {
+            'votes': {'kick': set(), 'keep': set()},
+            'target_name': target_name,
+        }
+
+    @classmethod
+    def add_vote(cls, room_code, member_id, voter_id, vote):
+        """Add a vote. Returns True if vote was added."""
+        vote_data = cls.get_vote_kick(room_code, member_id)
+        if not vote_data:
+            return False
+        
+        # Remove previous vote from this voter
+        vote_data['votes']['kick'].discard(voter_id)
+        vote_data['votes']['keep'].discard(voter_id)
+        
+        # Add new vote
+        vote_data['votes'][vote].add(voter_id)
+        return True
+    
+    @classmethod
+    def get_vote_counts(cls, room_code, member_id):
+        vote_data = cls.get_vote_kick(room_code, member_id)
+        if not vote_data:
+            return {'kick': 0, 'keep': 0}
+        return {
+            'kick': len(vote_data['votes']['kick']),
+            'keep': len(vote_data['votes']['keep'])
+        }
+        
+    @classmethod
+    def clear_vote_kick(cls, room_code, member_id):
+        if room_code in cls.vote_kicks and member_id in cls.vote_kicks[room_code]:
+            del cls.vote_kicks[room_code][member_id]
+            return True
+        return False
 
 class GameConsumer(AsyncWebsocketConsumer):
     """
@@ -87,6 +170,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'round_players': await self.get_round_players_data(),
                 }
             )
+
+            # Start disconnection timer
+            await self.start_disconnection_timer(member.id, grace_period)
         
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
@@ -104,6 +190,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'kick_player':  self.handle_kick_player,
                 'new_round': self.handle_new_round,
                 'leave_room': self.handle_leave_room,
+                'cast_vote': self.handle_cast_vote,
             }
             
             handler = handlers.get(message_type)
@@ -116,6 +203,136 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_error('Invalid JSON')
         except Exception as e:
             await self.send_error(str(e))
+
+    # ════════════════════════════════════════════════════════════════
+    # DISCONNECTION HANDLING
+    # ════════════════════════════════════════════════════════════════
+    async def start_disconnection_timer(self, member_id, grace_period):
+        """Start grace period timer for a disconnected member."""
+        # Cancel existing timer if any
+        # DisconnectionManager.cancel_disconnection_timer(self.room_code, member_id)
+
+        async def on_grace_period_expired():
+            try:
+                await asyncio.sleep(grace_period)
+                await self.handle_grace_period_expired(member_id)
+            except asyncio.CancelledError:
+                pass  # Timer was cancelled (player reconnected)
+
+        task = asyncio.create_task(on_grace_period_expired())
+
+    async def handle_grace_period_expired(self, member_id):
+        """Handle when grace period expires for a disconnected player."""
+
+        # Verify member is still disconnected
+        member = await self.get_member_by_id(member_id)
+        if not member or member.connection_status != 'disconnected':
+            return
+        
+        current_round = await self.get_current_round()
+        
+        if current_round and current_round.status == 'playing':
+            # GAME PHASE: Enable bot control
+            # await self.enable_bot_control(member_id)
+            
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'player_bot_controlled',
+                    'member_id': member_id,
+                    'member_name': member.display_name,
+                    'message': f'{member.display_name} is now controlled by bot',
+                    'round_players': await self.get_round_players_data(),
+                }
+            )
+            
+            # If it's this player's turn, schedule bot play
+            round_player = await self.get_round_player(member_id)
+            current_turn_id = await self.get_current_turn_id()
+            if round_player and current_turn_id == round_player.id:
+                await self.schedule_bot_play(round_player.id)
+        else:
+            # LOBBY or SETUP PHASE: Start vote kick
+            await self.initiate_vote_kick(member_id)
+
+
+    # ════════════════════════════════════════════════════════════════
+    # VOTE KICK
+    # ════════════════════════════════════════════════════════════════
+
+    async def initiate_vote_kick(self, member_id):
+        """Start a vote kick for a disconnected player."""
+        member = await self.get_member_by_id(member_id)
+        if not member:
+            return
+        
+        # Start vote tracking
+        DisconnectionManager.start_vote_kick(self.room_code, member_id, member.display_name)
+        
+        total_voters = await self.get_connected_voters_count(member_id)
+        
+        # If no voters (everyone else disconnected), auto-keep
+        if total_voters == 0:
+            DisconnectionManager.clear_vote_kick(self.room_code, member_id)
+            return
+        
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'vote_kick_started',
+                'target_member_id': member_id,
+                'target_member_name': member.display_name,
+                'total_voters': total_voters,
+            }
+        )
+
+    async def handle_cast_vote(self, data):
+        """Handle a player casting their vote."""
+        target_member_id = data.get('target_member_id')
+        vote = data.get('vote')
+
+        if not target_member_id or vote not in ['kick', 'keep']: 
+            await self.send_error('Invalid vote data')
+            return
+        
+        member = await self.get_member()
+        if not member:
+            return
+        
+        # Can't vote on yourself
+        if member.id == target_member_id:
+            return
+
+        # Check if vote kick is active
+        vote_data = DisconnectionManager.get_vote_kick(self.room_code, target_member_id)
+        if not vote_data:
+            await self.send_error('No active vote for this player')
+            return
+        
+        # Add vote
+        DisconnectionManager.add_vote(self.room_code, target_member_id, member.id, vote)
+
+        # Get counts
+        votes = DisconnectionManager.get_vote_counts(self.room_code, target_member_id)
+        total_voters = await self.get_connected_voters_count(target_member_id)
+        total_voted = votes['kick'] + votes['keep']
+        
+        
+        # Broadcast vote update
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'vote_updated',
+                'target_member_id': target_member_id,
+                'votes': votes,
+                'total_voters': total_voters,
+                'total_voted': total_voted,
+            }
+        )
+
+        # Check if voting is complete
+        # if total_voted >= total_voters:
+        #     await self.complete_vote_kick(target_member_id, votes)
     
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
@@ -377,8 +594,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'round_players': await self.get_round_players_data(),
             }
         )
-    
-    
+       
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
         member = await self.get_member()
@@ -471,6 +687,23 @@ class GameConsumer(AsyncWebsocketConsumer):
             'round_players': event['round_players'],
         }))
 
+    async def vote_kick_started(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'vote_kick_started',
+            'target_member_id': event['target_member_id'],
+            'target_member_name': event['target_member_name'],
+            'total_voters': event['total_voters'],
+        }))
+
+
+    async def vote_updated(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'vote_updated',
+            'target_member_id':  event['target_member_id'],
+            'votes': event['votes'],
+            'total_voters': event['total_voters'],
+            'total_voted': event['total_voted'],
+        }))
 
     async def game_starting(self, event):
         await self.send(text_data=json.dumps({
@@ -665,7 +898,17 @@ class GameConsumer(AsyncWebsocketConsumer):
             return room.settings_grace_period
         except: 
             return 10
-        
+    
+    @database_sync_to_async
+    def get_connected_voters_count(self, exclude_member_id):
+        try:
+            room:Room = Room.objects.get(code=self.room_code)
+            return room.members.filter(
+                is_active=True,
+                connection_status='connected'
+            ).exclude(id=exclude_member_id).count()
+        except:
+            return 0
 
     @database_sync_to_async
     def mark_member_connected(self, member_id, channel_name):

@@ -109,19 +109,18 @@
                         
                         <div id="players-list" class="space-y-2">
                             {% for player in round_players %}
-                            <div class="player-card flex items-center justify-between p-3 rounded-xl relative
+                            <div class="player-card rounded-xl relative
                                 {% if player.room_member.id == current_member.id %}bg-accent-50 border border-accent-100{% else %}bg-slate-50{% endif %}
-                                {% if player.connection_status == 'disconnected' %} border border-dashed border-slate-900{% endif %}" 
+                                {% if player.connection_status == 'disconnected' %} border border-dashed border-red-500{% endif %}" 
                                 data-member-id="{{ player.room_member.id }} ">
-                                    <div id="player-Binfo-{{ player.room_member.id }}" class="flex items-center gap-3  {% if player.connection_status == 'disconnected' %}disconnected {% endif %}">
-                                        <!--Disconnect Icon-->
-                                        <span id="disconnect-icon-{{ player.room_member.id }}" class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %} " title="Player disconnected">
-                                            <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
-                                                <g transform="matrix(0.69 0 0 0.69 12 12)" >
-                                                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
-                                                </g>
-                                            </svg>
-                                        </span>
+                                <div class="flex items-center justify-between p-3">
+                                    <div id="player-b-info-{{ player.room_member.id }}" class="flex items-center gap-3  {% if player.connection_status == 'disconnected' %}disconnected {% endif %}">
+                                        
+                                        <!--Disconnect Timer-->
+                                        <div id="disconnect-timer-{{ player.room_member.id }}" class="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center border-2 border-red-200 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %}" title="Player disconnected Timer">
+                                            <!-- Countdown Number -->
+                                            <span class="timer-value text-xs font-bold ">00</span>
+                                        </div>
 
                                         <!-- Profile icon -->
                                         <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
@@ -136,9 +135,17 @@
                                         
                                         <!-- Player Info -->
                                         <div>
-                                            <p class="font-medium text-slate-900 text-sm">
+                                            <p class="font-medium text-slate-900 text-sm flex items-center gap-1">
                                                 {{ player.display_name }} 
                                                 {% if player.room_member.id == current_member.id %}<span class="text-slate-400 font-normal">(You)</span>{% endif %}
+                                                <!--Disconnect Icon-->
+                                                <span id="disconnected-icon-{{ player.room_member.id }}" class="p-1 rounded-full bg-red-100 {% if player.connection_status != 'disconnected' %} hidden {% endif %} " title="Player disconnected">
+                                                    <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
+                                                        <g transform="matrix(0.69 0 0 0.69 12 12)" >
+                                                            <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
+                                                        </g>
+                                                    </svg>
+                                                </span>
                                             </p>
                                             <p class="text-xs text-slate-400">
                                                 {% if player.room_member.user %} @{{ player.room_member.user.username }}{% else %}Guest{% endif %}
@@ -164,12 +171,62 @@
                                             {% endif %}
                                         {% endif %}
                                     </div>
+                                </div>
+
+                                <!-- Vote Bar Section (Hidden by default, shown when disconnected) -->
+                                <div id="vote-bar-{{ player.room_member.id }}" 
+                                    class="hidden border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-b-xl ">
+                                    
+                                    <!-- Voting Timer Progress Bar -->
+                                    <div class="relative h-1 bg-slate-200 overflow-hidden">
+                                        <div id="vote-timer-bar-{{ player.room_member.id }}" 
+                                            class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 ease-linear" 
+                                            style="width: 100%;">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Compact Vote Section -->
+                                    <div class="flex items-center justify-between gap-2 px-3 py-1.5">
+
+                                        <!-- Total Votes Indicator -->
+                                        <div class="flex items-center gap-1 text-xs text-slate-500">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                                            </svg>
+                                            <span id="total-votes-{{ player.room_member.id }}" class="font-semibold">{{ player.votes_cast }} 0 / {{ player.total_voters }}0</span>
+                                        </div>
+
+                                        <!-- Vote Buttons -->
+                                        <div class="flex items-center gap-1.5">
+                                            <button onclick="castVote({{ player.room_member.id }}, 'keep')"  title="Vote to Keep Player"
+                                                    class="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors text-xs font-medium">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                <span id="keep-count-{{ player.room_member.id }}" class="font-semibold">0</span>
+                                            </button>
+                                            
+                                            <div class="h-4 w-px bg-slate-300"></div>
+                                            
+                                            <button onclick="castVote({{ player.room_member.id }}, 'kick')" title="Vote to Kick Player"
+                                                    class="flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors text-xs font-medium">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                <span id="kick-count-{{ player.room_member.id }}" class="font-semibold">0</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                            
+                            
                             {% empty %}
                             <p class="text-slate-400 text-center py-4">No players yet</p>
                             {% endfor %}
                         </div>
                     </div>
+                    
                 </div>
                 
                 <!-- Right Column: Actions & Settings -->
@@ -554,6 +611,9 @@
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     let kickTargetId = null;
+
+    let disconnectedUserStatus = new Map();
+
     
     // ════════════════════════════════════════════════════════════
     // WEBSOCKET
@@ -605,20 +665,22 @@
     function handleMessage(data) {
         switch (data.type) {
             case 'player_connected':
+                clearDisconnectTimer(data.member_id, remove_ = true);
                 updatePlayersList(data.round_players);
                 if (data.member_id !== currentMemberId) {
                     if (data.is_reconnection) {
+                        clearDisconnectTimer(data.member_id);
                         showNotification(`${data.member_name} Reconnected to the room`, 'info');
                     }
                     else{
                         showNotification(`${data.member_name} joined`, 'success_light');
                     }
                 } 
-                
                 break;
             case 'player_disconnected':
                 handlePlayerDisconnected(data);
                 break;
+
             case 'player_left':
                 updatePlayersList(data.round_players);
                 if (data.was_host && data.new_host_name) {
@@ -630,7 +692,6 @@
                 }
                 break;
             
-
             case 'player_kicked':
                 if (data.kicked_member_id === currentMemberId) {
                     showNotification('You have been removed from the room', 'error');
@@ -639,6 +700,14 @@
                     updatePlayersList(data.round_players);
                     showNotification(`${data.kicked_name} was removed`, 'info');
                 }
+                break;
+
+            case 'vote_kick_started':
+                handleVoteKickStarted(data);
+                break;
+
+            case 'vote_updated':
+                handleVoteUpdated(data);
                 break;
 
             case 'game_starting':
@@ -668,26 +737,22 @@
     // ═══════════════════════════════════════════════════════════════
     
     function handlePlayerDisconnected(data) {
-        // showNotification(`${data.member_name} disconnected. Waiting ${data.grace_period}s...`, 'warning', position='bottom');
         
         // Start countdown display
         startDisconnectTimer(data.member_id, data.member_name, data.deadline, data.grace_period);
         
         const playercard = document.querySelector(`[data-member-id="${data.member_id}"]`);
-        if (playercard) playercard.classList.add('border', 'border-dashed', 'border-slate-900');
+        if (playercard) playercard.classList.add('border', 'border-dashed', 'border-red-500');
 
         disconnectedIcon = document.getElementById(`disconnected-icon-${data.member_id}`);
         if (disconnectedIcon) {
             disconnectedIcon.classList.remove('hidden');
         }
 
-        playerBinfo = document.getElementById(`player-binfo-${data.member_id}`);
-        if (playerBinfo) {
-            playerBinfo.classList.add('disconnected');
+        playerBInfo = document.getElementById(`player-b-info-${data.member_id}`);
+        if (playerBInfo) {
+            playerBInfo.classList.add('disconnected');
         }
-
-
-        
     }
 
 
@@ -697,30 +762,31 @@
     // ═══════════════════════════════════════════════════════════════
     
     function startDisconnectTimer(memberId, memberName, deadline, gracePeriod) {
-        //clearDisconnectTimer(memberId);
+
+        disconnectedTimer = document.getElementById(`disconnected-timer-${memberId}`);
+        if (disconnectedTimer) {
+            disconnectedTimer.classList.remove('hidden');
+        }
         
         const deadlineTime = new Date(deadline).getTime();
-        
-        // Create countdown element
-        const el = document.createElement('div');
-        el.id = `disconnect-timer-${memberId}`;
-        el.className = 'fixed bottom-4 left-4 bg-amber-500 text-white px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2';
-        el.innerHTML = `
-            <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span><strong>${memberName}</strong>: <span class="timer-value">${gracePeriod}</span>s</span>
-        `;
-        document.body.appendChild(el);
-        
+        starting_color = ['bg-amber-100', 'text-amber-700'];
+        ending_color = ['bg-red-100', 'text-red-700'];
+        // selecting countdown element
+        const timer_container = document.getElementById(`disconnected-timer-${memberId}`);
+        const timer_value = timer_container.querySelector('.timer-value');
+
+        timer_value.textContent = gracePeriod;
+
+        timer_value.classList.remove(...ending_color);
+        timer_value.classList.add(...starting_color);
+
         const update = () => {
             const remaining = Math.max(0, Math.ceil((deadlineTime - Date.now()) / 1000));
-            const timerSpan = el.querySelector('.timer-value');
-            if (timerSpan) timerSpan.textContent = remaining;
+            timer_value.textContent = remaining;
             
             if (remaining <= 5) {
-                el.classList.remove('bg-amber-500');
-                el.classList.add('bg-red-500');
+                timer_value.classList.remove(...starting_color);
+                timer_value.classList.add(...ending_color);
             }
             
             if (remaining <= 0) clearDisconnectTimer(memberId);
@@ -728,19 +794,67 @@
         
         update();
         const timer = setInterval(update, 1000);
-        disconnectedTimers.set(memberId, { timer, element: el });
+        disconnectedUserStatus.set(memberId, { timer, status: 'timer' });
     }
 
 
-    function clearDisconnectTimer(memberId) {
-        const data = disconnectedTimers.get(memberId);
+    function clearDisconnectTimer(memberId, remove_ = false) {
+        const data = disconnectedUserStatus.get(memberId);
         if (data) {
             clearInterval(data.timer);
-            if (data.element) data.element.remove();
-            disconnectedTimers.delete(memberId);
+            if (remove_) {
+                disconnectedUserStatus.delete(memberId);
+            }else{
+                disconnectedUserStatus.set(memberId, { status: 'vote' });
+            }
+        }
+        disconnectedTimer = document.getElementById(`disconnected-timer-${memberId}`);
+        if (disconnectedTimer) {
+            disconnectedTimer.classList.add('hidden');
         }
     }
     
+
+    function handleVoteKickStarted(data) {
+        const { target_member_id, target_member_name, total_voters } = data;
+        showNotification(`Vote to Kick or Keep ${target_member_name}`, 'warning_light');
+
+        if (target_member_id === currentMemberId) return;
+        
+        vote_bar = document.getElementById(`vote-bar-${target_member_id}`);
+        vote_bar.classList.remove('hidden');
+        vote_count = document.getElementById(`votes-count-${target_member_id}`);
+        vote_count.textContent = `0/${total_voters} votes`;
+    }
+
+    function handleVoteUpdated(data) {
+        const { target_member_id, votes,  total_voters, total_voted } = data;
+        
+        if (target_member_id === currentMemberId) return;
+        
+        vote_count = document.getElementById(`votes-count-${target_member_id}`);
+        vote_count.textContent = `${total_voted}/${total_voters} votes`;
+        document.getElementById(`kick-count-${target_member_id}`).textContent = votes['kick'];
+        document.getElementById(`keep-count-${target_member_id}`).textContent = votes['keep'];
+
+        // If voting complete
+        if (votes['kick'] + votes['keep'] >= total_voters) {
+            showNotification(`Vote concluded for ${data.target_member_name}`, 'info');
+            const vote_bar = document.getElementById(`vote-bar-${target_member_id}`);
+            vote_bar.classList.add('hidden');
+        }
+    }
+
+
+    function castVote(targetMemberId, vote) {
+        data = disconnectedUserStatus.get(targetMemberId);
+        if (data && data.status === 'vote') {
+            sendMessage('cast_vote', {voter: currentMemberId, target_member_id: targetMemberId, vote: vote });
+        } else{
+            showNotification('Voting period has ended or not started yet.', 'error');
+        }
+    }
+
     // ════════════════════════════════════════════════════════════
     // UI UPDATES
     // ════════════════════════════════════════════════════════════
@@ -784,50 +898,106 @@
             const roleText = player.role === 'host' ?  'Host' : player.role === 'co-host' ? 'Co-Host' : 'Player';
             
             return `
-                <div class="player-card flex items-center justify-between p-3 rounded-xl relative
+                <div class="player-card rounded-xl relative
                 ${isMe ? 'bg-accent-50 border border-accent-100' : 'bg-slate-50'} 
-                ${player.connection_status === 'disconnected' ? 'border border-dashed border-slate-900' : ''}" 
+                ${player.connection_status === 'disconnected' ? 'border border-dashed border-red-500' : ''}" 
                 data-member-id="${player.member_id}">
-                    <div id="player-binfo-${player.member_id}" class="flex items-center gap-3 ${player.connection_status === 'disconnected' ? 'disconnected' : ''}">
-                        <!--Disconnect Icon-->
-                        <span id="disconnected-icon-${player.member_id}" class="p-1 rounded-full bg-red-100 absolute -top-2 -left-2 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected">
-                            <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
-                                <g transform="matrix(0.69 0 0 0.69 12 12)" >
-                                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
-                                </g>
-                            </svg>
-                        </span>
+                    <div class="flex items-center justify-between p-3">
+                        <div id="player-b-info-${player.member_id}" class="flex items-center gap-3 ${player.connection_status === 'disconnected' ? 'disconnected' : ''}">
+                            
+                            
+                            <!--Disconnect Timer-->
+                            <div id="disconnected-timer-${player.member_id}" class="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center border-2 border-red-200 absolute -top-2 -left-2 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected Timer">
+                                <!-- Countdown Number -->
+                                <span class="timer-value text-xs font-bold"></span>
+                            </div>
 
-                        <!-- Profile icon -->
-                        <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
-                            ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name.charAt(0).toUpperCase()}</span>`}
+
+                            <!-- Profile icon -->
+                            <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
+                                ${player.is_host ? crownSvg : `<span class="text-sm font-medium text-slate-500">${player.name.charAt(0).toUpperCase()}</span>`}
+                            </div>
+
+                            <!-- Player Info -->
+                            <div>
+                                <p class="font-medium text-slate-900 text-sm flex items-center gap-1">
+                                    ${player.name}${isMe ? '<span class="text-slate-400 font-normal"> (You)</span>' : ''}
+                                    
+                                    <!--Disconnect Icon-->
+                                    <span id="disconnected-icon-${player.member_id}" class="p-1 rounded-full bg-red-100 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected">
+                                        <svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' class="w-5 h-5 text-red-700" >
+                                            <g transform="matrix(0.69 0 0 0.69 12 12)" >
+                                                <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-17.59, -19.25)" d="M 16 6.5 C 10.984 6.5 6.4407812 8.565625 3.1757812 11.890625 L 4.5898438 13.304688 C 7.4918437 10.343687 11.535 8.5 16 8.5 C 20.465 8.5 24.508156 10.343687 27.410156 13.304688 L 28.824219 11.890625 C 25.559219 8.565625 21.016 6.5 16 6.5 z M 16 11.5 C 12.359 11.5 9.0699375 13.007781 6.7109375 15.425781 L 8.1210938 16.839844 C 10.121094 14.780844 12.914 13.5 16 13.5 C 17.682 13.5 19.272219 13.892266 20.699219 14.572266 C 21.628219 14.246266 22.617437 14.053578 23.648438 14.017578 C 21.501437 12.442578 18.864 11.5 16 11.5 z M 24 16 C 19.6 16 16 19.6 16 24 C 16 28.4 19.6 32 24 32 C 28.4 32 32 28.4 32 24 C 32 19.6 28.4 16 24 16 z M 16 16.5 C 13.738 16.5 11.699187 17.444938 10.242188 18.960938 L 11.65625 20.371094 C 12.67425 19.303094 14.078484 18.611531 15.646484 18.519531 C 16.109484 17.815531 16.662203 17.178281 17.283203 16.613281 C 16.864203 16.545281 16.438 16.5 16 16.5 z M 24 18 C 27.3 18 30 20.7 30 24 C 30 27.3 27.3 30 24 30 C 20.7 30 18 27.3 18 24 C 18 20.7 20.7 18 24 18 z M 21.699219 20.300781 L 20.300781 21.699219 L 22.599609 24 L 20.300781 26.300781 L 21.699219 27.699219 L 24 25.400391 L 26.300781 27.699219 L 27.699219 26.300781 L 25.400391 24 L 27.699219 21.699219 L 26.300781 20.300781 L 24 22.599609 L 21.699219 20.300781 z M 14.181641 22.132812 C 14.038641 22.243813 13.90225 22.362094 13.78125 22.496094 L 14.080078 22.794922 C 14.107078 22.571922 14.140641 22.350812 14.181641 22.132812 z" stroke-linecap="round" />
+                                            </g>
+                                        </svg>
+                                    </span>
+                                </p>
+                                <p class="text-xs text-slate-400">${ player.user ? `@${player.user.username}` : 'Guest Player'}</p>
+                            </div>
                         </div>
-
-                        <!-- Player Info -->
-                        <div>
-                            <p class="font-medium text-slate-900 text-sm">
-                                ${player.name}${isMe ? '<span class="text-slate-400 font-normal"> (You)</span>' : ''}
-                            </p>
-                            <p class="text-xs text-slate-400">${ player.user ? `@${player.user.username}` : 'Guest Player'}</p>
+                        <div class="flex items-center gap-2">
+                            <!-- Role Badge -->
+                            <div>
+                                ${player.is_host 
+                                    ? '<span class="badge badge-warning px-1 rounded-md">Host</span>' 
+                                    : player.role === 'co-host'
+                                        ? '<span class="badge badge-info px-1 rounded-md">Co-Host</span>'
+                                        : '<span class="badge badge-info px-1 rounded-md">Player</span>'
+                                }
+                            </div>
+                            ${isHost && ! isMe ? `
+                                <button onclick="kickPlayer(${player.member_id}, '${player.name}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"  class="w-4 h-4" >
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                    </svg>
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <!-- Role Badge -->
-                        <div>
-                            ${player.is_host 
-                                ? '<span class="badge badge-warning px-1 rounded-md">Host</span>' 
-                                : player.role === 'co-host'
-                                    ? '<span class="badge badge-info px-1 rounded-md">Co-Host</span>'
-                                    : '<span class="badge badge-info px-1 rounded-md">Player</span>'
-                            }
+
+                    <!-- Vote Bar Section (Hidden by default, shown when disconnected) -->
+                    <div id="vote-bar-${player.member_id}"
+                        class="hidden border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-b-xl ">
+                        
+                        <!-- Voting Timer Progress Bar -->
+                        <div class="relative h-1 bg-slate-200 overflow-hidden">
+                            <div id="vote-timer-bar-${player.member_id}" 
+                                class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 ease-linear" 
+                                style="width: 100%;">
+                            </div>
                         </div>
-                        ${isHost && ! isMe ? `
-                            <button onclick="kickPlayer(${player.member_id}, '${player.name}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"  class="w-4 h-4" >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                        
+                        <!-- Compact Vote Section -->
+                        <div class="flex items-center justify-between gap-2 px-3 py-1.5">
+                            <!-- Total Votes Indicator -->
+                            <div class="flex items-center gap-1 text-xs text-slate-500">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
                                 </svg>
-                            </button>
-                        ` : ''}
+                                <span id="votes-count-${player.member_id}" class="font-semibold">0/0</span>
+                            </div>
+
+                            <!-- Vote Buttons -->
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="castVote(${player.member_id}, 'keep')"  title="Vote to Keep Player"
+                                        class="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors text-xs font-medium">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span id="keep-count-${player.member_id}" class="font-semibold">0</span>
+                                </button>
+                                
+                                <div class="h-4 w-px bg-slate-300"></div>
+                                
+                                <button onclick="castVote(${player.member_id}, 'kick')" title="Vote to Kick Player"
+                                        class="flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors text-xs font-medium">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span id="kick-count-${player.member_id}" class="font-semibold">0</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1033,7 +1203,7 @@
     
     // Cleanup on unload
     window.addEventListener('beforeunload', () => {
-        disconnectedTimers.forEach((_, id) => clearDisconnectTimer(id));
+        disconnectedUserStatus.forEach((_, id) => clearDisconnectTimer(id));
     });
     // ════════════════════════════════════════════════════════════
     // INIT
