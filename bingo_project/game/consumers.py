@@ -64,15 +64,18 @@ class DisconnectionManager:
         """Add a vote. Returns True if vote was added."""
         vote_data = cls.get_vote_kick(room_code, member_id)
         if not vote_data:
-            return False
+            return False, 'No active vote kick for this member.'
         
+        # Prevent voting more than once
+        if voter_id in vote_data['votes']['kick'] or voter_id in vote_data['votes']['keep']:
+            return False, "Can't vote more than once."
         # Remove previous vote from this voter
         vote_data['votes']['kick'].discard(voter_id)
         vote_data['votes']['keep'].discard(voter_id)
         
         # Add new vote
         vote_data['votes'][vote].add(voter_id)
-        return True
+        return True, 'Vote added.'
     
     @classmethod
     def get_vote_counts(cls, room_code, member_id):
@@ -310,8 +313,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         # Add vote
-        DisconnectionManager.add_vote(self.room_code, target_member_id, member.id, vote)
-
+        added_vote, message = DisconnectionManager.add_vote(self.room_code, target_member_id, member.id, vote )
+        if not added_vote:
+            await self.send_error(message)
+            return
+        
         # Get counts
         votes = DisconnectionManager.get_vote_counts(self.room_code, target_member_id)
         total_voters = await self.get_connected_voters_count(target_member_id)

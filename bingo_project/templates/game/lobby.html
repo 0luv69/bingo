@@ -175,7 +175,7 @@
 
                                 <!-- Vote Bar Section (Hidden by default, shown when disconnected) -->
                                 <div id="vote-bar-{{ player.room_member.id }}" 
-                                    class="hidden border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-b-xl ">
+                                    class="hidden border-t curs border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-b-xl ">
                                     
                                     <!-- Voting Timer Progress Bar -->
                                     <div class="relative h-1 bg-slate-200 overflow-hidden">
@@ -198,7 +198,7 @@
 
                                         <!-- Vote Buttons -->
                                         <div class="flex items-center gap-1.5">
-                                            <button onclick="castVote({{ player.room_member.id }}, 'keep')"  title="Vote to Keep Player"
+                                            <button id = "vote-keep-btn-{{ player.room_member.id }}" onclick="castVote({{ player.room_member.id }}, 'keep')"  title="Vote to Keep Player"
                                                     class="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors text-xs font-medium">
                                                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -208,7 +208,7 @@
                                             
                                             <div class="h-4 w-px bg-slate-300"></div>
                                             
-                                            <button onclick="castVote({{ player.room_member.id }}, 'kick')" title="Vote to Kick Player"
+                                            <button id = "vote-kick-btn-{{ player.room_member.id }}" onclick="castVote({{ player.room_member.id }}, 'kick')" title="Vote to Kick Player"
                                                     class="flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors text-xs font-medium">
                                                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
@@ -848,8 +848,37 @@
 
     function castVote(targetMemberId, vote) {
         data = disconnectedUserStatus.get(targetMemberId);
+
         if (data && data.status === 'vote') {
-            sendMessage('cast_vote', {voter: currentMemberId, target_member_id: targetMemberId, vote: vote });
+            votedby = data.votedby || [];
+            if (votedby.includes(currentMemberId)) {
+                showNotification('You have already voted for this player.', 'error');
+                return;
+            }
+            votedby.push(currentMemberId);
+            disconnectedUserStatus.set(targetMemberId, { status: 'vote', votedby: votedby });
+
+            // disable vote buttons
+            kickBTN = document.getElementById(`vote-kick-btn-${targetMemberId}`);
+            keepBTN = document.getElementById(`vote-keep-btn-${targetMemberId}`);
+
+            kickBTN.disabled = true;
+            keepBTN.disabled = true;
+
+            kickBTN.classList.add('cursor-not-allowed');
+            keepBTN.classList.add('cursor-not-allowed');
+
+            if (vote === 'kick') {
+                kickBTN.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+            } else {
+                keepBTN.classList.add('bg-green-500', 'text-white','hover:bg-green-600');
+            }
+
+            // send vote to server
+            sendMessage('cast_vote', {target_member_id: targetMemberId, vote: vote });
+
+
+
         } else{
             showNotification('Voting period has ended or not started yet.', 'error');
         }
@@ -979,7 +1008,7 @@
 
                             <!-- Vote Buttons -->
                             <div class="flex items-center gap-1.5">
-                                <button onclick="castVote(${player.member_id}, 'keep')"  title="Vote to Keep Player"
+                                <button id="vote-keep-btn-${player.member_id}" onclick="castVote(${player.member_id}, 'keep')"  title="Vote to Keep Player"
                                         class="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded transition-colors text-xs font-medium">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -989,7 +1018,7 @@
                                 
                                 <div class="h-4 w-px bg-slate-300"></div>
                                 
-                                <button onclick="castVote(${player.member_id}, 'kick')" title="Vote to Kick Player"
+                                <button id="vote-kick-btn-${player.member_id}" onclick="castVote(${player.member_id}, 'kick')" title="Vote to Kick Player"
                                         class="flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors text-xs font-medium">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
