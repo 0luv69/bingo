@@ -337,9 +337,32 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
         # Check if voting is complete
-        # if total_voted >= total_voters:
-        #     await self.complete_vote_kick(target_member_id, votes)
-    
+        if total_voted >= total_voters:
+            await self.complete_vote_kick(target_member_id, votes)
+
+
+    async def complete_vote_kick(self, target_member_id, votes):
+        """Complete the vote kick and take action."""
+        vote_data = DisconnectionManager.get_vote_kick(self.room_code, target_member_id)
+        if not vote_data:
+            return
+
+        target_name = vote_data['target_name']
+        kick_count = votes['kick']
+        keep_count = votes['keep']
+
+        # Clear vote data
+        DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
+        
+        # Determine result (majority wins, tie = keep)
+        result = 'kick' if kick_count > keep_count else 'keep'
+
+        if result == 'kick':
+            # Remove the player
+            await self.leave_room_db(target_member_id)
+            ...
+
+
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
     # ════════════════════════════════════════════════════════════

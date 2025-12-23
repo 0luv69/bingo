@@ -71,7 +71,11 @@ class Room(models.Model):
     
     def get_host(self):
         """Get current host of the room."""
-        return self.members.filter(is_active=True, role='host').first()
+        host = self.members.filter(is_active=True, role='host').first()
+        if not host:
+            # Fallback to co-host if no host found
+            host = self.members.filter(is_active=True, role='co-host').first()
+        return host
 
     def get_current_round(self):
         """Get the current (latest) game round."""
