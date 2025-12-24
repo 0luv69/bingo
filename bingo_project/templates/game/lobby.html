@@ -828,7 +828,7 @@
     }
 
     function handleVoteUpdated(data) {
-        const { target_member_id, votes,  total_voters, total_voted } = data;
+        const { target_member_id, votes,target_name , total_voters, total_voted } = data;
         
         if (target_member_id === currentMemberId) return;
         
@@ -838,8 +838,23 @@
         document.getElementById(`keep-count-${target_member_id}`).textContent = votes['keep'];
 
         // If voting complete
-        if (votes['kick'] + votes['keep'] >= total_voters) {
-            showNotification(`Vote concluded for ${data.target_member_name}`, 'info');
+        if (votes['kick'] + votes['keep'] == total_voters) {
+            if (total_voted == 0){
+                showNotification(`No votes were cast for ${target_name}. Grace time Extend`, 'info');
+            }
+
+            else if (votes['kick'] > votes['keep']) {
+                // Result is to kick
+                showNotification(`Voted Kick, for ${target_name}. Player kicked`, 'error');
+            } else if (votes['keep'] > votes['kick']) {
+                // Result is to keep
+                showNotification(`Voted Extend, For${target_name}. Grace time Extend`, 'info');
+            }else if (votes['keep'] === votes['kick']){
+                // Result is tie
+                showNotification(`Voted tie, for ${target_name}. Grace time Extend`, 'info');
+            }
+
+            // hide vote bar
             const vote_bar = document.getElementById(`vote-bar-${target_member_id}`);
             vote_bar.classList.add('hidden');
         }

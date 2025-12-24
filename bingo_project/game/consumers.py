@@ -322,6 +322,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         votes = DisconnectionManager.get_vote_counts(self.room_code, target_member_id)
         total_voters = await self.get_connected_voters_count(target_member_id)
         total_voted = votes['kick'] + votes['keep']
+        target_name = vote_data['target_name']
         
         
         # Broadcast vote update
@@ -331,6 +332,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'type': 'vote_updated',
                 'target_member_id': target_member_id,
                 'votes': votes,
+                'target_name': target_name,
                 'total_voters': total_voters,
                 'total_voted': total_voted,
             }
@@ -355,12 +357,29 @@ class GameConsumer(AsyncWebsocketConsumer):
         DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
         
         # Determine result (majority wins, tie = keep)
-        result = 'kick' if kick_count > keep_count else 'keep'
+        if kick_count < 0 or keep_count < 0:
+            result = 'zero'
+        elif kick_count > keep_count:
+            result = 'kick'
+        elif kick_count == keep_count:
+            result = 'tie'
+        else:
+            result = 'keep'
 
         if result == 'kick':
             # Remove the player
             await self.leave_room_db(target_member_id)
-            ...
+
+        elif result == 'keep' or result == 'tie':
+            grace_period = await self.get_grace_period()
+            # Restart grace period
+            await self.start_disconnection_timer(target_member_id, grace_period)
+
+        elif result == 'zero':
+            # kick the player
+            await self.leave_room_db(target_member_id)
+
+
 
 
     # ════════════════════════════════════════════════════════════
@@ -730,6 +749,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'vote_updated',
             'target_member_id':  event['target_member_id'],
             'votes': event['votes'],
+            'target_name': event['target_name'],
             'total_voters': event['total_voters'],
             'total_voted': event['total_voted'],
         }))
