@@ -678,6 +678,11 @@
                 } 
                 break;
             case 'player_disconnected':
+                showNotification(`${data.member_name} disconnected`, 'warning_light', position='bottom');
+                handlePlayerDisconnected(data);
+                break;
+
+            case 'player_timerestarted':
                 handlePlayerDisconnected(data);
                 break;
 
@@ -839,24 +844,54 @@
 
         // If voting complete
         if (votes['kick'] + votes['keep'] == total_voters) {
+            updateData = false
             if (total_voted == 0){
-                showNotification(`No votes were cast for ${target_name}. Grace time Extend`, 'info');
+                showNotification(`No votes casted for ${target_name}. Grace time Extend`, 'info');
+                updateData = true
             }
-
             else if (votes['kick'] > votes['keep']) {
                 // Result is to kick
                 showNotification(`Voted Kick, for ${target_name}. Player kicked`, 'error');
             } else if (votes['keep'] > votes['kick']) {
                 // Result is to keep
                 showNotification(`Voted Extend, For${target_name}. Grace time Extend`, 'info');
+                updateData = true
+
             }else if (votes['keep'] === votes['kick']){
                 // Result is tie
                 showNotification(`Voted tie, for ${target_name}. Grace time Extend`, 'info');
+                updateData = false
             }
+
+            disconnectedUserStatus.delete(target_member_id);
+
+
 
             // hide vote bar
             const vote_bar = document.getElementById(`vote-bar-${target_member_id}`);
             vote_bar.classList.add('hidden');
+
+            if (updateData){
+                // Enable the vote buttons again
+                document.getElementById(`kick-count-${target_member_id}`).textContent = 0;
+                document.getElementById(`keep-count-${target_member_id}`).textContent = 0;
+
+
+                kickBTN = document.getElementById(`vote-kick-btn-${target_member_id}`);
+                keepBTN = document.getElementById(`vote-keep-btn-${target_member_id}`);
+
+                kickBTN.disabled = false;
+                keepBTN.disabled = false;
+
+                kickBTN.classList.remove('cursor-not-allowed');
+                keepBTN.classList.remove('cursor-not-allowed');
+                
+                kickBTN.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+                keepBTN.classList.remove('bg-green-500', 'text-white','hover:bg-green-600');
+            }
+
+
+
         }
     }
 

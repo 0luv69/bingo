@@ -372,6 +372,23 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         elif result == 'keep' or result == 'tie':
             grace_period = await self.get_grace_period()
+
+            member = await self.get_member_by_id(target_member_id)
+            if not member:
+                return
+            
+            # Notify others
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type':  'player_timerestarted',
+                    'member_id': member.id,
+                    'member_name': member.display_name,
+                    'grace_period': grace_period,
+                    'deadline': (timezone.now() + timedelta(seconds=grace_period)).isoformat(),
+                    'round_players': await self.get_round_players_data(),
+                }
+            )
             # Restart grace period
             await self.start_disconnection_timer(target_member_id, grace_period)
 
@@ -718,6 +735,16 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def player_disconnected(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_disconnected',
+            'member_id': event['member_id'],
+            'member_name': event['member_name'],
+            'grace_period': event['grace_period'],
+            'deadline': event['deadline'],
+            'round_players': event['round_players'],
+        }))
+
+    async def player_timerestarted(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_timerestarted',
             'member_id': event['member_id'],
             'member_name': event['member_name'],
             'grace_period': event['grace_period'],
