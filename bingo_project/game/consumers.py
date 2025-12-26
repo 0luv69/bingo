@@ -108,14 +108,25 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.member_id = session.get('current_member_id')
 
         if not self.member_id:
+            await self.accept()
+            await self.send(text_data=json.dumps({
+                "type": "connection_error",
+                "reason": "Member ID not found in session"
+            }))
             await self.close()
-            return
-        
+            return 
+
         # Verify member exists and is active
         member = await self.get_member()
         if not member:
+            await self.accept()
+            await self.send( text_data=json.dumps({
+                "type": "connection_error",
+                "reason": "Member is not active in this room"
+            }))
             await self.close()
-            return
+            return 
+        
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -126,19 +137,17 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.mark_member_connected(member.id, self.channel_name)
         
         # Broadcast player connected
-        member = await self.get_member()
-        if member:
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'player_connected',
-                    'member_id': member.id,
-                    'member_name': member.display_name,
-                    'is_reconnection': was_disconnected,
-                    'round_players': await self.get_round_players_data(),
-                }
-            )
-    
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'player_connected',
+                'member_id': member.id,
+                'member_name': member.display_name,
+                'is_reconnection': was_disconnected,
+                'round_players': await self.get_round_players_data(),
+            }
+        )
+
     async def disconnect(self, close_code):
 
         # Removing if member_id is not set for this consumer
@@ -223,6 +232,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 pass  # Timer was cancelled (player reconnected)
 
         task = asyncio.create_task(on_grace_period_expired())
+        DisconnectionManager.set_disconnection_timer(self.room_code, member_id, task)
 
     async def handle_grace_period_expired(self, member_id):
         """Handle when grace period expires for a disconnected player."""
@@ -253,7 +263,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             round_player = await self.get_round_player(member_id)
             current_turn_id = await self.get_current_turn_id()
             if round_player and current_turn_id == round_player.id:
-                await self.schedule_bot_play(round_player.id)
+                ...
+                # await self.schedule_bot_play(round_player.id)
         else:
             # LOBBY or SETUP PHASE: Start vote kick
             await self.initiate_vote_kick(member_id)
@@ -279,6 +290,23 @@ class GameConsumer(AsyncWebsocketConsumer):
             DisconnectionManager.clear_vote_kick(self.room_code, member_id)
             return
         
+        # create task for vote duration
+        async def vote_kick_timer(target_member_id, total_voters):
+            try:
+                grace_period = await self.get_grace_period()
+                await asyncio.sleep(grace_period + 5)  # Extra 5 seconds for voting
+                
+                # Get final votes
+                votes = DisconnectionManager.get_vote_counts(self.room_code, target_member_id)
+                
+                # Complete vote kick
+                await self.complete_vote_kick(target_member_id, votes)
+            except asyncio.CancelledError:
+                pass  # Timer was cancelled (vote completed early)
+
+        task = asyncio.create_task(vote_kick_timer(member_id, total_voters))
+
+        # Broadcast vote kick started
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -286,6 +314,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'target_member_id': member_id,
                 'target_member_name': member.display_name,
                 'total_voters': total_voters,
+                'total_time': await self.get_grace_period() + 5,
             }
         )
 
@@ -342,7 +371,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         if total_voted >= total_voters:
             await self.complete_vote_kick(target_member_id, votes)
 
-
     async def complete_vote_kick(self, target_member_id, votes):
         """Complete the vote kick and take action."""
         vote_data = DisconnectionManager.get_vote_kick(self.room_code, target_member_id)
@@ -357,7 +385,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
         
         # Determine result (majority wins, tie = keep)
-        if kick_count < 0 or keep_count < 0:
+        if kick_count <= 0 and keep_count <= 0:
             result = 'zero'
         elif kick_count > keep_count:
             result = 'kick'
@@ -366,9 +394,22 @@ class GameConsumer(AsyncWebsocketConsumer):
         else:
             result = 'keep'
 
-        if result == 'kick':
+        if result == 'kick' or result == 'zero':
             # Remove the player
-            await self.leave_room_db(target_member_id)
+            new_cohost_name, new_cohost_id = await self.leave_room_db(target_member_id)
+
+            # Notify others
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'player_voted_ended',
+                    'kicked_member_id': target_member_id,
+                    'kicked_name': target_name,
+                    'new_cohost_name': new_cohost_name,
+                    'new_cohost_id': new_cohost_id,
+                    'round_players': await self.get_round_players_data(),
+                }
+            )
 
         elif result == 'keep' or result == 'tie':
             grace_period = await self.get_grace_period()
@@ -392,12 +433,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             # Restart grace period
             await self.start_disconnection_timer(target_member_id, grace_period)
 
-        elif result == 'zero':
-            # kick the player
-            await self.leave_room_db(target_member_id)
-
-
-
 
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
@@ -406,7 +441,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_start_game(self, data):
         """Host starts the game."""
         member = await self.get_member()
-        if not member or not member.is_host:
+        if not member or not (member.is_host or member.is_co_host):
             await self.send_error('Only host can start the game')
             return
         
@@ -579,8 +614,8 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_update_settings(self, data):
         """Host updates room settings."""
         member = await self.get_member()
-        if not member or not member.is_host:
-            await self.send_error('Only host can change settings')
+        if not member or (not member.is_host and not member.is_co_host):
+            await self.send_error('Only host or co-host can change settings')
             return
         
         room = await self.get_room()
@@ -639,7 +674,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         was_host = member.is_host
         
         # Remove from room
-        new_host_name = await self.leave_room_db(member_id)
+        new_cohost_name, new_cohost_id = await self.leave_room_db(member_id)
         
         # Send confirmation to leaving player
         await self.send(text_data=json.dumps({
@@ -655,7 +690,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'member_id': member_id,
                 'member_name': member_name,
                 'was_host': was_host,
-                'new_host_name': new_host_name,
+                'new_cohost_name': new_cohost_name,
+                'new_cohost_id': new_cohost_id,
                 'round_players': await self.get_round_players_data(),
             }
         )
@@ -742,6 +778,16 @@ class GameConsumer(AsyncWebsocketConsumer):
             'round_players': event['round_players'],
         }))
 
+    async def player_voted_ended(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_voted_ended',
+            'kicked_member_id': event['kicked_member_id'],
+            'kicked_name': event['kicked_name'],
+            'new_cohost_name': event['new_cohost_name'],
+            'new_cohost_id': event['new_cohost_id'],
+            'round_players': event['round_players'],
+        }))
+
     async def player_timerestarted(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_timerestarted',
@@ -758,7 +804,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             'member_id': event['member_id'],
             'member_name': event['member_name'],
             'was_host':  event['was_host'],
-            'new_host_name': event['new_host_name'],
+            'new_cohost_id': event['new_cohost_id'],
+            'new_cohost_name': event['new_cohost_name'],
             'round_players': event['round_players'],
         }))
 
@@ -768,6 +815,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'target_member_id': event['target_member_id'],
             'target_member_name': event['target_member_name'],
             'total_voters': event['total_voters'],
+            'total_time': event['total_time'],
         }))
 
 
@@ -872,7 +920,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not self.member_id:
             return None
         try:
-            return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True)
+            return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True, connection_status__in=['connected', 'disconnected', 'left', 'kicked'])
         except RoomMember.DoesNotExist:
             return None
 
@@ -953,7 +1001,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'id': p.room_member.user.id,
                     'username': p.room_member.user.username,
                 } if getattr(p.room_member, 'user', None) else None
-            } for p in current_round.players.select_related('room_member').all().filter(room_member__is_active=True)]
+            } for p in current_round.players.select_related('room_member').all().filter(room_member__is_active=True, room_member__connection_status__in=['connected', 'disconnected'])]
         except Exception as e:
             print(e)
             return []
@@ -1008,16 +1056,10 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Remove member from room. Returns new host name if host changed."""
         try:
             member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
-            was_host = member.is_host
-            member.leave_room()
-
-            if was_host:
-                room = Room.objects.get(code=self.room_code)
-                new_host_member = room.transfer_host()
-                return new_host_member.display_name if new_host_member else None
-            return None
+            new_host_member = member.leave_room()
+            return (new_host_member.display_name, new_host_member.id) if new_host_member else (None, None)
         except:
-            return None
+            return None, None
     
     
     @database_sync_to_async
@@ -1164,6 +1206,11 @@ class GameConsumer(AsyncWebsocketConsumer):
                 return None
             
             name = member.display_name
+            member.kicked_count += 1
+            member.connection_status = 'kicked'
+            if member.kicked_count >= 3:
+                member.connection_status = 'banned'
+            
             member.is_active = False
             member.save()
             

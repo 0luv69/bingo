@@ -155,13 +155,13 @@
                                     <div class="flex items-center gap-2">
                                         <!-- Role Badge -->
                                         <div>
-                                            {% if player.role == 'host' %}<span class="badge badge-warning px-1 rounded-md">Host</span>
-                                            {% elif player.role == 'co-host' %}<span class="badge badge-info px-1 rounded-md">Co-Host</span>
+                                            {% if player.is_host  %}<span class="badge badge-warning px-1 rounded-md">Host</span>
+                                            {% elif player.is_co_host  %}<span class="badge badge-success px-1 rounded-md">Co-Host</span>
                                             {%else%}<span class="badge badge-info px-1 rounded-md">Player</span>{% endif %}
                                         </div>
                                         
                                         {% if player.room_member.id != current_member.id %}
-                                            {% if is_host or player.role == 'co-host' %}
+                                            {% if is_host or is_co_host %}
                                                 <button onclick="kickPlayer({{ player.room_member.id }}, '{{ player.display_name }}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Kick player">
                                                     <!-- Kick Icon -->
                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"  class="w-4 h-4" >
@@ -236,7 +236,7 @@
                         <h2 class="font-semibold text-slate-900 mb-4">Actions</h2>
                         
                         <div class="space-y-3">
-                            {% if is_host %}
+                            {% if is_host or is_co_host %}
                             <button id="start-game-btn" onclick="startGame()" class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed" {% if round_players|length < 2 %}disabled{% endif %}>
                                 Start Game
                             </button>
@@ -263,7 +263,7 @@
                     <input type="hidden" id="is-host" value="{{ is_host|yesno:'1,0' }}">
                   
                     <!-- Host Settings -->
-                    {% if is_host %}
+                    {% if is_host or is_co_host %}
                     <div class="card p-6">
                         <div class="flex justify-between items-center gap-2 mb-4">
                             <h2 class="font-semibold text-slate-900">Game Settings</h2>
@@ -560,7 +560,7 @@
     <div class="card p-6 max-w-sm mx-4">
         <h3 class="font-semibold text-slate-900 mb-2">Remove Player</h3>
         <p class="text-slate-500 mb-6">Remove <span id="kick-player-name" class="font-medium"></span> from the room?</p>
-        <p class="text-xs text-red-500 mb-4">Once kicked, this player cannot join again.</p>
+        <p class="text-xs text-red-500 mb-4">On 3rd kick player gets banned.</p>
         <div class="flex gap-3">
             <button onclick="hideKickModal()" class="btn-secondary flex-1">Cancel</button>
             <button onclick="confirmKick()" class="btn-primary flex-1 bg-red-500 hover:bg-red-600">Kick 👟</button>
@@ -622,7 +622,7 @@
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
-        
+        let shouldReconnect = true;
         socket = new WebSocket(wsUrl);
         
         socket.onopen = function() {
@@ -634,6 +634,7 @@
         socket.onclose = function() {
             console.log('WebSocket disconnected');
             updateConnectionStatus('disconnected');
+            if (!shouldReconnect) return;
             if (reconnectAttempts < maxReconnectAttempts) {
                 reconnectAttempts++;
                 setTimeout(connectWebSocket, 2000);
@@ -648,6 +649,13 @@
         socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             console.log('Received:', data);
+            if (data.type === 'connection_error') {
+                    shouldReconnect = false;
+                    showNotification(data.reason + " Plz Click to join again in 2 seconds", 'error');
+                    setTimeout(() => window.location.href = `/join/${roomCode}/`, 1500);
+                    socket.close();
+                    return;
+                }
             handleMessage(data);
         };
     }
@@ -688,19 +696,20 @@
 
             case 'player_left':
                 updatePlayersList(data.round_players);
-                if (data.was_host && data.new_host_name) {
-                    showNotification(`${data.new_host_name} is now the host, ${data.member_name} Left Room.`, 'info');
-                    // Reload if we became host
-                    setTimeout(() => location.reload(), 1000);
+                if (data.was_host) {
+                    if (data.new_cohost_id === currentMemberId) {
+                        showNotification(`You are now a Co-Host. ${data.member_name} Left Room.`, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    }
                 }else{
-                    showNotification(`${data.member_name} left the room`, 'warning_light', position='bottom');
+                    showNotification(`${data.new_cohost_name} is now a Co-Host. ${data.member_name} Left Room.`, 'info');
                 }
                 break;
             
             case 'player_kicked':
                 if (data.kicked_member_id === currentMemberId) {
-                    showNotification('You have been removed from the room', 'error');
-                    setTimeout(() => window.location.href = '/', 2000);
+                    showNotification('You are being removed from the room', 'error');
+                    setTimeout(() => window.location.href = '/', 1000);
                 } else {
                     updatePlayersList(data.round_players);
                     showNotification(`${data.kicked_name} was removed`, 'info');
@@ -713,6 +722,26 @@
 
             case 'vote_updated':
                 handleVoteUpdated(data);
+                break;
+
+            case 'player_voted_ended':
+                updatePlayersList(data.round_players);
+                if (data.kicked_member_id === currentMemberId) {
+                    showNotification('You have been removed from the room', 'error');
+                    setTimeout(() => window.location.href = '/', 1000);
+                }
+                else{
+                    showNotification(`${data.kicked_name} is Removed.`, 'info');
+                    if (data.new_cohost_id){
+                        if (data.new_cohost_id === currentMemberId) {
+                        showNotification('You are now a Co-Host.', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                        }
+                        else{
+                            showNotification(`${data.new_cohost_name} is now a Co-Host.`, 'info');
+                        }
+                    }
+                }
                 break;
 
             case 'game_starting':
@@ -819,10 +848,13 @@
         }
     }
     
+    // ═══════════════════════════════════════════════════════════════
+    // VOTE KICK HANDLERS
+    // ═══════════════════════════════════════════════════════════════
 
     function handleVoteKickStarted(data) {
-        const { target_member_id, target_member_name, total_voters } = data;
-        showNotification(`Vote to Kick or Keep ${target_member_name}`, 'warning_light');
+        const { target_member_id, target_member_name, total_voters, total_time } = data;
+        showNotification(`Vote to Kick or Keep ${target_member_name}, in ${total_time} seconds`, 'warning_light');
 
         if (target_member_id === currentMemberId) return;
         
@@ -830,6 +862,37 @@
         vote_bar.classList.remove('hidden');
         vote_count = document.getElementById(`votes-count-${target_member_id}`);
         vote_count.textContent = `0/${total_voters} votes`;
+
+        const timerBar = document.getElementById(`vote-timer-bar-${target_member_id}`);
+        let time_left = total_time;
+
+        updateVoteTimerBar(target_member_id, time_left, total_time,timerBar);
+
+        const interval = setInterval(() => {
+            time_left -= 1;
+            if (time_left >= 0) {
+                updateVoteTimerBar(target_member_id, time_left, total_time,timerBar);
+            } else {
+                clearInterval(interval);
+            }
+        }, 1000);
+    }
+
+
+    function updateVoteTimerBar(target_member_id, time_left, total_time,timerBar) {
+        if (!timerBar) return;
+        const percentage = (time_left / total_time) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+
+        // Change color based on urgency
+        if (time_left <= 5) {
+            timerBar.className = 'h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-1000 ease-linear';
+        } else if (time_left <= 10) {
+            timerBar.className = 'h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-1000 ease-linear';
+        } else {
+            timerBar.className = 'h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 ease-linear';
+            }
     }
 
     function handleVoteUpdated(data) {
@@ -851,7 +914,7 @@
             }
             else if (votes['kick'] > votes['keep']) {
                 // Result is to kick
-                showNotification(`Voted Kick, for ${target_name}. Player kicked`, 'error');
+                // showNotification(`Voted Kick, for ${target_name}. Player Removed`, 'error');
             } else if (votes['keep'] > votes['kick']) {
                 // Result is to keep
                 showNotification(`Voted Extend, For${target_name}. Grace time Extend`, 'info');
@@ -894,7 +957,6 @@
 
         }
     }
-
 
     function castVote(targetMemberId, vote) {
         data = disconnectedUserStatus.get(targetMemberId);
@@ -1018,7 +1080,7 @@
                                 ${player.is_host 
                                     ? '<span class="badge badge-warning px-1 rounded-md">Host</span>' 
                                     : player.role === 'co-host'
-                                        ? '<span class="badge badge-info px-1 rounded-md">Co-Host</span>'
+                                        ? '<span class="badge badge-success px-1 rounded-md">Co-Host</span>'
                                         : '<span class="badge badge-info px-1 rounded-md">Player</span>'
                                 }
                             </div>

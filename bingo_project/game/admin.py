@@ -39,7 +39,7 @@ class RoomAdmin(admin. ModelAdmin):
 
 @admin.register(RoomMember)
 class RoomMemberAdmin(admin.ModelAdmin):
-    list_display = ['display_name', 'room_code', 'role_badge', 'is_active_badge', 'identifier_type', 'joined_at']
+    list_display = ['display_name', 'room_code', 'role_badge', 'is_active_badge', 'status_badge', 'identifier_type', 'joined_at']
     list_filter = ['role', 'is_active', 'room']
     search_fields = ['display_name', 'room__code']
     readonly_fields = ['joined_at']
@@ -56,9 +56,15 @@ class RoomMemberAdmin(admin.ModelAdmin):
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return mark_safe('<span style="color: #10b981;">● Active</span>')
-        return mark_safe('<span style="color: #ef4444;">● Left</span>')
-    is_active_badge.short_description = 'Status'
+            return mark_safe('<span style="color: #10b981;">✅</span>')
+        return mark_safe('<span style="color: #ef4444;">❌</span>')
+    is_active_badge.short_description = 'Active'
+
+    def status_badge(self, obj):
+        colors = {'connected': '#10b981', 'disconnected': '#f59e0b', 'left': '#ef4444'}
+        color = colors.get(obj.connection_status, '#6b7280')
+        return format_html('<span style="color:  {};">{}</span>', color, obj.get_connection_status_display())
+    status_badge.short_description = ' Connection Status'
     
     def identifier_type(self, obj):
         if obj.user:

@@ -153,7 +153,10 @@ def join_room_view(request):
     existing_member = get_room_member(room, user, session_key)
     if existing_member:
         member = existing_member
-        if not member.connection_status != 'connected':
+        if member.connection_status == 'banned':
+            messages.error(request, "You have been banned from this room. You can't rejoin.")
+            return redirect('home')
+        else:
             member.is_active = True
             member.connection_status = 'connected'
             member.display_name = player_name
@@ -228,10 +231,16 @@ def join_room_direct_view(request, room_code):
             existing_member = RoomMember.objects.filter(room=room, session_key=session_key).first()
         
         if existing_member: 
-            # Reactivate if was kicked/left
-            existing_member.display_name = player_name
-            existing_member.save()
             member = existing_member
+            if member.connection_status == 'banned':
+                messages.error(request, "You have been banned from this room. You can't rejoin.")
+                return redirect('home')
+            
+            else:
+                member.is_active = True
+                member.connection_status = 'connected'
+                member.display_name = player_name
+                member.save()
         else: 
             # Create new member
             member = RoomMember.objects.create(
@@ -280,8 +289,8 @@ def lobby_view(request, room_code):
     if member_id:
         current_member = RoomMember.objects.filter(id=member_id, room=room).first()
 
-    if not current_member.is_active:
-        messages.error(request, 'You have been removed from this room. Please contact the host to rejoin.')
+    if current_member.connection_status == 'banned' and not current_member.is_active:
+        messages.error(request, "You have been banned from this room. You can't rejoin.")
         return redirect('home')
     
     if not current_member:
@@ -302,7 +311,7 @@ def lobby_view(request, room_code):
     round_players = []
     current_round_player = None
     if current_round:
-        round_players = current_round.players.select_related('room_member').all()
+        round_players = current_round.players.select_related('room_member').all().filter(room_member__is_active=True, room_member__connection_status__in=['connected', 'disconnected'])
         current_round_player = current_round.players.filter(room_member=current_member).first()
     
     round_history = room.rounds.filter(status='finished').order_by('-round_number').prefetch_related('winners__room_member')
@@ -315,6 +324,7 @@ def lobby_view(request, room_code):
         'members':  members,
         'round_players': round_players,
         'is_host': current_member.is_host,
+        'is_co_host': current_member.is_co_host,
         'share_url': request.build_absolute_uri(f'/join/{room.code}/'),
         'round_history': round_history,
     }

@@ -96,7 +96,7 @@ class Room(models.Model):
         
         if self.get_active_members_count() >= self.settings_max_players:
             return False, "Room is full"
-        
+
         return True, "OK"
     
     def transfer_host(self, exclude_member=None):
@@ -134,7 +134,6 @@ class RoomMember(models.Model):
     CONNECTION_STATUS_CHOICES = [
         ('connected', 'Connected'),
         ('disconnected', 'Disconnected'),
-        ('removed', 'Removed'),
         ('left', 'Left'),
         ('kicked', 'Kicked'),
         ('banned', 'Banned'),
@@ -147,6 +146,7 @@ class RoomMember(models.Model):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='player')
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="False when member is Kicked or Removed")
+    kicked_count = models.IntegerField(default=0, help_text="Number of times this member has been kicked")
 
     connection_status = models. CharField(max_length=15, choices=CONNECTION_STATUS_CHOICES, default='connected')
     disconnected_at = models.DateTimeField(null=True, blank=True, help_text="When player disconnected")
@@ -218,12 +218,13 @@ class RoomMember(models.Model):
         self.save()
         
         if was_host:
-            self.room.transfer_host(exclude_member=self)
+            return self.room.transfer_host(exclude_member=self)
         
         # Check if room should be deactivated
         if self.room.get_active_members_count() == 0:
             self.room.is_active = False
             self.room.save()
+        return None
 
 class GameRound(models.Model):
     """
@@ -407,6 +408,10 @@ class RoundPlayer(models.Model):
     @property
     def connection_status(self):
         return self.room_member.connection_status
+    
+    @property
+    def kicked_count(self):
+        return self.room_member.kicked_count
     
     @staticmethod
     def generate_board():
