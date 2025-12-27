@@ -64,7 +64,7 @@ class RoomMemberAdmin(admin.ModelAdmin):
         colors = {'connected': '#10b981', 'disconnected': '#f59e0b', 'left': '#ef4444'}
         color = colors.get(obj.connection_status, '#6b7280')
         return format_html('<span style="color:  {};">{}</span>', color, obj.get_connection_status_display())
-    status_badge.short_description = ' Connection Status'
+    status_badge.short_description = 'Status'
     
     def identifier_type(self, obj):
         if obj.user:

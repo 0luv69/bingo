@@ -866,7 +866,6 @@
         const timerBar = document.getElementById(`vote-timer-bar-${target_member_id}`);
         let time_left = total_time;
 
-        updateVoteTimerBar(target_member_id, time_left, total_time,timerBar);
 
         const interval = setInterval(() => {
             time_left -= 1;
@@ -1316,30 +1315,55 @@
         };
         
         const notification = document.createElement('div');
-        notification.className = `${colors[type]} px-4 py-3 rounded-lg shadow-lg flex items-start gap-2 transform transition-all duration-300 translate-x-full`;
+        notification.className = `${colors[type]} px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 transform transition-all duration-300 translate-x-full`;
+        
         if (title) {
             notification.innerHTML = `
-            <div>
+            <div class="flex-1">
                 <div class="font-semibold text-base mb-0.5">${title}</div>
                 <div class="text-sm">${message}</div>
             </div>
-            `
-            timeout += 3000
-            ;
+            <button class="close-notification flex-shrink-0 p-1 hover:bg-black/10 rounded transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            `;
+            timeout += 3000;
         } else {
-            notification.innerHTML = `<span class="text-sm font-medium">${message}</span>`;
+            notification.innerHTML = `
+            <span class="text-sm font-medium flex-1">${message}</span>
+            <button class="close-notification flex-shrink-0 p-1 hover:bg-black/10 rounded transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            `;
         }
         
         container.appendChild(notification);
         
+        // Close button functionality
+        const closeBtn = notification.querySelector('.close-notification');
+        closeBtn.addEventListener('click', () => {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => notification.remove(), 300);
+        });
+        
         requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
         
-        setTimeout(() => {
+        // Auto-dismiss after timeout
+        const autoDismiss = setTimeout(() => {
             notification.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => notification.remove(), 300);
         }, timeout);
+        
+        // Clear auto-dismiss if manually closed
+        closeBtn.addEventListener('click', () => clearTimeout(autoDismiss), { once: true });
     }
+
     
+
     // Cleanup on unload
     window.addEventListener('beforeunload', () => {
         disconnectedUserStatus.forEach((_, id) => clearDisconnectTimer(id));
