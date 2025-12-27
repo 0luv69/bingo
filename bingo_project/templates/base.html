@@ -63,7 +63,6 @@
             border-radius: 10px;
             border: 1px solid #e2e8f0;
             transition: all 0.2s ease;
-            display: inline-block;
             text-align: center;
         }
         .btn-secondary:hover {
@@ -190,7 +189,7 @@
                                 <!-- Logout Button -->
                                 <form method="post" action="{% url 'logout' %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-secondary w-full mt-2">Logout</button>
+                                    <button type="submit" class="btn-secondary inline-block w-full mt-2">Logout</button>
                                 </form>
                             </div>
                         </div>

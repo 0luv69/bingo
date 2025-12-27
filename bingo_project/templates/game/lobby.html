@@ -19,11 +19,8 @@
         text-align: left;
         border-radius: 8px;
         padding: 10px 12px;
-        position: absolute;
-        z-index: 100;
-        bottom: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%);
+        position: fixed;
+        z-index: 1000;
         opacity: 0;
         transition: opacity 0.2s, visibility 0.2s;
         font-size: 12px;
@@ -55,19 +52,35 @@
     <main class="flex-1 py-8 px-4">
         <div class="max-w-4xl mx-auto">
             <div class="grid lg:grid-cols-3 gap-6">
-                
                 <!-- Left Column:  Room Info & Share -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Room Code Card -->
                     <div class="card p-6 relative">
-                        <div class="flex items-center justify-between mb-4">
+
+                        <!-- Room Settings Button -->
+                        <span id="room-settings" onclick="OpenCloseSettings()" class="absolute -top-3 -right-2 p-1 bg-green-100 border border-green-300 text-green-900 rounded-full cursor-pointer" title="Room Settings">
+                            <svg class="w-5 h-5 hover:rotate-90 transition-transform" viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' >
+                                <g transform="matrix(0.43 0 0 0.43 12 12)" >
+                                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: currentColor; fill-rule: nonzero; opacity: 1;" transform=" translate(-25, -25)" d="M 22.205078 2 C 21.71554465145752 2.0002592913348565 21.29814891331823 2.354839071557026 21.21875 2.837890600000001 L 20.246094 8.7929688 C 19.076509 9.1331971 17.961243 9.5922728 16.910156 10.164062 L 11.996094 6.6542969 C 11.598816673690413 6.370610351017056 11.05478010183534 6.41518993627862 10.708984 6.7597656 L 6.8183594 10.646484 C 6.475160524964622 10.989923106498557 6.428211573453509 11.530247517776324 6.7070312 11.927734 L 10.164062 16.873047 C 9.583454 17.930271 9.1142098 19.051824 8.765625 20.232422 L 2.8359375 21.21875 C 2.3544384236683737 21.299853103126054 2.0018943636724598 21.71679624691585 2.0019531 22.205078 L 2.0019531 27.705078 C 2.0010727236635546 28.190255593235108 2.3485550930543897 28.606081573468177 2.8261718999999994 28.691406 L 8.7597656 29.742188 C 9.1064607 30.920739 9.5727226 32.043065 10.154297 33.101562 L 6.6542969 37.998047 C 6.370610922069476 38.3953241278578 6.415190488284029 38.93936004458805 6.7597656 39.285156 L 10.648438 43.175781 C 10.991091175572949 43.518528734926946 11.53018449205332 43.566265169641206 11.927734 43.289062 L 16.882812 39.820312 C 17.936999 40.39548 19.054994 40.857928 20.228516 41.201172 L 21.21875 47.164062 C 21.29900191650291 47.64633753510371 21.716171003072734 47.99989891822272 22.205078 48 L 27.705078 48 C 28.190873624431802 48.00071302418453 28.60692141940177 47.652221407941326 28.691406 47.173828 L 29.751953 41.1875 C 30.920633 40.838997 32.033372 40.369697 33.082031 39.791016 L 38.070312 43.291016 C 38.4677984351913 43.569835678735394 39.00812284248828 43.522886811913494 39.351562 43.179688 L 43.240234 39.287109 C 43.58635884253118 38.940243201970105 43.63018334371835 38.39367949780705 43.34375 37.996094 L 39.787109 33.058594 C 40.355783 32.014958 40.813915 30.908875 41.154297 29.748047 L 47.171875 28.693359 C 47.650268407941326 28.60887441940177 47.99876002418453 28.192826624431802 47.998047 27.707031 L 47.998047 22.207031 C 47.997787676411804 21.717497522999718 47.643207687402 21.300101738345074 47.160156 21.220703 L 41.152344 20.238281 C 40.80968 19.078827 40.350281 17.974723 39.78125 16.931641 L 43.289062 11.933594 C 43.5678816787354 11.536107564808699 43.5209328119135 10.995783157511722 43.177734 10.652344 L 39.287109 6.7636719 C 38.940243125035 6.417547151422113 38.39367942651908 6.3737227776956535 37.996094 6.6601562 L 33.072266 10.201172 C 32.023186 9.6248101 30.909713 9.1579916 29.738281 8.8125 L 28.691406 2.828125 C 28.607763399254416 2.348955125660183 28.191493001530553 1.9994528068422304 27.705078 2 L 22.205078 2 z M 23.056641 4 L 26.865234 4 L 27.861328 9.6855469 C 27.929044914660185 10.075133850801762 28.21995139988209 10.388240873372174 28.603516 10.484375 C 30.066026 10.848832 31.439607 11.426549 32.693359 12.185547 C 33.03600756919579 12.393158782856133 33.46948671765437 12.37624993104274 33.794922 12.142578 L 38.474609 8.7792969 L 41.167969 11.472656 L 37.835938 16.220703 C 37.60857212753903 16.544304584556595 37.593260347032825 16.971497890600585 37.796875 17.310547 C 38.548366 18.561471 39.118333 19.926379 39.482422 21.380859 C 39.579324746181165 21.768029009610615 39.897147002706895 22.06051766497204 40.291016 22.125 L 45.998047 23.058594 L 45.998047 26.867188 L 40.279297 27.871094 C 39.889395381724604 27.940112287248493 39.57692744653398 28.232668148127694 39.482422 28.617188 C 39.122545 30.069817 38.552234 31.434687 37.800781 32.685547 C 37.594606932099026 33.028110531180594 37.6122733133994 33.460551470482464 37.845703 33.785156 L 41.224609 38.474609 L 38.53125 41.169922 L 33.791016 37.84375 C 33.46574854327684 37.615915089932976 33.03649336063164 37.60211770003485 32.697266 37.808594 C 31.44975 38.567585 30.074755 39.148028 28.617188 39.517578 C 28.23551064884404 39.613793579709224 27.94576612243851 39.92494382040216 27.876953 40.3125 L 26.867188 46 L 23.052734 46 L 22.111328 40.337891 C 22.04583842755697 39.94423717216324 21.752592915243802 39.62719420800885 21.365234 39.53125 C 19.90185 39.170557 18.522094 38.59371 17.259766 37.835938 C 16.921191318478126 37.63317307152783 16.49503551308596 37.64847469464101 16.171875 37.875 L 11.46875 41.169922 L 8.7734375 38.470703 L 12.097656 33.824219 C 12.329865105179428 33.498821176556525 12.345994571475426 33.06640157362733 12.138672 32.724609 C 11.372652 31.458855 10.793319 30.079213 10.427734 28.609375 C 10.332183343148055 28.226938415501134 10.020898397848066 27.936303881528456 9.6328125 27.867188 L 4.0019531 26.867188 L 4.0019531 23.052734 L 9.6289062 22.117188 C 10.022025538962975 22.05199479868345 10.33892953298193 21.759645025385023 10.435547 21.373047 C 10.804273 19.898143 11.383325 18.518729 12.146484 17.255859 C 12.35210645597429 16.91710242149066 12.338317911104822 16.48888840616317 12.111328 16.164062 L 8.8261719 11.46875 L 11.523438 8.7734375 L 16.185547 12.105469 C 16.50967768193481 12.336588834455698 16.940015422136796 12.353464924380376 17.28125 12.148438 C 18.536908 11.394293 19.919867 10.822081 21.384766 10.462891 C 21.77403145871616 10.367055127312424 22.068453629887163 10.04803321360581 22.132812 9.6523438 L 23.056641 4 z M 25 17 C 20.593567 17 17 20.593567 17 25 C 17 29.406433 20.593567 33 25 33 C 29.406433 33 33 29.406433 33 25 C 33 20.593567 29.406433 17 25 17 z M 25 19 C 28.325553 19 31 21.674447 31 25 C 31 28.325553 28.325553 31 25 31 C 21.674447 31 19 28.325553 19 25 C 19 21.674447 21.674447 19 25 19 z" stroke-linecap="round" />
+                                </g>
+                            </svg>
+                            
+                            <!-- Tooltip Popup -->
+                            <div id="settings-tooltip" class="h-7 w-42 absolute bottom-full right-8 top-0 mb-2 px-3 py-1 bg-slate-100 text-sm rounded-lg border whitespace-nowrap pointer-events-none transition-all duration-300">
+                                <span>View/edit settings ➜</span>
+                            </div>
+                        </span>
+
+
+                        <!-- Room Code Header -->
+                        <div class="flex items-center justify-between mb-3">
                             <h2 class="font-semibold text-slate-900">Room Code</h2>
                             {% if current_round %}
                             <span class="badge badge-info px-2 rounded-xl">Round {{ current_round.round_number }}</span>
                             {% endif %}
                         </div>
                         
-                        <div class="flex items-center justify-center gap-4 py-4">
+                        <div class="flex items-center justify-center gap-4 py-3">
                             <span id="room-code" class="text-4xl font-mono font-bold text-slate-900 tracking-widest">{{ room.code }}</span>
                             <button 
                                 onclick="copyRoomCode()"
@@ -84,14 +97,14 @@
                         </div>
                         
                         <!-- Share Options -->
-                        <div class="flex flex-wrap gap-3 justify-center mt-4 pt-4 border-t border-slate-100">
-                            <button onclick="copyShareLink()" class="btn-secondary flex items-center gap-2 text-sm">
+                        <div class="flex flex-wrap gap-3 justify-center mt-4 pt-3 border-t border-slate-100">
+                            <button onclick="copyShareLink()" class="btn-secondary flex items-center justify-center gap-2 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                                 </svg>
                                 <span id="copy-link-text">Copy Link</span>
                             </button>
-                            <button onclick="showQRCode()" class="btn-secondary flex items-center gap-2 text-sm">
+                            <button onclick="showQRCode()" class="btn-secondary flex items-center gap-1.5 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                                 </svg>
@@ -152,7 +165,7 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-1.5">
                                         <!-- Role Badge -->
                                         <div>
                                             {% if player.is_host  %}<span class="badge badge-warning px-1 rounded-md">Host</span>
@@ -230,7 +243,7 @@
                 </div>
                 
                 <!-- Right Column: Actions & Settings -->
-                <div class="space-y-4">
+                <div class="space-y-6 ">
                     <!-- Actions -->
                     <div class="card p-6">
                         <h2 class="font-semibold text-slate-900 mb-4">Actions</h2>
@@ -244,8 +257,8 @@
                                 {% if round_players|length < 2 %}Need at least 2 players{% else %}Click to start when ready{% endif %}
                             </p>
                             {% else %}
-                            <div class="text-center text-slate-500 text-sm py-4">
-                                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <div class="text-center text-slate-500 text-sm ">
+                                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
                                     <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
@@ -261,242 +274,6 @@
                     </div>
 
                     <input type="hidden" id="is-host" value="{{ is_host|yesno:'1,0' }}">
-                  
-                    <!-- Host Settings -->
-                    {% if is_host or is_co_host %}
-                    <div class="card p-6">
-                        <div class="flex justify-between items-center gap-2 mb-4">
-                            <h2 class="font-semibold text-slate-900">Game Settings</h2>
-                            <span id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class="p-1 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors cursor-pointer hidden">
-                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                </svg>
-                            </span>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <!-- Setup Duration -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Setup Time</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Setup Time</strong><br>
-                                            Time players have to arrange their bingo board before the game starts. Drag numbers to customize your board layout.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="flex-1" oninput="updateDisplay('setup-duration')">
-                                    <span id="setup-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_setup_duration }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Turn Duration -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Turn Time</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Turn Time</strong><br>
-                                            Time each player has to pick a number on their turn.If time runs out, a random number is auto-selected.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="flex-1" oninput="updateDisplay('turn-duration')">
-                                    <span id="turn-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_turn_duration }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Max Players -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Max Players</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Max Players</strong><br>
-                                            Maximum number of players allowed in this room.New players cannot join once the limit is reached.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="flex-1" oninput="updateDisplay('max-players')">
-                                    <span id="max-players-display" class="text-sm font-medium w-12 text-right">{{ room.settings_max_players }}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Grace Period -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Disconnect Grace</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Disconnect Grace Period</strong><br>
-                                            Time to wait before taking action when a player disconnects.<br><br>
-                                            • <strong>In Lobby/Setup:</strong> Vote kick starts after this time<br>
-                                            • <strong>In Game:</strong> Bot takes over after this time
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="flex-1" oninput="updateDisplay('grace-period')">
-                                    <span id="grace-period-display" class="text-sm font-medium w-12 text-right">{{ room.settings_grace_period }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Show Score -->
-                            <div class="flex items-center justify-between pt-2">
-                                <div class="flex items-center gap-2">
-                                    <label class="text-sm text-slate-600">Show Scores</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Show Scores</strong><br>
-                                            When enabled, players can see how many lines other players have completed (BINGO progress).
-                                        </div>
-                                    </div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %} onclick="updateDisplay('show-score')">
-                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
-                                </label>
-                            </div>
-                            
-                            <button id="save-settings-btn" onclick="saveSettings()" class="w-full btn-primary text-sm mt-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                Save Settings
-                            </button>
-                        </div>
-                    </div>
-                    {%else%}
-                    <!-- Game settings (view only for non-hosts) -->
-                    <div class="card p-6">
-                        <div class="mb-4">
-                        <h2 class="font-semibold text-slate-900 mb-1">Game Settings</h2>
-                        <p class="text-red-500 text-[11px]">
-                            Only Host and Co-Hosts can modify game settings. You can only view.
-                        </p>
-                        </div>
-
-                        <div class="space-y-4">
-                            <!-- Setup Duration -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Setup Time</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Setup Time</strong><br>
-                                            Time players have to arrange their bingo board before the game starts.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="flex-1" disabled>
-                                    <span id="setup-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_setup_duration }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Turn Duration -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Turn Time</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Turn Time</strong><br>
-                                            Time each player has to pick a number on their turn.If time runs out, a random number is auto-selected.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="flex-1" disabled>
-                                    <span id="turn-duration-display" class="text-sm font-medium w-12 text-right">{{ room.settings_turn_duration }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Max Players -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Max Players</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Max Players</strong><br>
-                                            Maximum number of players allowed in this room.New players cannot join once the limit is reached.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="flex-1" disabled>
-                                    <span id="max-players-display" class="text-sm font-medium w-12 text-right">{{ room.settings_max_players }}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Grace Period -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label class="text-sm text-slate-600">Disconnect Grace</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Disconnect Grace Period</strong><br>
-                                            Time to wait before taking action when a player disconnects.<br><br>
-                                            • <strong>In Lobby/Setup:</strong> Vote kick starts after this time<br>
-                                            • <strong>In Game:</strong> Bot takes over after this time
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="flex-1" disabled>
-                                    <span id="grace-period-display" class="text-sm font-medium w-12 text-right">{{ room.settings_grace_period }}s</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Show Score -->
-                            <div class="flex items-center justify-between pt-2">
-                                <div class="flex items-center gap-2">
-                                    <label class="text-sm text-slate-600">Show Scores</label>
-                                    <div class="tooltip-container">
-                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <div class="tooltip-content">
-                                            <strong>Show Scores</strong><br>
-                                            When enabled, players can see how many lines other players have completed (BINGO progress).
-                                        </div>
-                                    </div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %} disabled>
-                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
 
                     <!-- Round History Card -->
                     {% if round_history %}
@@ -544,6 +321,394 @@
     
 </div>
 
+<!-- Host Settings -->
+{% if is_host or is_co_host %}
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg ">
+            
+            <!-- Header -->
+            <div class="px-4 py-4 border-b relative">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-semibold text-lg text-slate-800">Game Settings</h2>
+                    <button id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors hidden">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                    </button>
+
+                    <button onclick="OpenCloseSettings()" class="absolute -top-2 -right-2 border border-red-700 p-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Settings Content -->
+            <div class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
+                
+                <!-- Setup Duration -->
+                <div class="setting-card p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Setup Time</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Setup Time</strong><br>
+                                        Time players have to arrange their bingo board before the game starts.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="setup-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_setup_duration }}s</span>
+                    </div>
+                    <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="w-full" oninput="updateDisplay('setup-duration')">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>15s</span>
+                        <span>120s</span>
+                    </div>
+                </div>
+                
+                <!-- Turn Duration -->
+                <div class="setting-card p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Turn Time</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Turn Time</strong><br>
+                                        Time each player has to pick a number on their turn.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="turn-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_turn_duration }}s</span>
+                    </div>
+                    <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="w-full" oninput="updateDisplay('turn-duration')">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>10s</span>
+                        <span>60s</span>
+                    </div>
+                </div>
+                
+                <!-- Max Players -->
+                <div class="setting-card p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Max Players</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Max Players</strong><br>
+                                        Maximum number of players allowed in this room.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="max-players-display" class="text-lg font-bold text-slate-800">{{ room.settings_max_players }}</span>
+                    </div>
+                    <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="w-full" oninput="updateDisplay('max-players')">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>2</span>
+                        <span>15</span>
+                    </div>
+                </div>
+                
+                <!-- Grace Period -->
+                <div class="setting-card p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Disconnect Grace</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Disconnect Grace Period</strong><br>
+                                        Time to wait before taking action when a player disconnects.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="grace-period-display" class="text-lg font-bold text-slate-800">{{ room.settings_grace_period }}s</span>
+                    </div>
+                    <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="w-full" oninput="updateDisplay('grace-period')">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>5s</span>
+                        <span>60s</span>
+                    </div>
+                </div>
+                
+                <!-- Show Score Toggle -->
+                <div class="setting-card p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Show Scores</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Show Scores</strong><br>
+                                        Players can see how many lines others have completed.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %} onclick="updateDisplay('show-score')">
+                            <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-sky-500 shadow-inner"></div>
+                        </label>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Footer Actions -->
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 rounded-b-2xl">
+                <div class="flex gap-2">
+                    <button onclick="OpenCloseSettings()" class="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                        Close
+                    </button>
+                    <button id="save-settings-btn" onclick="saveSettings()" class="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Save
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+{%else%}
+    <!-- Game settings (view only for non-hosts) -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+
+            <!-- Header -->
+            <div class="px-4 py-4 border-b relative">
+                <div class="flex-col justify-between items-center">
+                    <h2 class="font-semibold text-lg text-slate-800">Game Settings</h2>
+                    <p class="text-red-500 text-[10px]">
+                        Only Host and Co-Hosts can modify game settings. You can only view.
+                    </p>
+                </div>
+                <button onclick="OpenCloseSettings()" class="absolute -top-2 -right-2 border border-red-700 p-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Settings Content -->
+            <div class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
+                <!-- Setup Duration -->
+                <div class= " p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Setup Time</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Setup Time</strong><br>
+                                        Time players have to arrange their bingo board before the game starts.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="setup-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_setup_duration }}s</span>
+                    </div>
+                    <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="w-full" disabled>
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>15s</span>
+                        <span>120s</span>
+                    </div>
+                    
+                </div>
+
+                <!-- Turn Duration -->
+                <div class=" p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Turn Time</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Turn Time</strong><br>
+                                        Time each player has to pick a number on their turn.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="turn-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_turn_duration }}s</span>
+                    </div>
+                    <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="w-full" disabled>
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>10s</span>
+                        <span>60s</span>
+                    </div>
+                </div>
+                
+                <!-- Max Players -->
+                <div class=" p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Max Players</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Max Players</strong><br>
+                                        Maximum number of players allowed in this room.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="max-players-display" class="text-lg font-bold text-slate-800">{{ room.settings_max_players }}</span>
+                    </div>
+                    <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="w-full" disabled>
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>2</span>
+                        <span>15</span>
+                    </div>
+                </div>
+                
+                <!-- Grace Period -->
+                <div class=" p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Disconnect Grace</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Disconnect Grace Period</strong><br>
+                                        Time to wait before taking action when a player disconnects.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="grace-period-display" class="text-lg font-bold text-slate-800">{{ room.settings_grace_period }}s</span>
+                    </div>
+                    <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="w-full" disabled>
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>5s</span>
+                        <span>60s</span>
+                    </div>
+                </div>
+                
+                <!-- Show Score Toggle -->
+                <div class=" p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Show Scores</label>
+                                <div class="tooltip-container inline-block ml-1">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Show Scores</strong><br>
+                                        Players can see how many lines others have completed.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %} disabled>
+                            <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-sky-500 shadow-inner"></div>
+                        </label>
+                    </div>
+                </div>
+                
+            </div>
+
+                
+            <!-- Footer Actions -->
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 rounded-b-2xl">
+                <div class="flex gap-2">
+                    <button onclick="OpenCloseSettings()" class="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
 
 <!-- QR Code Modal -->
 <div id="qr-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="closeModal('qr-modal', event)">
@@ -551,7 +716,7 @@
         <h3 class="text-lg font-bold text-center mb-4">Scan to Join</h3>
         <div id="qr-code" class="flex justify-center mb-4"></div>
         <p class="text-sm text-slate-500 mb-4 text-center">Room:  {{ room.code }}</p>
-        <button onclick="hideQRCode('qr-modal')" class="w-full btn-secondary">Close</button>
+        <button onclick="hideQRCode('qr-modal')" class="w-full btn-secondary inline-block">Close</button>
     </div>
 </div>
 
@@ -1073,7 +1238,7 @@
                                 <p class="text-xs text-slate-400">${ player.user ? `@${player.user.username}` : 'Guest Player'}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             <!-- Role Badge -->
                             <div>
                                 ${player.is_host 
@@ -1145,7 +1310,9 @@
     // ════════════════════════════════════════════════════════════
     // ACTIONS
     // ════════════════════════════════════════════════════════════
-    
+
+
+
     function startGame() {
         sendMessage('start_game');
     }
@@ -1201,6 +1368,7 @@
 
         sendMessage('update_settings', { settings });
         showNotification('Settings saved', 'success');
+        OpenCloseSettings();
     }
 
     function settingsUpdate(data){
@@ -1217,6 +1385,11 @@
             updateDisplay('max-players', false);
             updateDisplay('grace-period', false);
         }
+    }
+
+    function OpenCloseSettings() {
+        setting_modal = document.getElementById('settings-modal');
+        setting_modal.classList.toggle('hidden');
     }
     
     function copyRoomCode() {
@@ -1362,7 +1535,7 @@
         closeBtn.addEventListener('click', () => clearTimeout(autoDismiss), { once: true });
     }
 
-    
+
 
     // Cleanup on unload
     window.addEventListener('beforeunload', () => {
@@ -1375,6 +1548,29 @@
     document.addEventListener('DOMContentLoaded', function() {
         connectWebSocket();
     });
+
+    settingModal = document.getElementById('settings-modal');
+    settingModal.addEventListener('click', function(event) {
+        if (event.target === settingModal) {
+            OpenCloseSettings();
+        }
+    });
+
+
+    // Tooltip Positioning
+    const tooltipContainers = document.querySelectorAll('.tooltip-container');
+    
+    tooltipContainers.forEach(container => {
+        const tooltip = container.querySelector('.tooltip-content');
+        
+        container.addEventListener('mouseenter', function() {
+            const rect = container.getBoundingClientRect();
+            tooltip.style.left = rect.left + (rect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 8) + 'px';
+            tooltip.style.transform = 'translate(-50%, -100%)';
+        });
+    });
+
 </script>
 
 {% if is_host %}
@@ -1382,4 +1578,5 @@
         showNotification('With Great Power Comes, Great Responsibility', 'success_light', position='top', title='⭐!! You are the Host !!⭐');
     </script>
 {% endif %}
+
 {% endblock %}
