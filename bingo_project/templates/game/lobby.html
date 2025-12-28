@@ -323,8 +323,8 @@
 
 <!-- Host Settings -->
 {% if is_host or is_co_host %}
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg ">
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50  hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[26rem] ">
             
             <!-- Header -->
             <div class="px-4 py-4 border-b relative">
@@ -351,7 +351,7 @@
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
@@ -369,7 +369,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="setup-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_setup_duration }}s</span>
+                        <span id="setup-duration-display" class="text-base text-slate-800">{{ room.settings_setup_duration }}s</span>
                     </div>
                     <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="w-full" oninput="updateDisplay('setup-duration')">
                     <div class="flex justify-between text-xs text-slate-400">
@@ -382,7 +382,7 @@
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8  rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
@@ -400,7 +400,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="turn-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_turn_duration }}s</span>
+                        <span id="turn-duration-display" class="text-base text-slate-800">{{ room.settings_turn_duration }}s</span>
                     </div>
                     <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="w-full" oninput="updateDisplay('turn-duration')">
                     <div class="flex justify-between text-xs text-slate-400">
@@ -413,7 +413,7 @@
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                 </svg>
@@ -431,7 +431,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="max-players-display" class="text-lg font-bold text-slate-800">{{ room.settings_max_players }}</span>
+                        <span id="max-players-display" class="text-base text-slate-800">{{ room.settings_max_players }}</span>
                     </div>
                     <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="w-full" oninput="updateDisplay('max-players')">
                     <div class="flex justify-between text-xs text-slate-400">
@@ -444,7 +444,7 @@
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
                                 </svg>
@@ -462,7 +462,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="grace-period-display" class="text-lg font-bold text-slate-800">{{ room.settings_grace_period }}s</span>
+                        <span id="grace-period-display" class="text-base text-slate-800">{{ room.settings_grace_period }}s</span>
                     </div>
                     <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="w-full" oninput="updateDisplay('grace-period')">
                     <div class="flex justify-between text-xs text-slate-400">
@@ -475,7 +475,7 @@
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -509,7 +509,7 @@
                     <button onclick="OpenCloseSettings()" class="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
                         Close
                     </button>
-                    <button id="save-settings-btn" onclick="saveSettings()" class="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <button id="save-settings-btn" onclick="saveSettings()" class="flex-1 px-4 py-2 bg-gradient-to-br from-accent-500 to-accent-600 text-white rounded-lg text-sm font-medium hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                         Save
                     </button>
                 </div>
@@ -520,7 +520,7 @@
 {%else%}
     <!-- Game settings (view only for non-hosts) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[26rem]">
 
             <!-- Header -->
             <div class="px-4 py-4 border-b relative">
@@ -543,7 +543,7 @@
                 <div class= " p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8  rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
@@ -561,7 +561,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="setup-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_setup_duration }}s</span>
+                        <span id="setup-duration-display" class="text-base text-slate-800">{{ room.settings_setup_duration }}s</span>
                     </div>
                     <input type="range" id="setup-duration" min="15" max="120" value="{{ room.settings_setup_duration }}" class="w-full" disabled>
                     <div class="flex justify-between text-xs text-slate-400">
@@ -575,7 +575,7 @@
                 <div class=" p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
@@ -593,7 +593,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="turn-duration-display" class="text-lg font-bold text-slate-800">{{ room.settings_turn_duration }}s</span>
+                        <span id="turn-duration-display" class="text-base text-slate-800">{{ room.settings_turn_duration }}s</span>
                     </div>
                     <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" class="w-full" disabled>
                     <div class="flex justify-between text-xs text-slate-400">
@@ -606,7 +606,7 @@
                 <div class=" p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8  rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                 </svg>
@@ -624,7 +624,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="max-players-display" class="text-lg font-bold text-slate-800">{{ room.settings_max_players }}</span>
+                        <span id="max-players-display" class="text-base text-slate-800">{{ room.settings_max_players }}</span>
                     </div>
                     <input type="range" id="max-players" min="2" max="15" value="{{ room.settings_max_players }}" class="w-full" disabled>
                     <div class="flex justify-between text-xs text-slate-400">
@@ -637,7 +637,7 @@
                 <div class=" p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8  rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
                                 </svg>
@@ -655,7 +655,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="grace-period-display" class="text-lg font-bold text-slate-800">{{ room.settings_grace_period }}s</span>
+                        <span id="grace-period-display" class="text-base text-slate-800">{{ room.settings_grace_period }}s</span>
                     </div>
                     <input type="range" id="grace-period" min="5" max="60" value="{{ room.settings_grace_period }}" class="w-full" disabled>
                     <div class="flex justify-between text-xs text-slate-400">
@@ -668,7 +668,7 @@
                 <div class=" p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
-                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <div class="w-8 h-8  rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -851,7 +851,7 @@
                 } 
                 break;
             case 'player_disconnected':
-                showNotification(`${data.member_name} disconnected`, 'warning_light', position='bottom');
+                showNotification(`${data.member_name} disconnected`, 'warning_light', position='bottom', member_id=data.member_id);
                 handlePlayerDisconnected(data);
                 break;
 
@@ -1472,7 +1472,7 @@
     // ════════════════════════════════════════════════════════════
     // NOTIFICATIONS
     // ════════════════════════════════════════════════════════════
-    function showNotification(message, type = 'info', position='top', title=null, timeout=4000) {
+    function showNotification(message, type = 'info', position='top', title=null, timeout=4000, argss={}) {
 
         const container = document.getElementById('notification-container-' + position);
         
