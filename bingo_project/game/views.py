@@ -7,7 +7,8 @@ from .utils import get_room_member, get_or_create_round_player, get_or_create_ro
 from django.contrib.auth import login
 from allauth.socialaccount.models import SocialLogin, SocialAccount
 from django.contrib.auth import get_user_model
-
+from django.db.models import Count
+from django.db import models
 
 User = get_user_model()
 
@@ -17,7 +18,16 @@ def home_view(request):
     """
     Landing page - Create or Join a room.
     """
-    return render(request,'game/home.html')
+    active_rooms = Room.objects.filter(
+        is_active=True
+    ).annotate(
+        player_count=Count('members', filter=models.Q(members__is_active=True))
+    ).order_by('-created_at')[:10]  # Show latest 10 rooms
+    
+    context = {
+        'active_rooms': active_rooms,
+    }
+    return render(request,'game/home.html', context)
 
 def logout_view(request):
     """
