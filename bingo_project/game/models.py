@@ -32,6 +32,11 @@ class Room(models.Model):
     - Persists through multiple game rounds
     - Soft-deleted when all members leave (is_active=False)
     """
+
+    ROOM_VISIBILITY_TYPE = {
+        'public': 'Public',
+        'private': 'Private ',
+    }
     
     code = models.CharField(max_length=6, unique=True, help_text="Unique room code (e.g., ABC123)")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -39,6 +44,7 @@ class Room(models.Model):
     is_active = models.BooleanField(default=True, help_text="False when room is abandoned")
     
     # Room Settings
+    visibility_type = models.CharField(max_length=10, choices=ROOM_VISIBILITY_TYPE.items(), default='public', help_text="Room visibility type")
     settings_setup_duration = models.IntegerField(default=60, help_text="Seconds for board arrangement phase")
     settings_turn_duration = models.IntegerField(default=20, help_text="Seconds per turn")
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
@@ -61,6 +67,10 @@ class Room(models.Model):
             if not cls.objects.filter(code=code).exists():
                 return code
     
+    def get_visibility_type(self):
+        """Get human-readable visibility type."""
+        return self.ROOM_VISIBILITY_TYPE.get(self.visibility_type, 'Unknown')
+
     def get_active_members(self):
         """Get all active members in this room."""
         return self.members.filter(is_active=True)

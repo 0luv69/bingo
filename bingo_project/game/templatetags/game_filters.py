@@ -8,3 +8,17 @@ def split(value, delimiter=','):
     if not value:
         return []
     return value.split(delimiter)
+
+
+@register.filter
+def replacewith(value, args):
+    old, new = args.split(',')
+    return value.replace(old, new)
+
+
+@register.filter
+def multiply(value, arg):
+    try:
+        return int(value) * int(arg)
+    except (ValueError, TypeError):
+        return ''

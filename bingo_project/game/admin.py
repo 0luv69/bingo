@@ -6,13 +6,13 @@ from . models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHisto
 
 @admin.register(Room)
 class RoomAdmin(admin. ModelAdmin):
-    list_display = ['code', 'is_active_badge', 'members_count', 'rounds_count', 'settings_display', 'created_at']
+    list_display = ['code', 'is_active_badge', 'visibility_type_display', 'members_count', 'rounds_count', 'settings_display', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['code']
     readonly_fields = ['code', 'created_at']
     
     fieldsets = (
-        ('Room Info', {'fields': ('code', 'created_by', 'is_active', 'created_at')}),
+        ('Room Info', {'fields': ('code', 'visibility_type', 'created_by', 'is_active', 'created_at')}),
         ('Settings', {'fields': ('settings_setup_duration', 'settings_turn_duration', 'settings_max_players')}),
     )
     
@@ -21,6 +21,10 @@ class RoomAdmin(admin. ModelAdmin):
         total = obj.members. count()
         return f"{active}/{total}"
     members_count.short_description = 'Members (Active/Total)'
+
+    def visibility_type_display(self, obj):
+        return obj.get_visibility_type()
+    visibility_type_display.short_description = 'Visibility Type'
     
     def rounds_count(self, obj):
         return obj.rounds.count()

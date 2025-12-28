@@ -20,6 +20,7 @@ def home_view(request):
     """
     active_rooms = Room.objects.filter(
         is_active=True
+    , visibility_type='public'
     ).annotate(
         player_count=Count('members', filter=models.Q(members__is_active=True))
     ).order_by('-created_at')[:10]  # Show latest 10 rooms
@@ -65,6 +66,7 @@ def create_room_view(request):
         return redirect('home')
     
     player_name = request.POST.get('player_name', '').strip()
+    room_type = request.POST.get('room_type', 'public').strip().lower()
     
     if not player_name: 
         messages.error(request, 'Please enter your name.')
@@ -79,7 +81,7 @@ def create_room_view(request):
         request.session.create()
     
     # Create room
-    room = Room.objects.create(code=Room.generate_room_code())
+    room = Room.objects.create(code=Room.generate_room_code(), visibility_type=room_type)
     
     # Create room member as host
     user = request.user if request.user.is_authenticated else None
