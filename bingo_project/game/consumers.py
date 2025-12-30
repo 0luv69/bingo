@@ -134,6 +134,13 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         was_disconnected = member.connection_status == 'disconnected'
 
+        # Cancel any pending disconnection timer
+        DisconnectionManager.cancel_disconnection_timer(self.room_code, member.id)
+
+        # Cancel any pending vote kick
+        DisconnectionManager.clear_vote_kick(self.room_code, member.id)
+        
+
         await self.mark_member_connected(member.id, self.channel_name)
         
         # Broadcast player connected

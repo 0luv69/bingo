@@ -778,6 +778,7 @@
     let kickTargetId = null;
 
     let disconnectedUserStatus = new Map();
+    let pendingDisconnectNotifications = {};
 
     
     // ════════════════════════════════════════════════════════════
@@ -840,6 +841,14 @@
             case 'player_connected':
                 clearDisconnectTimer(data.member_id, remove_ = true);
                 updatePlayersList(data.round_players);
+
+
+                if (pendingDisconnectNotifications[data.member_id]) {
+                    clearTimeout(pendingDisconnectNotifications[data.member_id]);
+                    delete pendingDisconnectNotifications[data.member_id];
+                    return;
+                }
+
                 if (data.member_id !== currentMemberId) {
                     if (data.is_reconnection) {
                         clearDisconnectTimer(data.member_id);
@@ -851,8 +860,14 @@
                 } 
                 break;
             case 'player_disconnected':
-                showNotification(`${data.member_name} disconnected`, 'warning_light', position='bottom', member_id=data.member_id);
                 handlePlayerDisconnected(data);
+
+                const timeoutId = setTimeout(() => {
+                    showNotification(`${data.member_name} disconnected`, 'warning_light', 'bottom');
+                    delete pendingDisconnectNotifications[data.member_id];
+                }, 1500);
+                pendingDisconnectNotifications[data.member_id] = timeoutId;
+
                 break;
 
             case 'player_timerestarted':
