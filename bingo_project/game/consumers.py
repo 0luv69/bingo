@@ -193,6 +193,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             # Start disconnection timer
             await self.start_disconnection_timer(member.id, grace_period)
         
+        # Leave room group for player left
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
     
     async def receive(self, text_data):

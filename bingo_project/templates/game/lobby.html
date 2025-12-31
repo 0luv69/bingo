@@ -779,6 +779,8 @@
 
     let disconnectedUserStatus = new Map();
     let pendingDisconnectNotifications = {};
+    let isInitialLobbyLoad = sessionStorage.getItem('isInitialLobby') === 'true';
+    console.log("Is Initial Lobby Load:", isInitialLobbyLoad);
 
     
     // ════════════════════════════════════════════════════════════
@@ -841,6 +843,13 @@
             case 'player_connected':
                 clearDisconnectTimer(data.member_id, remove_ = true);
                 updatePlayersList(data.round_players);
+                console.log("Initial Lobby Load Status: 3", isInitialLobbyLoad);
+
+                if (!isInitialLobbyLoad) {
+                    isInitialLobbyLoad = true;
+                    sessionStorage.setItem('isInitialLobby', 'true');
+                    return;
+                }
 
 
                 if (pendingDisconnectNotifications[data.member_id]) {

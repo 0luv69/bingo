@@ -384,7 +384,9 @@
                 break;
             case 'new_round_created':
                 showNotification(data.message, 'success');
-                setTimeout(() => window.location.href = `/room/${roomCode}/lobby/`, 1500);
+                // Set a cookie to indicate initial lobby load is false
+                sessionStorage.setItem('isInitialLobby', 'false');
+                setTimeout(() => window.location.href = `/room/${roomCode}/lobby/`, 1000);
                 break;
             case 'error':
                 showNotification(data.message, 'error');
