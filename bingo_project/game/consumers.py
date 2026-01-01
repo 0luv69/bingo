@@ -149,10 +149,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         was_disconnected = member.connection_status == 'disconnected'
 
-        # Cancel any pending disconnection timer
+        # Cancel any pending disconnection timer & vote kick
         DisconnectionManager.cancel_disconnection_timer(self.room_code, member.id)
-
-        # Cancel any pending vote kick
         DisconnectionManager.clear_vote_kick(self.room_code, member.id)
         
 
@@ -406,8 +404,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         kick_count = votes['kick']
         keep_count = votes['keep']
 
-        # Clear vote data
-        DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
+
         
         # Determine result (majority wins, tie = keep)
         if kick_count <= 0 and keep_count <= 0:
@@ -418,6 +415,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             result = 'tie'
         else:
             result = 'keep'
+
+        
 
         if result == 'kick' or result == 'zero':
             # Remove the player
@@ -435,6 +434,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'round_players': await self.get_round_players_data(),
                 }
             )
+
+            # clear vote  task
+            DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
 
         elif result == 'keep' or result == 'tie':
             grace_period = await self.get_grace_period()
@@ -457,7 +459,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             )
             # Restart grace period
             await self.start_disconnection_timer(target_member_id, grace_period)
-
 
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
@@ -586,6 +587,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if current_turn_id != round_player.id:
             await self.send_error('Not your turn')
             return
+        
         
         number = data.get('number')
         if not isinstance(number, int) or number < 1 or number > 25:
@@ -1082,6 +1084,15 @@ class GameConsumer(AsyncWebsocketConsumer):
         try:
             member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
             new_host_member = member.leave_room()
+
+            # If room is empty, mark inactive, wait to confirm deletion
+            # if member.room.get_active_members_count() == 0:
+            #     member.room.is_active = False
+            #     member.room.save()
+            #     # cleanup timers for this room
+            #     DisconnectionManager.disconnection_timers.pop(self.room.code, None)
+            #     DisconnectionManager.vote_kicks.pop(self.room.code, None)
+
             return (new_host_member.display_name, new_host_member.id) if new_host_member else (None, None)
         except:
             return None, None

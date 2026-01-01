@@ -130,7 +130,7 @@
                                     <div id="player-b-info-{{ player.room_member.id }}" class="flex items-center gap-3  {% if player.connection_status == 'disconnected' %}disconnected {% endif %}">
                                         
                                         <!--Disconnect Timer-->
-                                        <div id="disconnect-timer-{{ player.room_member.id }}" class="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center border-2 border-red-200 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %}" title="Player disconnected Timer">
+                                        <div id="disconnected-timer-{{ player.room_member.id }}" class="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center border-2 border-red-200 absolute -top-2 -left-2 {% if player.connection_status != 'disconnected' %} hidden {% endif %}" title="Player disconnected Timer">
                                             <!-- Countdown Number -->
                                             <span class="timer-value text-xs font-bold ">00</span>
                                         </div>
@@ -780,8 +780,6 @@
     let disconnectedUserStatus = new Map();
     let pendingDisconnectNotifications = {};
     let isInitialLobbyLoad = sessionStorage.getItem('isInitialLobby') === 'true';
-    console.log("Is Initial Lobby Load:", isInitialLobbyLoad);
-
     
     // ════════════════════════════════════════════════════════════
     // WEBSOCKET
@@ -843,7 +841,6 @@
             case 'player_connected':
                 clearDisconnectTimer(data.member_id, remove_ = true);
                 updatePlayersList(data.round_players);
-                console.log("Initial Lobby Load Status: 3", isInitialLobbyLoad);
 
                 if (!isInitialLobbyLoad) {
                     isInitialLobbyLoad = true;
@@ -962,7 +959,7 @@
     function handlePlayerDisconnected(data) {
         
         // Start countdown display
-        startDisconnectTimer(data.member_id, data.member_name, data.deadline, data.grace_period);
+        startDisconnectTimer(data.member_id, data.deadline, data.grace_period);
         
         const playercard = document.querySelector(`[data-member-id="${data.member_id}"]`);
         if (playercard) playercard.classList.add('border', 'border-dashed', 'border-red-500');
@@ -984,7 +981,7 @@
     // DISCONNECT TIMER UI
     // ═══════════════════════════════════════════════════════════════
     
-    function startDisconnectTimer(memberId, memberName, deadline, gracePeriod) {
+    function startDisconnectTimer(memberId, deadline, gracePeriod) {
 
         disconnectedTimer = document.getElementById(`disconnected-timer-${memberId}`);
         if (disconnectedTimer) {
@@ -1021,7 +1018,7 @@
     }
 
 
-    function clearDisconnectTimer(memberId, remove_ = false) {
+    function clearDisconnectTimer(memberId, remove_ = false) { // remove_ : whether to remove the player's disconnectedUserStatus map
         const data = disconnectedUserStatus.get(memberId);
         if (data) {
             clearInterval(data.timer);
@@ -1042,6 +1039,7 @@
     // ═══════════════════════════════════════════════════════════════
 
     function handleVoteKickStarted(data) {
+        clearDisconnectTimer(data.target_member_id);
         const { target_member_id, target_member_name, total_voters, total_time } = data;
         showNotification(`Vote to Kick or Keep ${target_member_name}, in ${total_time} seconds`, 'warning_light');
 
@@ -1065,7 +1063,6 @@
             }
         }, 1000);
     }
-
 
     function updateVoteTimerBar(target_member_id, time_left, total_time,timerBar) {
         if (!timerBar) return;
@@ -1115,8 +1112,6 @@
             }
 
             disconnectedUserStatus.delete(target_member_id);
-
-
 
             // hide vote bar
             const vote_bar = document.getElementById(`vote-bar-${target_member_id}`);
@@ -1206,6 +1201,8 @@
         const countEl = document.getElementById('player-count');
         const startBtn = document.getElementById('start-game-btn');
         const startHint = document.getElementById('start-hint');
+
+        const gracePeriod = document.getElementById('grace-period').value;
         
         if (countEl) {
             countEl.textContent = `${players.length}/${document.getElementById('max-players')?.value || 6}`;
@@ -1232,13 +1229,11 @@
                     <div class="flex items-center justify-between p-3">
                         <div id="player-b-info-${player.member_id}" class="flex items-center gap-3 ${player.connection_status === 'disconnected' ? 'disconnected' : ''}">
                             
-                            
                             <!--Disconnect Timer-->
                             <div id="disconnected-timer-${player.member_id}" class="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center border-2 border-red-200 absolute -top-2 -left-2 ${ player.connection_status !== 'disconnected' ? 'hidden' : '' }" title="Player disconnected Timer">
                                 <!-- Countdown Number -->
-                                <span class="timer-value text-xs font-bold"></span>
+                                <span class="timer-value text-xs font-bold">${gracePeriod}</span>
                             </div>
-
 
                             <!-- Profile icon -->
                             <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center">
@@ -1329,6 +1324,14 @@
                 </div>
             `;
         }).join('');
+
+
+        // 2) After render, start/update timers for disconnected players
+        players.forEach(player => {
+            if (player.connection_status === 'disconnected' ) {
+            startDisconnectTimer(player.member_id, new Date(Date.now() + (gracePeriod-3) * 1000).toISOString(), gracePeriod);
+            }
+        });
     }
     
     // ════════════════════════════════════════════════════════════
