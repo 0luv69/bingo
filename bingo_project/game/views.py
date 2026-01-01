@@ -11,7 +11,7 @@ from django.db.models import Count
 from django.db import models
 
 User = get_user_model()
-
+LENGTH_NAME = 30
 
 
 def home_view(request):
@@ -72,8 +72,8 @@ def create_room_view(request):
         messages.error(request, 'Please enter your name.')
         return redirect('home')
     
-    if len(player_name) > 30:
-        messages.error(request, 'Name must be 30 characters or less.')
+    if len(player_name) > LENGTH_NAME:
+        messages.error(request, f'Name must be {LENGTH_NAME} characters or less.')
         return redirect('home')
     
     # Ensure session exists
@@ -127,8 +127,8 @@ def join_room_view(request):
         messages.error(request, 'Please enter your name.')
         return redirect('home')
     
-    if len(player_name) > 20:
-        messages.error(request, 'Name must be 20 characters or less.')
+    if len(player_name) > LENGTH_NAME:
+        messages.error(request, f'Name must be {LENGTH_NAME} characters or less.')
         return redirect('home')
     
     if not room_code:
@@ -218,8 +218,8 @@ def join_room_direct_view(request, room_code):
             messages.error(request, 'Please enter your name.')
             return render(request, 'join_direct.html', {'room':  room, 'can_join': can_join, 'reason': reason})
         
-        if len(player_name) > 20:
-            messages.error(request, 'Name must be 20 characters or less.')
+        if len(player_name) > LENGTH_NAME:
+            messages.error(request, f'Name must be {LENGTH_NAME} characters or less.')
             return render(request, 'join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
         
         # Check if player name already exists in this room (case-insensitive)
@@ -292,14 +292,15 @@ def lobby_view(request, room_code):
     Waiting room before game starts.
     Shows players, settings, share options.
     """
-    room = get_object_or_404(Room, code=room_code)
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages.error(request, f'Room {room_code} not found.')
+        return redirect('home')
     
     # Get current member
     member_id = request.session.get('current_member_id')
-    current_member = None
-    
-    if member_id:
-        current_member = RoomMember.objects.filter(id=member_id, room=room).first()
+    current_member = RoomMember.objects.filter(id=member_id, room=room).first() if member_id else None
 
     if not current_member:
         messages.error(request, 'You are not in this room. Please join the room first.')
@@ -349,7 +350,11 @@ def lobby_view2(request, room_code):
     Waiting room before game starts.
     Shows players, settings, share options.
     """
-    room = get_object_or_404(Room, code=room_code)
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages.error(request, f'Room {room_code} not found.')
+        return redirect('home')
     
     # Get current member
     member_id = request.session.get('current_member_id')
@@ -405,10 +410,7 @@ def game_view(request, room_code):
     
     # Get current member
     member_id = request.session.get('current_member_id')
-    current_member = None
-    
-    if member_id:
-        current_member = RoomMember.objects.filter(id=member_id, room=room).first()
+    current_member = RoomMember.objects.filter(id=member_id, room=room).first() if member_id else None
 
     if not current_member:
         messages.error(request, 'You are not in this room.')

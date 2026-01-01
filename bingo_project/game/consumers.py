@@ -8,6 +8,8 @@ from datetime import timedelta
 from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 from .utils import determine_winners, validate_board
 
+VOTE_GRACE_ADDITIONAL_SECONDS = 5
+
 
 class DisconnectionManager:
     """
@@ -42,6 +44,9 @@ class DisconnectionManager:
             if task:
                 task.cancel()
                 del cls.disconnection_timers[room_code][member_id]
+                if not cls.disconnection_timers[room_code]:
+                    # Clean up room entry if empty
+                    del cls.disconnection_timers[room_code]
                 return True
         return False
     
@@ -49,14 +54,16 @@ class DisconnectionManager:
     def get_vote_kick(cls, room_code, member_id):
         return cls.vote_kicks.get(room_code, {}).get(member_id)
     
-
     @classmethod
-    def start_vote_kick(cls, room_code, member_id, target_name):
+    def start_vote_kick(cls, room_code, member_id, target_name, task):
         if room_code not in cls.vote_kicks:
+            # Initialize room entry, if not present
             cls.vote_kicks[room_code] = {}
+
         cls.vote_kicks[room_code][member_id] = {
             'votes': {'kick': set(), 'keep': set()},
             'target_name': target_name,
+            'task': task
         }
 
     @classmethod
@@ -90,7 +97,15 @@ class DisconnectionManager:
     @classmethod
     def clear_vote_kick(cls, room_code, member_id):
         if room_code in cls.vote_kicks and member_id in cls.vote_kicks[room_code]:
-            del cls.vote_kicks[room_code][member_id]
+            task = cls.vote_kicks[room_code][member_id].get('task')
+            try:
+                if task:
+                    task.cancel()
+            finally:
+                del cls.vote_kicks[room_code][member_id]
+                if not cls.vote_kicks[room_code]:
+                    # Clean up room entry if empty
+                    del cls.vote_kicks[room_code]
             return True
         return False
 
@@ -296,10 +311,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         # create task for vote duration
-        async def vote_kick_timer(target_member_id, total_voters):
+        async def vote_kick_timer(target_member_id):
             try:
                 grace_period = await self.get_grace_period()
-                await asyncio.sleep(grace_period + 5)  # Extra 5 seconds for voting
+                await asyncio.sleep(grace_period + VOTE_GRACE_ADDITIONAL_SECONDS)  # Extra VOTE_GRACE_ADDITIONAL_SECONDS seconds for voting
                 
                 # Get final votes
                 votes = DisconnectionManager.get_vote_counts(self.room_code, target_member_id)
@@ -309,10 +324,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             except asyncio.CancelledError:
                 pass  # Timer was cancelled (vote completed early)
 
-        task = asyncio.create_task(vote_kick_timer(member_id, total_voters))
+        task = asyncio.create_task(vote_kick_timer(member_id))
 
         # Start vote tracking
-        DisconnectionManager.start_vote_kick(self.room_code, member_id, member.display_name)
+        DisconnectionManager.start_vote_kick(self.room_code, member_id, member.display_name, task)
 
         # Broadcast vote kick started
         await self.channel_layer.group_send(
@@ -337,10 +352,12 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         member = await self.get_member()
         if not member:
+            await self.send_error('Member not found')
             return
         
         # Can't vote on yourself
         if member.id == target_member_id:
+            await self.send_error("Can't vote on yourself")
             return
 
         # Check if vote kick is active
@@ -1227,6 +1244,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             current_round = room.get_current_round()
             if current_round:
                 current_round.players.filter(room_member=member).delete()
+
+            # Cancel timers/votes
+            DisconnectionManager.cancel_disconnection_timer(self.room_code, member.id)
+            DisconnectionManager.clear_vote_kick(self.room_code, member.id)
             
             return {'name': name}
         except RoomMember.DoesNotExist:

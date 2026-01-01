@@ -258,7 +258,7 @@ class GameRound(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='rounds')
     round_number = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='waiting')
-    called_numbers = models.JSONField(default=list, help_text="List of called numbers [5, 13, 21]", blank=True, null=True)
+    called_numbers = models.JSONField(default=list, help_text="List of called numbers [5, 13, 21]", blank=True)
     current_turn = models.ForeignKey('RoundPlayer', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_turn_round', help_text="Whose turn is it")
     turn_deadline = models.DateTimeField(null=True, blank=True, help_text="When current turn/phase expires")
     winners = models.ManyToManyField('RoundPlayer', blank=True, related_name='won_rounds')
@@ -344,10 +344,11 @@ class GameRound(models.Model):
         
         self.save()
     
-    def end_game(self, winner):
+    def end_game(self, winner_ids: list[int]):
         """End the game with a winner."""
+        winners_ = RoundPlayer.objects.filter(id__in=winner_ids)
         self.status = 'finished'
-        self.winner = winner
+        self.winners.set(winners_)
         self.finished_at = timezone.now()
         self.turn_deadline = None
         self.save()
