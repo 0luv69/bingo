@@ -288,9 +288,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not member:
             return
         
-        # Start vote tracking
-        DisconnectionManager.start_vote_kick(self.room_code, member_id, member.display_name)
-        
         total_voters = await self.get_connected_voters_count(member_id)
         
         # If no voters (everyone else disconnected), auto-keep
@@ -313,6 +310,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                 pass  # Timer was cancelled (vote completed early)
 
         task = asyncio.create_task(vote_kick_timer(member_id, total_voters))
+
+        # Start vote tracking
+        DisconnectionManager.start_vote_kick(self.room_code, member_id, member.display_name)
 
         # Broadcast vote kick started
         await self.channel_layer.group_send(

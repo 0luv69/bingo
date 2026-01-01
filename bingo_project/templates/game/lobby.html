@@ -285,7 +285,7 @@
                         
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             {% for round in round_history %}
-                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                            <div class="flex-row justify-between p-3 rounded-xl bg-slate-50">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full {% if round.winners %}bg-amber-100{% else %}bg-slate-200{% endif %} flex items-center justify-center">
                                        <span class= "text-xs font-medium text-amber-700 p-2">R{{ round.round_number }}</span>
@@ -300,7 +300,7 @@
                                         </p>
                                     </div>
                                 </div>
-                                <div class="text-right">
+                                <div class="mt-2 flex items-center justify-between">
                                     {% if round.finished_at %}
                                     <p class="text-xs text-slate-400">{{ round.finished_at|timesince }} ago</p>
                                     {% endif %}

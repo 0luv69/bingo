@@ -301,13 +301,14 @@ def lobby_view(request, room_code):
     if member_id:
         current_member = RoomMember.objects.filter(id=member_id, room=room).first()
 
+    if not current_member:
+        messages.error(request, 'You are not in this room. Please join the room first.')
+        return redirect('home')
+    
     if current_member.connection_status == 'banned' and not current_member.is_active:
         messages.error(request, "You have been banned from this room. You can't rejoin.")
         return redirect('home')
     
-    if not current_member:
-        messages.error(request, 'You are not in this room. Please join the room first.')
-        return redirect('home')
     
     # Get current round
     current_round = room.get_current_round()
@@ -409,13 +410,14 @@ def game_view(request, room_code):
     if member_id:
         current_member = RoomMember.objects.filter(id=member_id, room=room).first()
 
+    if not current_member:
+        messages.error(request, 'You are not in this room.')
+        return redirect('home')
+
     if not current_member.is_active:
         messages.error(request, 'You have been removed from this room. Please contact the host to rejoin.')
         return redirect('home')
     
-    if not current_member:
-        messages.error(request, 'You are not in this room.')
-        return redirect('home')
     
     # Get current round
     current_round = room.get_current_round()
@@ -430,8 +432,15 @@ def game_view(request, room_code):
         messages.error(request, 'You are not in this game round.')
         return redirect('lobby', room_code=room.code)
     
-    # Get all players
-    all_players = current_round.players.select_related('room_member').all()
+
+    # Get all active members
+    members = room.get_active_members()
+
+    # Get round players if round exists
+    round_players = []
+    if current_round:
+        round_players = current_round.players.select_related('room_member').all().filter(room_member__is_active=True, room_member__connection_status__in=['connected', 'disconnected'])
+
     
     # Determine if it's current player's turn
     is_my_turn = (current_round.current_turn_id == current_player.id) if current_round.current_turn else False
@@ -449,7 +458,8 @@ def game_view(request, room_code):
         'current_round': current_round,
         'current_member': current_member,
         'current_player': current_player,
-        'all_players': all_players,
+        'members': members,
+        'round_players': round_players,
         'is_my_turn': is_my_turn,
         'is_host': current_member.is_host,
         'called_numbers': current_round.called_numbers,

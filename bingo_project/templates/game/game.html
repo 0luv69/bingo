@@ -86,18 +86,26 @@
     <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Status Banner -->
-    <div id="status-banner" class="py-3 px-4 text-white text-center {% if current_round.status == 'setup' %}bg-accent-500 {% elif current_round.status == 'finished' %} bg-red-400 {% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-700{% endif %}">
-        <p id="status-text" class="font-medium">
-            {% if current_round.status == 'setup' %}
-                Setup Phase — Arrange your board!
-            {% elif current_round.status == 'finished' %}
-                Game Over
-            {% elif is_my_turn %}
-                Your turn — Click a number on your board
-            {% else %}
-                {% if current_round.current_turn %}{{ current_round.current_turn.display_name }}{% endif %}'s turn
-            {% endif %}
-        </p>
+    <div id="status-banner" class="py-4 px-6 text-white text-center border-b border-white/10 {% if current_round.status == 'setup' %}bg-accent-500{% elif current_round.status == 'finished' %}bg-red-500{% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-800{% endif %}">
+        <div class="max-w-4xl mx-auto flex items-center justify-center gap-3">
+            <!-- Status indicator -->
+            <div class="flex items-center">
+                <span class="h-2 w-2 rounded-full bg-white {% if is_my_turn %}animate-pulse{% endif %}"></span>
+            </div>
+            
+            <!-- Status text -->
+            <p id="status-text" class="text-sm font-medium tracking-wide uppercase opacity-90">
+                {% if current_round.status == 'setup' %}
+                    Setup Phase — Arrange your board
+                {% elif current_round.status == 'finished' %}
+                    Game Over
+                {% elif is_my_turn %}
+                    Your Turn — Click a number on your board
+                {% else %}
+                    {% if current_round.current_turn %}{{ current_round.current_turn.display_name }}{% endif %}'s Turn
+                {% endif %}
+            </p>
+        </div>
     </div>
     
     <!-- Main Content -->
@@ -183,7 +191,7 @@
                     <div class="card p-5">
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
                         <div id="players-list" class="space-y-3">
-                            {% for player in all_players %}
+                            {% for player in round_players %}
                             <div class="player-item relative flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
                                 <div class="flex items-center gap-2">
                                     {% if player.is_host %}
@@ -195,8 +203,6 @@
                                     {% if current_round.current_turn_id == player.id %}
                                     <div class="turn-indicator"></div>
                                     {% endif %}
-
-                                    
                                 </div>
                                 
 

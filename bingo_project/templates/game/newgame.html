@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Bingo - {{ room.code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bingo-letter {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight:  700;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+    .bingo-letter-inactive { background:  #f1f5f9; color: #94a3b8; }
+    .bingo-letter-active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .board-cell {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 18px;
+        border-radius: 10px;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        user-select: none;
+    }
+    .board-cell-default { background: #f8fafc; color: #334155; border: 2px solid #e2e8f0; }
+    .board-cell-default: hover { background: #e2e8f0; }
+    .board-cell-marked {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        border: 2px solid #f59e0b;
+    }
+    .board-cell-selectable {
+        border: 2px solid #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+    }
+    .board-cell-selectable:hover {
+        background: #0ea5e9;
+        color: white;
+        transform: scale(1.05);
+    }
+    .board-cell.dragging { opacity: 0.5; }
+    .board-cell.drag-over { background: #dbeafe; border:  2px dashed #3b82f6; }
+    
+    .turn-indicator {
+        width: 8px;
+        height: 8px;
+        background: #0ea5e9;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+<div class="flex items-center gap-3">
+    <span class="text-sm font-mono text-slate-500 bg-slate-100 p-1 rounded-lg">{{ room.code }} - R{{ current_round.round_number }}</span>
+    <div id="connection-status" class="badge badge-warning">Connecting...</div>
+    <div id="timer-container" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span id="timer" class="text-sm font-mono font-medium text-slate-700">{{ remaining_seconds }}s</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col bg-slate-50">
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
+    
+    <!-- Status Banner -->
+    <div id="status-banner" class="py-3 px-4 text-white text-center {% if current_round.status == 'setup' %}bg-accent-500 {% elif current_round.status == 'finished' %} bg-red-400 {% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-700{% endif %}">
+        <p id="status-text" class="font-medium">
+            {% if current_round.status == 'setup' %}
+                Setup Phase — Arrange your board!
+            {% elif current_round.status == 'finished' %}
+                Game Over
+            {% elif is_my_turn %}
+                Your turn — Click a number on your board
+            {% else %}
+                {% if current_round.current_turn %}{{ current_round.current_turn.display_name }}{% endif %}'s turn
+            {% endif %}
+        </p>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="flex-1 py-6 px-4">
+        <div class="max-w-5xl mx-auto">
+            <div class="grid lg:grid-cols-3 gap-6">
+                
+                <!-- Board Column -->
+                <div class="lg:col-span-2">
+                    <div class="card p-6">
+                        
+                        <!-- BINGO Progress -->
+                        <div class="flex items-center justify-center gap-2 mb-6">
+                            <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
+                            <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
+                            <div id="letter-N" class="bingo-letter {% if current_player.completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
+                            <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
+                            <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
+                        </div>
+                        
+                        <!-- 5x5 Board -->
+                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-xs mx-auto select-none no-callout">
+                            {% for row in current_player.board %}
+                                {% for number in row %}
+                                <div class="board-cell select-none no-callout {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" data-number="{{ number }}" draggable="true">
+                                    {{ number }}
+                                </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Setup Actions -->
+                        <div id="setup-actions" class="mt-6 pt-6 border-t border-slate-100 {% if current_round.status != 'setup' %}hidden{% endif %}">
+                            <div id="ready-section" class="{% if current_player.is_ready %}hidden{% endif %}">
+                                <div class="flex gap-3 justify-center mb-4">
+                                    <button onclick="shuffleBoard()" class="btn-secondary flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        Shuffle
+                                    </button>
+                                    <button onclick="setReady()" class="btn-primary flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        I'm Ready
+                                    </button>
+                                </div>
+                                <p class="text-xs text-slate-400 text-center">Drag numbers to swap positions</p>
+                            </div>
+                            <div id="ready-confirmed" class="text-center {% if not current_player.is_ready %}hidden{% endif %}">
+                                <div class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="font-medium text-sm">You're ready!</span>
+                                </div>
+                                <p id="waiting-text" class="text-xs text-slate-400 mt-2">Waiting for others...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Called Numbers -->
+                        <div id="called-section" class="mt-6 pt-6 border-t border-slate-100 {% if current_round.status == 'setup' %}hidden{% endif %}">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-semibold text-slate-700">Called Numbers</h3>
+                                <span id="called-count" class="text-xs text-slate-400">{{ called_numbers|length }}/25</span>
+                            </div>
+                            <div id="called-numbers" class="flex flex-wrap gap-1.5">
+                                {% for num in called_numbers %}
+                                <span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">{{ num }}</span>
+                                {% empty %}
+                                <span class="text-xs text-slate-400">No numbers called yet</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- Players Column -->
+                <div class="space-y-4">
+                    <!-- Players List -->
+                    <div class="card p-5">
+                        <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
+                        <div id="players-list" class="space-y-3">
+                            {% for player in all_players %}
+                            <div class="player-item relative flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
+                                <div class="flex items-center gap-2">
+                                    {% if player.is_host %}
+                                    <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                    </svg>
+                                    {% endif %}
+                                    <span class="text-sm font-medium ">{{ player.display_name }}{% if player.id == current_player.id %} (You){% endif %}</span> {% if current_round.winner_id == player.id %} 🏆 {% endif %} </span>
+                                    {% if current_round.current_turn_id == player.id %}
+                                    <div class="turn-indicator"></div>
+                                    {% endif %}
+                                </div>
+                                {% if show_score %}
+                                <!-- BINGO Letters -->
+                                <div class="flex gap-0.5">
+                                    {% for letter in "BINGO" %}
+                                    <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if forloop.counter <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ letter }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% if player.is_ready and player.game_round.status == "setup" %}
+                                <div class="absolute right-2 -top-[14px] border border-emerald-500 inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Ready
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+
+<!-- Winner Modal -->
+<div id="winner-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="card p-8 max-w-md mx-4 transform scale-95 opacity-0 transition-all" id="winner-content">
+        <div class="text-center mb-6">
+            <!-- Container for dynamic icon - no default styling here -->
+            <div id="winner-icon-container">
+                <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4"></div>
+            </div>
+            <h2 id="winner-title" class="text-2xl font-bold text-slate-900 mb-2">Game Over!</h2>
+            <p id="winner-message" class="text-slate-500"></p>
+        </div>
+        <div id="final-scores" class="bg-slate-50 rounded-xl p-4 mb-6 space-y-2"></div>
+        <div class="flex gap-3">
+            <button onclick="startNewRound()" class="btn-primary flex-1">Play Again</button>
+            <form method="POST" action="{% url 'leave_room' room.code %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-secondary w-full text-red-500 hover:bg-red-50">Leave Game</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ════════════════════════════════════════════════════════════
+    // CONFIG
+    // ════════════════════════════════════════════════════════════
+    const roomCode = "{{ room.code }}";
+    const currentPlayerId = {{ current_player.id }};
+    const currentMemberId = {{ current_member.id }};
+    const isHost = {{ is_host|yesno:"true,false" }};
+    let roomStatus = "{{ current_round.status }}";
+    let isMyTurn = {{ is_my_turn|yesno:"true,false" }};
+    let isReady = {{ current_player.is_ready|yesno:"true,false" }};
+    let remainingSeconds = {{ remaining_seconds }};
+    let calledNumbers = {{ called_numbers|safe }};
+    let myCompletedLines = {{ current_player.completed_lines }};
+    let boardData = {{ current_player.board|safe }};
+    let socket = null;
+    let timerInterval = null;
+    let draggedCell = null;
+
+    // ════════════════════════════════════════════════════════════
+    // WEBSOCKET
+    // ════════════════════════════════════════════════════════════
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        socket = new WebSocket(`${protocol}//${window.location.host}/ws/room/${roomCode}/`);
+        socket.onopen = () => updateConnectionStatus('connected');
+        socket.onclose = () => {
+            updateConnectionStatus('disconnected');
+            setTimeout(connectWebSocket, 2000);  // Attempt reconnection
+        };
+        socket.onerror = () => updateConnectionStatus('error');
+        socket.onmessage = (e) => handleMessage(JSON.parse(e.data));
+    }
+
+    function sendMessage(type, payload = {}) {
+        if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type, ...payload }));
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // MESSAGE HANDLERS
+    // ════════════════════════════════════════════════════════════
+
+    function updateConnectionStatus(status) {
+    const el = document.getElementById('connection-status');
+    el.className = 'badge ' + (status === 'connected' ? 'badge-success' : 'badge-warning');
+    el.textContent = status === 'connected' ? 'Connected' : 'Reconnecting...';
+}
+    function handleMessage(data) {
+        console.log('Received:', data);
+        switch (data.type) {
+            case 'player_ready':
+                updatePlayersList(data.round_players, show_score = false);
+                document.getElementById('waiting-text').textContent = `${data.ready_count}/${data.total_count} ready`;
+                break;
+            case 'game_started':
+                roomStatus = 'playing';
+                document.getElementById('setup-actions').classList.add('hidden');
+                document.getElementById('called-section').classList.remove('hidden');
+                updateStatusBanner(data.current_turn);
+                updatePlayersList(data.round_players, show_score = data.show_score, playing = true);
+                startTimer(data.duration);
+                showNotification('Game started!', 'success');
+                break;
+            case 'number_called':
+                calledNumbers = data.called_numbers;
+                markNumber(data.number);
+                updateCalledNumbers();
+                updatePlayersList(data.round_players, show_score = data.show_score, playing = true);
+                updateStatusBanner(data.next_turn);
+                startTimer(data.duration);
+                break;
+            case 'game_won':
+                handleGameWon(data);
+                break;
+            case 'new_round_created':
+                showNotification(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = `/room/${roomCode}/lobby/`;
+                }, 1000);
+                break;
+            case 'error':
+                showNotification(data.message, 'error');
+                break;
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // TIMER
+    // ════════════════════════════════════════════════════════════
+    function startTimer(duration) {
+        if (timerInterval) clearInterval(timerInterval);
+        remainingSeconds = duration;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            remainingSeconds--;
+            updateTimerDisplay();
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                handleTimerEnd();
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const el = document.getElementById('timer');
+        el.textContent = `${remainingSeconds}s`;
+        el.classList.toggle('text-red-500', remainingSeconds <= 10);
+    }
+
+    function handleTimerEnd() {
+        if (roomStatus === 'setup' && !isReady) {
+            setReady();
+            showNotification("Time's up! Auto-marked ready.", 'info');
+        } else if (roomStatus === 'playing' && isMyTurn) {
+            autoPickNumber();
+        }
+    }
+
+    function autoPickNumber() {
+        const available = [];
+        for (let i = 1; i <= 25; i++) {
+            if (!calledNumbers.includes(i)) available.push(i);
+        }
+        if (available.length > 0) {
+            const num = available[Math.floor(Math.random() * available.length)];
+            callNumber(num);
+            showNotification(`Time's up! Auto-selected ${num}`, 'info');
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // MODAL HANDLERS (E.G., WINNER MODAL)
+    // ════════════════════════════════════════════════════════════
+    function handleGameWon(data) {
+        roomStatus = 'finished';
+        if (timerInterval) clearInterval(timerInterval);
+
+        const modal = document.getElementById('winner-modal');
+        const content = document.getElementById('winner-content');
+        const title = document.getElementById('winner-title');
+        const message = document.getElementById('winner-message');
+        const scores = document.getElementById('final-scores');
+
+        const isPlayerWinner = data.winners.some(winner => winner.member_id === currentMemberId);
+        if (isPlayerWinner) {
+            title.textContent = "🎉 You Won!";
+        } else {
+            title.textContent = `${data.winners[0].name} Wins!`;
+        }
+        
+        message.textContent = 'Congratulations!';
+        // Add player scores from data.round_players
+        scores.innerHTML = data.round_players.map(player => `
+            <div class="flex justify-between items-center">
+                <span>${player.name}</span>
+                <span>${player.completed_lines} lines</span>
+            </div>
+        `).join('');
+
+        modal.classList.remove('hidden');
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // INIT
+    // ════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+        connectWebSocket();
+        if (remainingSeconds > 0) startTimer(remainingSeconds);
+    });
+</script>
+{% endblock %}

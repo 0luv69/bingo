@@ -406,7 +406,7 @@
                                 <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 </svg>
-                    <h3 class="text-xl font-bold text-slate-900">Active Game Rooms</h3>
+                    <h3 class="text-xl font-bold text-slate-900">Active Public Rooms</h3>
                 </div>
 
                 <div class="space-y-3">
@@ -564,13 +564,13 @@
             <div class="mt-16 max-w-lg mx-auto px-4">
                 <div class="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-sm">
                     <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                        <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        <svg class="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
                         </svg>
                     </div>
                     <h3 class="text-xl font-bold text-slate-900 mb-2">No Active Rooms</h3>
                     <p class="text-slate-500 mb-8 leading-relaxed text-sm">There aren't any games happening right now. Why not start your own and invite friends?</p>
-                    <button onclick="document.getElementById('create_name')?.focus()" class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition-all shadow-lg active:scale-95">
+                    <button onclick="document.getElementById('create_name')?.focus()" class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 btn-primary text-white font-bold rounded-2xl transition-all shadow-lg active:scale-95">
                         Create New Room
                     </button>
                 </div>
