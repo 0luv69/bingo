@@ -50,6 +50,50 @@ LINE_NAMES = [
 
 BINGO_LETTERS = ['B', 'I', 'N', 'G', 'O']
 
+def generate_winning_lines(size):
+    """
+    Generate all winning lines for an NxN board.
+    
+    Returns list of lines, where each line is a list of (row, col) tuples.
+    Total lines = size rows + size columns + 2 diagonals = 2*size + 2
+    """
+    lines = []
+    
+    # Horizontal rows
+    for row in range(size):
+        lines.append([(row, col) for col in range(size)])
+    
+    # Vertical columns
+    for col in range(size):
+        lines.append([(row, col) for row in range(size)])
+    
+    # Diagonal:  top-left to bottom-right
+    lines.append([(i, i) for i in range(size)])
+    
+    # Diagonal: top-right to bottom-left
+    lines.append([(i, size - 1 - i) for i in range(size)])
+    
+    return lines
+
+
+def generate_line_names(size):
+    """Generate human-readable names for winning lines."""
+    names = []
+    
+    # Rows
+    for i in range(size):
+        names.append(f"Row {i + 1}")
+    
+    # Columns
+    for i in range(size):
+        names.append(f"Column {i + 1}")
+    
+    # Diagonals
+    names.append("Diagonal ↘")
+    names.append("Diagonal ↙")
+    
+    return names
+
 
 def check_completed_lines(board, called_numbers, finished_lines):
     """
@@ -83,38 +127,65 @@ def check_completed_lines(board, called_numbers, finished_lines):
     
     return list(updated_finished_lines)
 
+def check_completed_lines(board, called_numbers, finished_lines, board_size=5):
+    """
+    Check how many lines are completed on a board.
+    
+    Args:
+        board: 2D list (NxN) - Player's board
+        called_numbers: List of integers - Numbers that have been called
+        finished_lines: List of already completed line indices
+        board_size: Size of the board (5-10)
+    
+    Returns:
+        list:  Updated finished_lines indices
+    """
+    winning_lines = generate_winning_lines(board_size)
+    called_set = set(called_numbers)
+    updated_finished_lines = finished_lines.copy()
+    
+    for line_index, line in enumerate(winning_lines):
+        if line_index in finished_lines:
+            continue
+        
+        line_complete = all(board[row][col] in called_set for row, col in line)
+        
+        if line_complete:
+            updated_finished_lines.append(line_index)
+    
+    return updated_finished_lines
 
 def determine_winners(game_round, calling_player):
     """
     Determine winner(s) after a number is called.
-    
-    Rules:
-    1. If caller completes 5+ lines, caller wins alone
-    2. If caller doesn't win, check others
-    3. Multiple non-callers can tie for win
-    
-    Args:
-        game_round: GameRound instance
-        calling_player: RoundPlayer who called the number
-    
-    Returns:
-        list: List of winning RoundPlayer instances (empty if no winner)
+    Uses room's board_size setting for lines_to_win.
     """
     called_numbers = game_round.called_numbers
-    lines_to_win = 5
+    board_size = game_round.room.settings_board_size
+    lines_to_win = board_size  # Need N lines to win on NxN board
     
-    # First check the caller
-    updated_finished_lines = check_completed_lines(calling_player.board, called_numbers, calling_player.finished_lines)
+    # Check the caller
+    updated_finished_lines = check_completed_lines(
+        calling_player.board, 
+        called_numbers, 
+        calling_player.finished_lines,
+        board_size
+    )
     calling_player.finished_lines = updated_finished_lines
     calling_player.save(update_fields=['finished_lines'])
     
     if len(updated_finished_lines) >= lines_to_win:
-        return [calling_player]  # Caller wins alone
+        return [calling_player]
     
     # Check all other players
     winners = []
     for player in game_round.players.exclude(id=calling_player.id):
-        updated_finished_lines = check_completed_lines(player.board, called_numbers, player.finished_lines)
+        updated_finished_lines = check_completed_lines(
+            player.board, 
+            called_numbers, 
+            player. finished_lines,
+            board_size
+        )
         player.finished_lines = updated_finished_lines
         player.save(update_fields=['finished_lines'])
         
@@ -122,6 +193,24 @@ def determine_winners(game_round, calling_player):
             winners.append(player)
     
     return winners
+
+
+def validate_board(board, expected_size=5):
+    """
+    Validate that board is a proper NxN grid with numbers 1 to N². 
+    """
+    if not isinstance(board, list) or len(board) != expected_size:
+        return False
+    
+    total_numbers = expected_size * expected_size
+    all_numbers = []
+    
+    for row in board:
+        if not isinstance(row, list) or len(row) != expected_size:
+            return False
+        all_numbers.extend(row)
+    
+    return sorted(all_numbers) == list(range(1, total_numbers + 1))
 
 def get_bingo_progress(completed_lines):
     """
@@ -134,25 +223,6 @@ def get_bingo_progress(completed_lines):
         dict: {'B': True, 'I': True, 'N': False, 'G': False, 'O': False}
     """
     return {letter: i < completed_lines for i, letter in enumerate(BINGO_LETTERS)}
-
-
-def validate_board(board):
-    """
-    Validate that board is a proper 5x5 grid with numbers 1-25.
-    
-    Returns:
-        bool: True if valid
-    """
-    if not isinstance(board, list) or len(board) != 5:
-        return False
-    
-    all_numbers = []
-    for row in board: 
-        if not isinstance(row, list) or len(row) != 5:
-            return False
-        all_numbers.extend(row)
-    
-    return sorted(all_numbers) == list(range(1, 26))
 
 
 def get_room_member(room, user=None, session_key=None):

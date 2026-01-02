@@ -13,7 +13,7 @@ class RoomAdmin(admin. ModelAdmin):
     
     fieldsets = (
         ('Room Info', {'fields': ('code', 'visibility_type', 'created_by', 'is_active', 'created_at')}),
-        ('Settings', {'fields': ('settings_setup_duration', 'settings_turn_duration', 'settings_max_players')}),
+        ('Settings', {'fields': ('settings_setup_duration', 'settings_turn_duration', 'settings_max_players', 'settings_board_size')}),
     )
     
     def members_count(self, obj):

@@ -7,6 +7,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Room, RoomMember, GameRound, RoundPlayer, CalledNumberHistory
 from .utils import determine_winners, validate_board
+from django.db import transaction
+
 
 VOTE_GRACE_ADDITIONAL_SECONDS = 5
 
@@ -108,6 +110,17 @@ class DisconnectionManager:
                     del cls.vote_kicks[room_code]
             return True
         return False
+
+    @classmethod
+    def cleanup_room(cls, room_code):
+        """Call when room is deleted/deactivated"""
+        # Cancel all timers for this room
+        for member_id, task in cls.disconnection_timers.pop(room_code, {}).items():
+            task.cancel()
+        for player_id, task in cls.bot_timers.pop(room_code, {}).items():
+            task.cancel()
+        cls.vote_kicks.pop(room_code, None)
+
 
 class GameConsumer(AsyncWebsocketConsumer):
     """
@@ -237,6 +250,18 @@ class GameConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             await self.send_error(str(e))
 
+    
+    async def check_and_cleanup_empty_room(self):
+        """Check if room is empty and cleanup if needed"""
+        room = await self.get_room()
+        if not room:
+            return
+        
+        active_count = await self.get_active_members_count()
+        if active_count == 0:
+            await self.deactivate_room()
+            DisconnectionManager.cleanup_room(self.room_code)
+    
     # ════════════════════════════════════════════════════════════════
     # DISCONNECTION HANDLING
     # ════════════════════════════════════════════════════════════════
@@ -420,7 +445,10 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         if result == 'kick' or result == 'zero':
             # Remove the player
-            new_cohost_name, new_cohost_id = await self.leave_room_db(target_member_id)
+            new_cohost_name, new_cohost_id, should_cleanup  = await self.leave_room_db(target_member_id)
+
+            if should_cleanup:
+                DisconnectionManager.cleanup_room(self.room_code)
 
             # Notify others
             await self.channel_layer.group_send(
@@ -540,6 +568,8 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_update_board(self, data):
         """Player updates their board arrangement."""
         member = await self.get_member()
+        room = await self.get_room()
+        board_size = room.settings_board_size
         current_round = await self.get_current_round()
         
         if not member or not current_round: 
@@ -548,6 +578,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         if current_round.status != 'setup':
             await self.send_error('Cannot update board now')
             return
+        
+        new_board = data.get('board')
+        if not new_board or not validate_board(new_board, board_size):
+            await self.send_error(f'Invalid board (expected {board_size}x{board_size})')
+            return
+        
+
         
         round_player = await self.get_round_player(member.id)
         if not round_player or round_player.is_ready:
@@ -570,12 +607,20 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Player calls a number."""
         member = await self.get_member()
         current_round = await self.get_current_round()
+        room = await self.get_room()
+        max_number = room.settings_board_size ** 2
+        
         
         if not member or not current_round:
             return
         
         if current_round.status != 'playing':
             await self.send_error('Game not in progress')
+            return
+        
+        number = data.get('number')
+        if not isinstance(number, int) or number < 1 or number > max_number:
+            await self.send_error(f'Invalid number (must be 1-{max_number})')
             return
         
         round_player = await self.get_round_player(member.id)
@@ -600,7 +645,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         # Call the number
-        await self.add_called_number(number, round_player.id)
+        await self.add_called_number_atomic(number, round_player.id)
         
         # Check for winners
         winners = await self.check_winners(round_player.id)
@@ -701,7 +746,10 @@ class GameConsumer(AsyncWebsocketConsumer):
         was_host = member.is_host
         
         # Remove from room
-        new_cohost_name, new_cohost_id = await self.leave_room_db(member_id)
+        new_cohost_name, new_cohost_id, should_cleanup = await self.leave_room_db(member_id)
+        
+        if should_cleanup:
+            DisconnectionManager.cleanup_room(self.room_code)
         
         # Send confirmation to leaving player
         await self.send(text_data=json.dumps({
@@ -963,7 +1011,10 @@ class GameConsumer(AsyncWebsocketConsumer):
     def is_member_active(self, member_id):
         try:
             return RoomMember.objects.filter(id=member_id, is_active=True).exists()
-        except: 
+        except RoomMember.DoesNotExist:
+            return False
+        except Exception as e:
+            #logger.error(f"Error checking member active status: {e}")
             return False
 
     @database_sync_to_async
@@ -1012,25 +1063,34 @@ class GameConsumer(AsyncWebsocketConsumer):
     def get_round_players_data(self):
         try:
             room = Room.objects.get(code=self.room_code)
-            current_round = room.get_current_round()
+            current_round: GameRound = room.get_current_round()
             if not current_round:
                 return []
-            return [{
-                'id': p.id,
-                'member_id': p.room_member.id,
-                'name': p.display_name,
-                'role':  p.role,
-                'is_host': p.is_host,
-                'is_ready': p.is_ready,
-                'completed_lines': p.completed_lines,
-                'connection_status': p.connection_status,
-                'user': {
-                    'id': p.room_member.user.id,
-                    'username': p.room_member.user.username,
-                } if getattr(p.room_member, 'user', None) else None
-            } for p in current_round.players.select_related('room_member').all().filter(room_member__is_active=True, room_member__connection_status__in=['connected', 'disconnected'])]
+            
+            players:RoundPlayer = current_round.players.select_related('room_member','room_member__user').filter( room_member__is_active=True, room_member__connection_status__in=['connected', 'disconnected'])
+            result = []
+            for p in players:
+                player_data = {
+                    'id': p.id,
+                    'member_id': p.room_member.id,
+                    'name': p.display_name,
+                    'role': p.role,
+                    'is_host': p.is_host,
+                    'is_ready': p.is_ready,
+                    'completed_lines': p.completed_lines,
+                    'connection_status': p.connection_status,
+                    'user': None
+                }
+                if p.room_member.user:
+                    player_data['user'] = {
+                        'id':  p.room_member.user.id,
+                        'username':  p.room_member.user.username,
+                    }
+                result.append(player_data)
+            return result
+        
         except Exception as e:
-            print(e)
+            print(f"Error in get_round_players_data:  {e}")
             return []
     
     @database_sync_to_async
@@ -1080,22 +1140,23 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def leave_room_db(self, member_id):
-        """Remove member from room. Returns new host name if host changed."""
+        """Remove member from room.  Returns new host name if host changed."""
         try:
-            member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
+            member = RoomMember.objects. get(id=member_id, room__code=self.room_code)
             new_host_member = member.leave_room()
 
-            # If room is empty, mark inactive, wait to confirm deletion
-            # if member.room.get_active_members_count() == 0:
-            #     member.room.is_active = False
-            #     member.room.save()
-            #     # cleanup timers for this room
-            #     DisconnectionManager.disconnection_timers.pop(self.room.code, None)
-            #     DisconnectionManager.vote_kicks.pop(self.room.code, None)
+            # Check if room is empty AFTER leaving
+            should_cleanup = member.room.get_active_members_count() == 0
+            
+            if should_cleanup:
+                member.room.is_active = False
+                member.room.save()
 
-            return (new_host_member.display_name, new_host_member.id) if new_host_member else (None, None)
+            if new_host_member:
+                return (new_host_member. display_name, new_host_member.id, should_cleanup)
+            return (None, None, should_cleanup)
         except:
-            return None, None
+            return None, None, False
     
     
     @database_sync_to_async
@@ -1151,21 +1212,25 @@ class GameConsumer(AsyncWebsocketConsumer):
         return current_round.called_numbers if current_round else []
     
     @database_sync_to_async
-    def add_called_number(self, number, player_id):
-        room = Room.objects.get(code=self.room_code)
-        current_round = room.get_current_round()
-        player = RoundPlayer.objects.get(id=player_id)
-        
-        if number not in current_round.called_numbers:
+    def add_called_number_atomic(self, number, player_id):
+        with transaction.atomic():
+            room: Room = Room.objects.select_for_update().get(code=self.room_code)
+            current_round: GameRound = room.get_current_round()
+            if number in current_round.called_numbers:
+                return False, "Number already called"
+            
+            player = RoundPlayer.objects.select_for_update().get(id=player_id)
+            
             current_round.called_numbers.append(number)
-            current_round.save()
-        
-        CalledNumberHistory.objects.create(
-            game_round=current_round,
-            number=number,
-            called_by=player
-        )
-    
+            current_round.save(update_fields=["called_numbers"])
+
+            CalledNumberHistory.objects.create(
+                game_round=current_round,
+                number=number,
+                called_by=player
+            )
+            return True, None
+
     @database_sync_to_async
     def check_winners(self, calling_player_id):
         room = Room.objects.get(code=self.room_code)
@@ -1267,6 +1332,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def create_new_round(self):
         room = Room.objects.get(code=self.room_code)
+        board_size = room.settings_board_size
         new_round = GameRound.create_new_round(room)
 
 
@@ -1276,14 +1342,32 @@ class GameConsumer(AsyncWebsocketConsumer):
             RoundPlayer.objects.create(
                 game_round=new_round,
                 room_member=member,
-                board=RoundPlayer.generate_board(),
+                board=RoundPlayer.generate_board(board_size),  # Pass size
                 turn_order=order
             )
         
-        return {
-            'round_number': new_round.round_number,
-        }
+        return {'round_number': new_round.round_number}
+
     
+
+    @database_sync_to_async
+    def get_active_members_count(self):
+        try:
+            room = Room.objects.get(code=self.room_code)
+            return room.get_active_members_count()
+        except:
+            return 0
+    
+    @database_sync_to_async
+    def deactivate_room(self):
+        try:
+            room = Room.objects.get(code=self.room_code)
+            room.is_active = False
+            room. save(update_fields=['is_active'])
+        except:
+            pass
+
+        
     async def send_error(self, message):
         await self.send(text_data=json.dumps({
             'type': 'error',

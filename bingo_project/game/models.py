@@ -37,6 +37,17 @@ class Room(models.Model):
         'public': 'Public',
         'private': 'Private ',
     }
+
+        # Add board size setting
+    BOARD_SIZE_CHOICES = [
+        (5, '5x5 (25 numbers)'),
+        (6, '6x6 (36 numbers)'),
+        (7, '7x7 (49 numbers)'),
+        (8, '8x8 (64 numbers)'),
+        (9, '9x9 (81 numbers)'),
+        (10, '10x10 (100 numbers)'),
+    ]
+  
     
     code = models.CharField(max_length=6, unique=True, help_text="Unique room code (e.g., ABC123)")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -50,6 +61,8 @@ class Room(models.Model):
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
     settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
     settings_grace_period = models.IntegerField(default=15, help_text="Seconds of grace period")
+    settings_board_size = models.IntegerField(  choices=BOARD_SIZE_CHOICES,   default=5,  help_text="Board dimension (5-10)")
+
 
     class Meta:
         ordering = ['-created_at']
@@ -57,6 +70,17 @@ class Room(models.Model):
     def __str__(self):
         return f"Room {self.code}"
     
+
+    @property   
+    def total_row_numbers(self):
+        return self.settings_board_size ** 2
+    
+    @property
+    def lines_to_win(self):
+        """Lines needed to win = board_size"""
+        return self.settings_board_size
+
+
     @classmethod
     def generate_room_code(cls):
         """Generate unique 6-char room code:  3 letters + 3 digits."""
@@ -158,7 +182,7 @@ class RoomMember(models.Model):
     is_active = models.BooleanField(default=True, help_text="False when member is Kicked or Removed")
     kicked_count = models.IntegerField(default=0, help_text="Number of times this member has been kicked")
 
-    connection_status = models. CharField(max_length=15, choices=CONNECTION_STATUS_CHOICES, default='connected')
+    connection_status = models.CharField(max_length=15, choices=CONNECTION_STATUS_CHOICES, default='connected')
     disconnected_at = models.DateTimeField(null=True, blank=True, help_text="When player disconnected")
     channel_name = models.CharField(max_length=255, blank=True, null=True, help_text="Current WebSocket channel")
     
@@ -205,7 +229,7 @@ class RoomMember(models.Model):
         self.connection_status = 'connected'
         self.disconnected_at = None
         if channel_name:
-            self. channel_name = channel_name
+            self.channel_name = channel_name
         self.save(update_fields=['connection_status', 'disconnected_at', 'channel_name'])
     
     def get_grace_period_remaining(self):
@@ -293,7 +317,9 @@ class GameRound(models.Model):
     
     def get_available_numbers(self):
         """Get numbers that haven't been called yet."""
-        all_numbers = set(range(1, 26))
+        board_size = self.room.settings_board_size
+        total = board_size * board_size
+        all_numbers = set(range(1, total + 1))
         called = set(self.called_numbers)
         return list(all_numbers - called)
     
@@ -374,7 +400,7 @@ class RoundPlayer(models.Model):
     
     game_round = models.ForeignKey(GameRound, on_delete=models.CASCADE, related_name='players')
     room_member = models.ForeignKey(RoomMember, on_delete=models.CASCADE, related_name='round_participations')
-    board = models.JSONField(default=list, help_text="5x5 grid [[1,2,3,4,5], ...]")
+    board = models.JSONField(default=list, help_text="NxN grid based on room settings")  # e.g., [[5, 10, 15, 20, 25], ...]
     is_ready = models.BooleanField(default=False)
     finished_lines = models.JSONField(default=list, help_text="List of completed line indices from winning lines [0,1,5,8]") 
     turn_order = models.PositiveIntegerField(default=0)
@@ -425,14 +451,15 @@ class RoundPlayer(models.Model):
         return self.room_member.kicked_count
     
     @staticmethod
-    def generate_board():
-        """Generate random 5x5 board with numbers 1-25."""
-        numbers = list(range(1, 26))
+    def generate_board(size= 5):
+        """Generate random NxN board with numbers 1 to N²."""
+        total = size * size
+        numbers = list(range(1, total + 1))
         random.shuffle(numbers)
-        return [numbers[i*5:(i+1)*5] for i in range(5)]
+        return [numbers[i*size:(i+1)*size] for i in range(size)]
     
     def get_number_position(self, number):
-        """Find position of number on board. Returns (row, col) or None."""
+        """Find position of number on board.Returns (row, col) or None."""
         for row_idx, row in enumerate(self.board):
             for col_idx, cell in enumerate(row):
                 if cell == number:
@@ -462,7 +489,7 @@ class RoundPlayer(models.Model):
     def set_bot_controlled(self, value=True):
         """Set bot control status."""
         self.is_bot_controlled = value
-        self. save(update_fields=['is_bot_controlled'])
+        self.save(update_fields=['is_bot_controlled'])
 
 class CalledNumberHistory(models.Model):
     """

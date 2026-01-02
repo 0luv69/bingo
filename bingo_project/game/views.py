@@ -455,6 +455,7 @@ def game_view(request, room_code):
     if current_round.turn_deadline:
         delta = current_round.turn_deadline - timezone.now()
         remaining_seconds = max(0, int(delta.total_seconds()))
+
     context = {
         'room': room,
         'current_round': current_round,
@@ -467,7 +468,10 @@ def game_view(request, room_code):
         'called_numbers': current_round.called_numbers,
         'remaining_seconds': remaining_seconds,
         'round_history': round_history,
-        'show_login': False
+        'show_login':  False,
+        # Add these for dynamic board
+        'board_size_range': range(1, room.settings_board_size + 1),  # [1, 2, 3, 4, 5, ...]
+        'show_score': room.settings_show_score,
     }
     
     return render(request, 'game/game.html', context)

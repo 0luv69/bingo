@@ -1,1 +1,1 @@
-deactivate room on 0 player left, 
+ Race Conditions on add_called_number_atomic fixed, 
