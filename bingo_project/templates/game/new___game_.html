@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static game_filters %}
 {% block title %}Bingo - {{ room.code }}{% endblock %}
 
 {% block extra_css %}
@@ -22,18 +22,26 @@
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
     
+    /* Dynamic board cell sizing based on board size */
     .board-cell {
         aspect-ratio: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        font-size: 18px;
         border-radius: 10px;
         transition: all 0.15s ease;
         cursor: pointer;
         user-select: none;
+        /* Dynamic font size based on board size */
+        font-size: clamp(10px, calc(18px - ({{ room.settings_board_size }} - 5) * 2px), 18px);
     }
+    
+    #bingo-board {
+        max-width: calc({{ room.settings_board_size }} * 50px + ({{ room.settings_board_size }} - 1) * 8px);
+    }
+
+
     .board-cell-default { background: #f8fafc; color: #334155; border: 2px solid #e2e8f0; }
     .board-cell-default: hover { background: #e2e8f0; }
     .board-cell-marked {
@@ -52,6 +60,16 @@
     }
     .board-cell.dragging { opacity: 0.5; }
     .board-cell.drag-over { background: #dbeafe; border:  2px dashed #3b82f6; }
+
+    {% if room.settings_board_size > 7 %}
+        .board-cell {
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        #bingo-board {
+            gap: 4px;
+        }
+    {% endif %}
     
     .turn-indicator {
         width: 8px;
@@ -83,9 +101,7 @@
 {% block content %}
 <div class="min-h-screen flex flex-col bg-slate-50">
     <!-- Notification Container -->
-    <div id="notification-container-top" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
-    <div id="notification-container-bottom" class="fixed bottom-20 left-0 z-50 space-y-2 max-w-xs"></div>
-    
+    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-xs"></div>
     
     <!-- Status Banner -->
     <div id="status-banner" class="py-4 px-6 text-white text-center border-b border-white/10 {% if current_round.status == 'setup' %}bg-accent-500{% elif current_round.status == 'finished' %}bg-red-500{% elif is_my_turn %}bg-emerald-500{% else %}bg-slate-800{% endif %}">
@@ -119,26 +135,53 @@
                 <div class="lg:col-span-2">
                     <div class="card p-6">
                         
-                        <!-- BINGO Progress -->
-                        <div class="flex items-center justify-center gap-2 mb-6">
-                            <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
-                            <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
-                            <div id="letter-N" class="bingo-letter {% if current_player.completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
-                            <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
-                            <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
+                        <!-- Progress Display (BINGO for 5x5, Progress bar for larger) -->
+                        <div id="progress-container" class="flex items-center justify-center gap-2 mb-6">
+                            {% if room.settings_board_size == 5 %}
+                                <!-- Classic BINGO letters for 5x5 -->
+                                <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
+                                <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
+                                <div id="letter-N" class="bingo-letter {% if current_player.completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
+                                <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
+                                <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
+                            {% else %}
+                                <!-- Progress display for larger boards -->
+                                <div class="flex items-center gap-3 px-4 py-2 bg-slate-100 rounded-xl">
+                                    <span class="text-sm font-medium text-slate-600">Lines:</span>
+                                    <div class="flex items-center gap-1">
+                                        {% for i in board_size_range %}
+                                        <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold
+                                            {% if i <= current_player.completed_lines %}
+                                                bg-emerald-500 text-white
+                                            {% else %}
+                                                bg-slate-200 text-slate-400
+                                            {% endif %}">
+                                            {{ i }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <span class="text-lg font-bold {% if current_player.completed_lines >= room.settings_board_size %}text-emerald-500{% else %}text-slate-700{% endif %}">
+                                        {{ current_player.completed_lines }}/{{ room.settings_board_size }}
+                                    </span>
+                                </div>
+                            {% endif %}
                         </div>
                         
-                        <!-- 5x5 Board -->
-                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-xs mx-auto select-none no-callout">
+                        <!-- Dynamic NxN Board -->
+                        <div id="bingo-board" 
+                            class="grid gap-2 max-w-xs mx-auto select-none no-callout"
+                            style="grid-template-columns: repeat({{ room.settings_board_size }}, 1fr);">
                             {% for row in current_player.board %}
                                 {% for number in row %}
-                                <div class="board-cell select-none no-callout {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" data-number="{{ number }}" draggable="true">
+                                <div class="board-cell select-none no-callout {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" 
+                                    data-number="{{ number }}" 
+                                    draggable="true">
                                     {{ number }}
                                 </div>
                                 {% endfor %}
                             {% endfor %}
                         </div>
-                        
+                                    
                         <!-- Setup Actions -->
                         <div id="setup-actions" class="mt-6 pt-6 border-t border-slate-100 {% if current_round.status != 'setup' %}hidden{% endif %}">
                             <div id="ready-section" class="{% if current_player.is_ready %}hidden{% endif %}">
@@ -318,6 +361,9 @@
     // ════════════════════════════════════════════════════════════
     
     const roomCode = "{{ room.code }}";
+    const boardSize = {{ room.settings_board_size }};
+    const totalNumbers = boardSize * boardSize;
+    const linesToWin = boardSize;  // e.g., 5 for 5x5 board
     const currentPlayerId = {{ current_player.id }};
     const currentMemberId = {{ current_member.id }};
     const isHost = {{ is_host|yesno:"true,false" }};
@@ -346,23 +392,8 @@
             updateConnectionStatus('disconnected');
             setTimeout(connectWebSocket, 2000);
         };
-        socket.onerror = function(e) { 
-            console.error('WebSocket error', e);
-            updateConnectionStatus('error'); 
-        };
-
-
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log('Received:', data);
-            if (data.type === 'connection_error') {
-                shouldReconnect = false;
-                showNotification(data.reason + " Plz Click to join again in 2 seconds", 'error');
-                setTimeout(() => window.location.href = `/join/${roomCode}/`, 1500);
-                socket.close();
-                return;
-            }
-            handleMessage(data);}
+        socket.onerror = () => updateConnectionStatus('error');
+        socket.onmessage = (e) => handleMessage(JSON.parse(e.data));
     }
     
     function sendMessage(type, payload = {}) {
@@ -376,6 +407,7 @@
     // ════════════════════════════════════════════════════════════
     
     function handleMessage(data) {
+        console.log('Received:', data);
         switch (data.type) {
             case 'player_ready':
                 updatePlayersList(data.round_players, show_score=false);
@@ -397,6 +429,9 @@
                 updatePlayersList(data.round_players, show_score=data.show_score, playing = true);
                 updateStatusBanner(data.next_turn);
                 startTimer(data.duration);
+                //if (data.called_by.member_id !== currentMemberId) {
+                   // showNotification(`${data.called_by.name} called ${data.number}`, 'info');
+                //}
                 break;
             case 'game_won':
                 handleGameWon(data);
@@ -462,9 +497,17 @@
         }
     }
     
+    //function updateCalledNumbers() {
+    //    const container = document.getElementById('called-numbers');
+    //    document.getElementById('called-count').textContent = `${calledNumbers.length}/25`;
+    //    container.innerHTML = calledNumbers.map(n => 
+    //        `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${n}</span>`
+    //    ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';
+    //}
+
     function updateCalledNumbers() {
         const container = document.getElementById('called-numbers');
-        document.getElementById('called-count').textContent = `${calledNumbers.length}/25`;
+        document.getElementById('called-count').textContent = `${calledNumbers.length}/${totalNumbers}`;
         container.innerHTML = calledNumbers.map(n => 
             `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${n}</span>`
         ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';
@@ -476,11 +519,22 @@
         
         container.innerHTML = players.map(p => {
             const isMe = p.id === currentPlayerId;
-            let bingoLetters = '';       
-            if (show_score){
-                bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
-                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < p.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
-                ).join('');
+            let progressDisplay = '';
+            
+            if (show_score) {
+                if (boardSize === 5) {
+                    // Classic BINGO for 5x5
+                    progressDisplay = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
+                        `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < p.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                    ).join('');
+                } else {
+                    // Numeric progress for larger boards
+                    progressDisplay = `
+                        <span class="text-xs font-bold px-2 py-1 rounded-full ${p.completed_lines >= linesToWin ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}">
+                            ${p.completed_lines}/${linesToWin}
+                        </span>
+                    `;
+                }
             }
             
             // Update my lines
@@ -488,29 +542,39 @@
                 myCompletedLines = p.completed_lines;
                 updateMyBingoLetters();
             }
+            
+            // Escape player name to prevent XSS
+            const escapedName = escapeHtml(p.name);
+            
             return `
                 <div class="player-item relative flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'}" data-player-id="${p.id}">
                     <div class="flex items-center gap-2">
                         ${p.is_host ? crownSvg : ''}
-                        <span class="text-sm font-medium ">${p.name}${isMe ? ' (You)' : ''}</span>
+                        <span class="text-sm font-medium">${escapedName}${isMe ? ' (You)' : ''}</span>
                         <div class="turn-box-${p.id} hidden absolute right-2 -top-[14px] border border-sky-500 inline-flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 rounded-lg text-xs font-medium">
-                            <div class=" turn-indicator"></div>
+                            <div class="turn-indicator"></div>
                             Turn
                         </div>
                     </div>
-                    ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
+                    ${show_score ? `<div class="flex gap-1">${progressDisplay}</div>` : ''}
 
-                    ${ (playing === false && p.is_ready) ? `
+                    ${(playing === false && p.is_ready) ? `
                     <div class="absolute right-2 -top-[14px] border border-emerald-500 inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
                         Ready
                     </div>
-                    ` : '' }
+                    ` : ''}
                 </div>
             `;
         }).join('');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     function updateTurnIndicators(currentTurnId) {
@@ -520,14 +584,32 @@
             if (indicator) indicator.classList.remove('hidden');
         }
     }
-    
+        
     function updateMyBingoLetters() {
-        'BINGO'.split('').forEach((letter, i) => {
-            const el = document.getElementById(`letter-${letter}`);
-            if (el) {
-                el.className = 'bingo-letter ' + (i < myCompletedLines ? 'bingo-letter-active' : 'bingo-letter-inactive');
+        // For 5x5, use BINGO letters
+        // For larger boards, show progress bar or numbers
+        
+        if (boardSize === 5) {
+            'BINGO'.split('').forEach((letter, i) => {
+                const el = document.getElementById(`letter-${letter}`);
+                if (el) {
+                    el.className = 'bingo-letter ' + (i < myCompletedLines ? 'bingo-letter-active' : 'bingo-letter-inactive');
+                }
+            });
+        } else {
+            // For larger boards, update a progress display
+            const progressContainer = document.getElementById('progress-container');
+            if (progressContainer) {
+                progressContainer.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-slate-600">Lines: </span>
+                        <span class="text-lg font-bold ${myCompletedLines >= linesToWin ? 'text-emerald-500' : 'text-slate-700'}">
+                            ${myCompletedLines}/${linesToWin}
+                        </span>
+                    </div>
+                `;
             }
-        });
+        }
     }
     
     // ════════════════════════════════════════════════════════════
@@ -566,7 +648,7 @@
     
     function autoPickNumber() {
         const available = [];
-        for (let i = 1; i <= 25; i++) {
+        for (let i = 1; i <= totalNumbers; i++) {
             if (!calledNumbers.includes(i)) available.push(i);
         }
         if (available.length > 0) {
@@ -634,7 +716,7 @@
         
         cells.forEach((cell, i) => {
             row.push(parseInt(cell.dataset.number));
-            if ((i + 1) % 5 === 0) {
+            if ((i + 1) % boardSize === 0) {  // Use boardSize instead of hardcoded 5
                 boardData.push(row);
                 row = [];
             }
@@ -646,7 +728,7 @@
     function shuffleBoard() {
         if (roomStatus !== 'setup' || isReady) return;
         
-        const numbers = Array.from({length: 25}, (_, i) => i + 1);
+        const numbers = Array.from({length: totalNumbers}, (_, i) => i + 1);
         for (let i = numbers.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
@@ -702,7 +784,7 @@
 
         const LOST_ICON = `
             <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" stroke-width="1. 5" viewBox="0 0 24 24">
+                <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 16.318A4.486 4.486 0 0 0 12.016 15a4.486 4.486 0 0 0-3.198 1.318M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" />
                 </svg>
             </div>`;
@@ -759,23 +841,37 @@
                   
         // Sort players by lines
         const sortedPlayers = [...data.round_players].sort((a, b) => b.completed_lines - a.completed_lines);
-        scores.innerHTML = sortedPlayers.map((player, index) =>{ 
-            const bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, idx) =>
-                        `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${idx < player.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
-                    ).join('');
+        scores.innerHTML = sortedPlayers.map((player, index) => {
+            let progressDisplay;
             
+            if (boardSize === 5) {
+                // Classic BINGO for 5x5
+                progressDisplay = ['B', 'I', 'N', 'G', 'O'].map((letter, idx) =>
+                    `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${idx < player.completed_lines ?  'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
+                ).join('');
+            } else {
+                // Numeric progress for larger boards
+                progressDisplay = `
+                    <span class="px-3 py-1 rounded-full text-sm font-bold ${player.completed_lines >= linesToWin ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}">
+                        ${player.completed_lines}/${linesToWin} lines
+                    </span>
+                `;
+            }
+            
+            const escapedName = escapeHtml(player.name);
             
             return `
                 <div class="flex items-center justify-between p-2 rounded-lg ${index === 0 ? 'bg-amber-50' : ''}">
                     <div class="flex items-center gap-2">
                         <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}">${index + 1}</span>
-                        <span class="text-sm font-medium text-slate-700">${player.name}${player.id === currentPlayerId ? ' (You)' : ''}</span>
+                        <span class="text-sm font-medium text-slate-700">${escapedName}${player.id === currentPlayerId ? ' (You)' : ''}</span>
                     </div>
                     <div class="flex gap-2 pl-2">
-                        ${bingoLetters}
+                        ${progressDisplay}
                     </div>
                 </div>
-        `}).join('');
+            `;
+        }).join('');
         
         modal.classList.remove('hidden');
         setTimeout(() => {
@@ -784,71 +880,58 @@
         }, 10);
     }
     
+    function renderBoard(board) {
+        const boardElement = document.getElementById('bingo-board');
+        boardElement.innerHTML = '';
+        boardElement.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+        
+        for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
+                const number = board[row][col];
+                const isMarked = calledNumbers.includes(number);
+                
+                const cell = document.createElement('div');
+                cell.className = `board-cell select-none no-callout ${isMarked ? 'board-cell-marked' : 'board-cell-default'}`;
+                cell.dataset.number = number;
+                cell.draggable = true;
+                cell.textContent = number;
+                
+                boardElement.appendChild(cell);
+            }
+        }
+        
+        // Re-initialize drag & drop for new cells
+        initDragDrop();
+        updateBoardInteractivity();
+    }
+
+
     // ════════════════════════════════════════════════════════════
     // NOTIFICATIONS
     // ════════════════════════════════════════════════════════════
     
-    function showNotification(message, type = 'info', position='top', title=null, timeout=4000, argss={}) {
-
-        const container = document.getElementById('notification-container-' + position);
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notification-container');
+        const notification = document.createElement('div');
+        notification.className = 'p-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
         
         const colors = {
-            success: 'bg-emerald-500 text-white',
-            success_light: 'bg-emerald-100 text-emerald-900',
-            error:  'bg-red-500 text-white',
-            error_light: 'bg-red-100 text-red-900',
-            warning: 'bg-amber-500 text-white',
-            warning_light: 'bg-amber-100 text-amber-900',
-            info:  'bg-sky-500 text-white',
-            info_light: 'bg-sky-100 text-sky-900'
+            success: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+            error: 'bg-red-50 text-red-700 border border-red-100',
+            info: 'bg-slate-50 text-slate-700 border border-slate-200'
         };
+        notification.classList.add(...(colors[type] || colors.info).split(' '));
         
-        const notification = document.createElement('div');
-        notification.className = `${colors[type]} px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 transform transition-all duration-300 translate-x-full`;
-        
-        if (title) {
-            notification.innerHTML = `
-            <div class="flex-1">
-                <div class="font-semibold text-base mb-0.5">${title}</div>
-                <div class="text-sm">${message}</div>
-            </div>
-            <button class="close-notification flex-shrink-0 p-1 hover:bg-black/10 rounded transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-            `;
-            timeout += 3000;
-        } else {
-            notification.innerHTML = `
-            <span class="text-sm font-medium flex-1">${message}</span>
-            <button class="close-notification flex-shrink-0 p-1 hover:bg-black/10 rounded transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-            `;
-        }
-        
+        notification.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
         container.appendChild(notification);
         
-        // Close button functionality
-        const closeBtn = notification.querySelector('.close-notification');
-        closeBtn.addEventListener('click', () => {
+        setTimeout(() => notification.classList.remove('translate-x-full'), 10);
+        setTimeout(() => {
             notification.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => notification.remove(), 300);
-        });
+        }, 3000);
         
-        requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
-        
-        // Auto-dismiss after timeout
-        const autoDismiss = setTimeout(() => {
-            notification.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => notification.remove(), 300);
-        }, timeout);
-        
-        // Clear auto-dismiss if manually closed
-        closeBtn.addEventListener('click', () => clearTimeout(autoDismiss), { once: true });
+        while (container.children.length > 5) container.children[0].remove();
     }
     
     // ════════════════════════════════════════════════════════════
