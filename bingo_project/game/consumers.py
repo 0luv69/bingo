@@ -518,109 +518,83 @@ class GameConsumer(AsyncWebsocketConsumer):
     # TURN TIMEOUT HANDLING
     # ════════════════════════════════════════════════════════════════
     
-    async def start_turn_timer(self, duration, current_player_id):
+    async def start_turn_timer(self, duration, current_member_id):
         """Start a timer that auto-picks a number when turn expires."""
         
         async def on_turn_timeout():
             try:
                 # Wait for turn duration
                 await asyncio.sleep(duration)
-                await self.handle_turn_timeout(current_player_id)
+                await self.handle_turn_timeout(current_member_id)
             except asyncio.CancelledError:
                 pass  # Timer was cancelled (player made a move)
         
         task = asyncio.create_task(on_turn_timeout())
         DisconnectionManager.set_turn_timer(self.room_code, task)
 
-    async def handle_turn_timeout(self, current_player_id):
+    async def handle_turn_timeout(self, expected_member_id):
         """Handle when a player's turn times out - auto-pick a number."""
-        
-        # Verify game is still in playing state
-        current_round = await self.get_current_round()
-        if not current_round or current_round.status != 'playing':
-            await self.send_error("Turn timeout: game is not in playing state.")
-            return
-        
-        # Verify it's still the expected player's turn (no race condition)
-        current_turn_id = await self.get_current_turn_id()
-        if current_turn_id != current_player_id:
-            await self.send_error("Turn timeout: it's not the expected player's turn.")
-            return  # Turn already changed
-        
-        # Get the player and their unmarked numbers
-        round_player = await self.get_round_player_by_id(current_player_id)
-        if not round_player:
-            await self.send_error("Turn timeout: round player not found.")
-            return
-        
-        unmarked_numbers = await self.get_player_unmarked_numbers(current_player_id)
-        if not unmarked_numbers:
-            await self.send_error("Turn timeout: no unmarked numbers left.")
-            return  # No numbers left (shouldn't happen normally)
-        
-        # Pick a random number from their board
-        auto_number = random.choice(unmarked_numbers)
-        
-        # Call the number using atomic operation
-        success, error = await self.add_called_number_atomic(auto_number, current_player_id)
-        if not success:
-            # Number was somehow already called, try again with different number
-            unmarked_numbers. remove(auto_number)
-            if unmarked_numbers:
-                auto_number = random.choice(unmarked_numbers)
-                success, error = await self.add_called_number_atomic(auto_number, current_player_id)
-            if not success:
-                return
-        
-        # Check for winners
-        winners = await self.check_winners(current_player_id)
-        
-        # Get room and next turn
         room = await self.get_room()
-        next_player_data = await self.set_next_turn()
+        current_round = await self.get_current_round()
+        max_number = room.settings_board_size ** 2
+
+        if not current_round or current_round.status != 'playing':
+            await self.send_error('Game not in progress')
+            return  
         
+        round_player = await self.get_round_player(expected_member_id)
+        if not round_player:
+            return
+        
+        # Auto-pick a number
+        available_numbers = await self.get_available_numbers(current_round)
+        number = random.choice(available_numbers)
+
+        if not isinstance(number, int) or number < 1 or number > max_number:
+            await self.send_error('Invalid number')
+            return
+        
+        # Call the number
+        success, error = await self.add_called_number_atomic(number, round_player.id)
+        if not success:
+            # If failed, send error but what do after error no idea yer still in palnning
+            print("Auto-pick failed to call number:", number)
+            await self.send_error(error or 'Failed to call number')
+            return
+        
+        winners = await self.check_winners(round_player.id)
+
+        next_player_data = await self.set_next_turn()
+        is_auto_pick = True
+
         # Get updated data
         round_players = await self.get_round_players_data()
         called_numbers = await self.get_called_numbers()
+
         show_score = room.settings_show_score
-        
-        # Get player info for broadcast
-        member = await self.get_member_by_round_player_id(current_player_id)
-        member_name = member.display_name if member else "Unknown"
-        member_id = member.id if member else None
-        
-        # Broadcast the auto-picked number
-        await self. channel_layer.group_send(
+
+        await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'number_called',
-                'number': auto_number,
-                'called_by': {
-                    'id': current_player_id,
-                    'member_id': member_id,
-                    'name': member_name,
-                },
-                'is_auto_pick': True,  # NEW: Flag to indicate auto-pick
+                'number':  number,
+                'is_auto_pick': is_auto_pick,
                 'called_numbers': called_numbers,
-                'next_turn':  next_player_data,
+                'next_turn': next_player_data,
                 'duration': room.settings_turn_duration,
-                'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
+                #'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                 'round_players': round_players,
                 'show_score': show_score,
             }
         )
-        
-        # Start timer for next player
-        if next_player_data and not winners:
-            await self.start_turn_timer(room.settings_turn_duration, next_player_data['id'])
-        
+
         # Handle winners
         if winners:
-            DisconnectionManager.cancel_turn_timer(self.room_code)
-            await self. handle_game_won(winners)
+            await self.handle_game_won(winners)
+        else:
+            # Start timer for next player
+            await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
 
-
-    async def process_called_number(self, round_player_id, number):...
 
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
@@ -740,7 +714,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def handle_call_number(self, data):
         """Player calls a number."""
-        member = await self.get_member()
+        member = await self.get_member() 
         current_round = await self.get_current_round()
         room = await self.get_room()
         max_number = room.settings_board_size ** 2
@@ -751,7 +725,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if current_round.status != 'playing':
             await self.send_error('Game not in progress')
             return
-        
+
         number = data.get('number')
         if not isinstance(number, int) or number < 1 or number > max_number:
             await self.send_error(f'Invalid number (must be 1-{max_number})')
@@ -780,6 +754,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         success, error = await self.add_called_number_atomic(number, round_player.id)
         if not success:
             # If failed, send error but what do after error no idea yer still in palnning
+            print("Auto-pick failed to call number:", number)
             await self.send_error(error or 'Failed to call number')
             return
         
@@ -787,8 +762,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         winners = await self.check_winners(round_player.id)
         
         # Get next turn
-        room = await self.get_room()
         next_player_data = await self.set_next_turn()
+        is_auto_pick = False
         
         # Get updated data
         round_players = await self.get_round_players_data()
@@ -801,16 +776,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'number_called',
                 'number':  number,
-                'called_by': {
-                    'id': round_player.id,
-                    'member_id': member.id,
-                    'name': member.display_name,
-                },
-                'is_auto_pick': False,
+                'is_auto_pick': is_auto_pick,
                 'called_numbers': called_numbers,
                 'next_turn': next_player_data,
                 'duration': room.settings_turn_duration,
-                'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
+                #'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                 'round_players': round_players,
                 'show_score': show_score,
             }
@@ -821,7 +791,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_game_won(winners)
         else:
             # Start timer for next player
-            await self.start_turn_timer(room.settings_turn_duration, next_player_data['id'])
+            await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
+            ...
         
     
     async def handle_update_settings(self, data):
@@ -914,11 +885,6 @@ class GameConsumer(AsyncWebsocketConsumer):
        
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
-        member = await self.get_member()
-        # if not member or not member.is_host:
-        #     await self.send_error('Only host can start new round')
-        #     return
-        
         current_round = await self.get_current_round()
         if current_round and current_round.status != 'finished':
             await self.send_error('Current round not finished')
@@ -960,16 +926,15 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'calling':1,
                     'type': 'game_started',
-                    'status': 'playing',
                     'current_turn': first_player,
                     'duration': room.settings_turn_duration,
-                    'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                     'round_players': await self.get_round_players_data(),
                     'show_score': show_score,
                 }
             )
+
+        await self.start_turn_timer(room.settings_turn_duration, first_player['member_id'])
     
     # ════════════════════════════════════════════════════════════
     # BROADCAST HANDLERS
@@ -1067,12 +1032,9 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def game_started(self, event):
         await self.send(text_data=json.dumps({
-            'calling':2,
             'type': 'game_started',
-            'status': event['status'],
             'current_turn': event['current_turn'],
             'duration': event['duration'],
-            'deadline': event['deadline'],
             'round_players':  event['round_players'],
             'show_score': event['show_score'],
         }))
@@ -1081,11 +1043,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'number_called',
             'number': event['number'],
-            'called_by': event['called_by'],
             'called_numbers': event['called_numbers'],
+            'is_auto_pick': event['is_auto_pick'],
             'next_turn': event['next_turn'],
             'duration': event['duration'],
-            'deadline': event['deadline'],
+            #'deadline': event['deadline'],
             'round_players': event['round_players'],
             'show_score': event['show_score'],
         }))
@@ -1320,17 +1282,17 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def start_playing_phase(self):
-        room = Room.objects.get(code=self.room_code)
-        current_round = room.get_current_round()
+        room: Room = Room.objects.get(code=self.room_code)
+        current_round: GameRound = room.get_current_round()
         if not current_round:
             return None
         
         current_round.status = 'playing'
-        first_player = current_round.players.order_by('joined_at').first()
+        first_player: RoundPlayer = current_round.get_next_turn_player()
         if first_player:
             current_round.current_turn = first_player
             current_round.turn_deadline = timezone.now() + timedelta(seconds=room.settings_turn_duration)
-        current_round.save()
+        current_round.save(update_fields=['status', 'current_turn', 'turn_deadline'])
         
         if first_player:
             return {
@@ -1343,7 +1305,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_current_turn_id(self):
         room = Room.objects.get(code=self.room_code)
-        current_round = room.get_current_round()
+        current_round: GameRound = room.get_current_round()
         return current_round.current_turn_id if current_round else None
     
     @database_sync_to_async
@@ -1356,7 +1318,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     def add_called_number_atomic(self, number, player_id):
         with transaction.atomic():
             room: Room = Room.objects.select_for_update().get(code=self.room_code)
-            current_round: GameRound = room.get_current_round()
+            current_round = GameRound.objects.select_for_update().get(room=room, id=room.get_current_round().id)
             if number in current_round.called_numbers:
                 return False, "Number already called"
             
@@ -1404,6 +1366,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             }
         return None
     
+
+    @database_sync_to_async
+    def get_available_numbers(self, current_round: GameRound):
+        return current_round.get_available_numbers()
+
+
     @database_sync_to_async
     def end_game(self, winner_ids:list):
         room = Room.objects.get(code=self.room_code)

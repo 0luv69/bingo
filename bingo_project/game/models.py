@@ -330,6 +330,7 @@ class GameRound(models.Model):
             return None
         
         if self.current_turn is None:
+            # initial turn is first player
             return players[0]
         
         try:
