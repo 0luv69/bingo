@@ -11,6 +11,7 @@ from django.db import transaction
 
 
 VOTE_GRACE_ADDITIONAL_SECONDS = 5
+BOT_TAKEOVER_DELAY = 4 
 
 
 class DisconnectionManager:
@@ -52,6 +53,26 @@ class DisconnectionManager:
                 if not cls.disconnection_timers[room_code]:
                     # Clean up room entry if empty
                     del cls.disconnection_timers[room_code]
+                return True
+        return False
+    
+    @classmethod
+    def get_bot_timer(cls, room_code, player_id):
+        return cls.bot_timers.get(room_code, {}).get(player_id)
+    
+    @classmethod
+    def set_bot_timer(cls, room_code, player_id, task):
+        if room_code not in cls.bot_timers:
+            cls.bot_timers[room_code] = {}
+        cls.bot_timers[room_code][player_id] = task
+
+    @classmethod
+    def cancel_bot_timer(cls, room_code, player_id):
+        if room_code in cls.bot_timers:
+            task = cls.bot_timers.get(room_code, {}).get(player_id)
+            if task:
+                task.cancel()
+                del cls.bot_timers[room_code][player_id]
                 return True
         return False
     
@@ -226,7 +247,14 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not has_left:
             # Unexpected disconnect - start grace period
             await self.mark_member_disconnected(member.id)
-            grace_period = await self.get_grace_period()
+            current_round = await self.get_current_round()
+
+            if current_round and current_round.status in ['setup', 'playing']:
+                # Quick takeover for active game
+                grace_period = BOT_TAKEOVER_DELAY
+            else:
+                # Full grace period for lobby
+                grace_period = await self.get_grace_period()
 
             # Notify others
             await self.channel_layer.group_send(
@@ -317,7 +345,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         if current_round and current_round.status == 'playing':
             # GAME PHASE: Enable bot control
-            # await self.enable_bot_control(member_id)
+            await self.enable_bot_control(member_id)
             
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -333,16 +361,116 @@ class GameConsumer(AsyncWebsocketConsumer):
             # If it's this player's turn, schedule bot play
             round_player = await self.get_round_player(member_id)
             current_turn_id = await self.get_current_turn_id()
+
             if round_player and current_turn_id == round_player.id:
-                ...
-                # await self.schedule_bot_play(round_player.id)
+                DisconnectionManager.cancel_turn_timer(self.room_code)
+                await self.schedule_bot_play(round_player.id)
+
+        elif current_round and current_round. status == 'setup':
+            # SETUP PHASE: Bot marks player as ready (already handled by quick timer)
+            await self.bot_mark_player_ready(member_id)
         else:
             # LOBBY or SETUP PHASE: Start vote kick
             await self.initiate_vote_kick(member_id)
 
 
     # ════════════════════════════════════════════════════════════════
-    # VOTE KICK
+    # BOT CONTROL
+    # ════════════════════════════════════════════════════════════════
+    async def enable_bot_control(self, member_id):
+        """Enable bot control for a player."""
+        await self.set_player_bot_controlled(member_id, True)
+
+
+    async def disable_bot_control(self, member_id):
+        """Disable bot control for a player."""
+        await self.set_player_bot_controlled(member_id, False)
+
+
+    async def schedule_bot_play(self, round_player_id):
+        """Schedule bot to play after 1-3 seconds."""
+        DisconnectionManager.cancel_bot_timer(self.room_code, round_player_id)
+        
+        delay = random.uniform(1, 3)  # Random delay between 1 to 3 seconds
+        
+        async def bot_play():
+            try:
+                await asyncio.sleep(delay)
+                await self.execute_bot_play(round_player_id)
+            except asyncio.CancelledError:
+                pass
+        
+        task = asyncio.create_task(bot_play())
+        DisconnectionManager.set_bot_timer(self.room_code, round_player_id, task)
+
+
+
+    async def execute_bot_play(self, round_player_id):
+        """Execute bot's turn - pick random unmarked number."""
+        # Verify game state
+        current_round = await self.get_current_round()
+        if not current_round or current_round.status != 'playing':
+            return
+        
+        # Verify it's still this player's turn
+        current_turn_id = await self.get_current_turn_id()
+        if current_turn_id != round_player_id: 
+            return
+        
+        # Verify player is still bot-controlled
+        is_bot = await self.is_player_bot_controlled(round_player_id)
+        if not is_bot:
+            return
+        
+        # Get unmarked numbers
+        unmarked = await self.get_available_numbers(round_player_id)
+        if not unmarked:
+            return
+        
+        number = random.choice(unmarked)
+        
+        # Call the number
+        await self.add_called_number_atomic(number, round_player_id, is_bot=True)
+        
+        # Check for winners
+        winners = await self.check_winners(round_player_id)
+        
+        # Get next turn
+        room = await self.get_room()
+        next_player_data = await self.set_next_turn()
+        
+        # Get updated data
+        round_players = await self.get_round_players_data()
+        called_numbers = await self.get_called_numbers()
+        member_data = await self.get_player_member_info(round_player_id)
+        
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'number_called',
+                'number': number,
+                'called_by': {
+                    'id': round_player_id,
+                    'member_id': member_data['member_id'],
+                    'name': member_data['name'],
+                    'is_bot': True,
+                },
+                'called_numbers': called_numbers,
+                'next_turn': next_player_data,
+                'duration': room.settings_turn_duration,
+                'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
+                'round_players': round_players,
+                'show_score': room.settings_show_score,
+            }
+        )
+        
+        if winners:
+            await self.handle_game_won(winners)
+        elif next_player_data and next_player_data.get('is_bot_controlled'):
+            # Next player is also bot-controlled
+            await self.schedule_bot_play(next_player_data['id'])
+    # ════════════════════════════════════════════════════════════════
+    # LOBBY VOTE KICK
     # ════════════════════════════════════════════════════════════════
 
     async def initiate_vote_kick(self, member_id):
@@ -466,8 +594,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         else:
             result = 'keep'
 
-        
-
         if result == 'kick' or result == 'zero':
             # Remove the player
             new_cohost_name, new_cohost_id, should_cleanup  = await self.leave_room_db(target_member_id)
@@ -488,7 +614,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-            # clear vote  task
+            # clear vote task
             DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
 
         elif result == 'keep' or result == 'tie':
@@ -497,6 +623,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             member = await self.get_member_by_id(target_member_id)
             if not member:
                 return
+            
+            # clear vote task
+            DisconnectionManager.clear_vote_kick(self.room_code, target_member_id)
             
             # Notify others
             await self.channel_layer.group_send(
@@ -515,7 +644,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 
     # ════════════════════════════════════════════════════════════════
-    # TURN TIMEOUT HANDLING
+    # GAME TURN TIMEOUT HANDLING
     # ════════════════════════════════════════════════════════════════
     
     async def start_turn_timer(self, duration, current_member_id):
@@ -542,8 +671,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_error('Game not in progress')
             return  
         
+        current_turn_id = await self.get_current_turn_id()
         round_player = await self.get_round_player(expected_member_id)
-        if not round_player:
+        if not round_player or current_turn_id != round_player.id:
             return
         
         # Auto-pick a number
@@ -614,7 +744,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_error('Cannot start game now')
             return
         
-        players_count = await self.get_round_players_count()
+        players_count = await self.get_round_players_count(only_connected=True)
         if players_count < 2:
             await self.send_error('Need at least 2 players')
             return
@@ -698,11 +828,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         round_player = await self.get_round_player(member.id)
         if not round_player or round_player.is_ready:
             await self.send_error('Cannot update board')
-            return
-        
-        new_board = data.get('board')
-        if not new_board or not validate_board(new_board):
-            await self.send_error('Invalid board')
             return
         
         await self.save_player_board(round_player.id, new_board)
@@ -1197,11 +1322,20 @@ class GameConsumer(AsyncWebsocketConsumer):
             return []
     
     @database_sync_to_async
-    def get_round_players_count(self):
+    def get_round_players_count(self, only_connected=False):
         try:
             room = Room.objects.get(code=self.room_code)
-            current_round = room.get_current_round()
-            return current_round.get_players_count() if current_round else 0
+            current_round: GameRound = room.get_current_round()
+            if not current_round:
+                return 0
+            if only_connected:
+                return current_round.players.filter(
+                    room_member__is_active=True,
+                    room_member__connection_status='connected'
+                ).count()
+            return current_round.players.filter(
+                room_member__is_active=True
+            ).count()
         except:
             return 0
 
@@ -1239,6 +1373,24 @@ class GameConsumer(AsyncWebsocketConsumer):
             member.mark_disconnected()
         except:
             pass
+
+
+    @database_sync_to_async
+    def set_player_bot_controlled(self, member_id, value):
+        try:
+            room = Room.objects.get(code=self.room_code)
+            current_round = room.get_current_round()
+            if current_round:
+                current_round.players.filter(room_member_id=member_id).update(is_bot_controlled=value)
+        except:
+            pass
+
+    @database_sync_to_async
+    def is_player_bot_controlled(self, round_player_id):
+        try:
+            return RoundPlayer.objects.filter(id=round_player_id, is_bot_controlled=True).exists()
+        except:
+            return False
     
 
     @database_sync_to_async
@@ -1249,7 +1401,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             new_host_member = member.leave_room()
 
             # Check if room is empty AFTER leaving
-            should_cleanup = member.room.get_active_members_count() == 0
+            should_cleanup = member.room.get_available_members_count() == 0
             
             if should_cleanup:
                 member.room.is_active = False
@@ -1318,10 +1470,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     def add_called_number_atomic(self, number, player_id):
         with transaction.atomic():
             room: Room = Room.objects.select_for_update().get(code=self.room_code)
-            current_round = GameRound.objects.select_for_update().get(room=room, id=room.get_current_round().id)
+            current_round: GameRound = room.get_current_round()
+            if not current_round:
+                return False, "No active round"
+            
+
             if number in current_round.called_numbers:
                 return False, "Number already called"
-            
+            current_round = GameRound.objects.select_for_update().get(id=current_round.id)
             player = RoundPlayer.objects.select_for_update().get(id=player_id)
             
             current_round.called_numbers.append(number)

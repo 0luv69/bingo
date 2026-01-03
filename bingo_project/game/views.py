@@ -95,12 +95,14 @@ def create_room_view(request):
     
     # Create first game round
     game_round = GameRound.create_new_round(room)
+    board_size = room.settings_board_size
+
     
     # Create round player
     RoundPlayer.objects.create(
         game_round=game_round,
         room_member=member,
-        board=RoundPlayer.generate_board()
+        board=RoundPlayer.generate_board(board_size)
     )
     
     # Store in session
@@ -174,7 +176,7 @@ def join_room_view(request):
             member.display_name = player_name
             member.save()
     else:
-        member, created = RoomMember.objects.get_or_create(
+        member = RoomMember.objects.create(
             room=room,
             user=user,
             session_key=session_key,

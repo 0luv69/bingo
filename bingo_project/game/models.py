@@ -119,6 +119,16 @@ class Room(models.Model):
         """Get shareable URL for this room."""
         return f"/join/{self.code}/"
     
+    def get_available_members(self):
+        """Get members who are connected or temporarily disconnected (not left/kicked/banned)."""
+        return self.members.filter(
+            is_active=True,
+            connection_status__in=['connected', 'disconnected']
+        )
+
+    def get_available_members_count(self):
+        return self.get_available_members().count()
+    
     def can_join(self):
         """Check if new players can join this room."""
         if not self.is_active:

@@ -559,24 +559,9 @@
         if (roomStatus === 'setup' && ! isReady) {
             setReady();
             showNotification("Time's up! Auto-marked ready.", 'info');
-        } else if (roomStatus === 'playing' && isMyTurn) {
-            autoPickNumber();
         }
     }
-    
-    function autoPickNumber() {
-        console.log("Auto-picking a number... off right now");
-        //const available = [];
-        //for (let i = 1; i <= 25; i++) {
-        //    if (!calledNumbers.includes(i)) available.push(i);
-        //}
-        //if (available.length > 0) {
-        //    const num = available[Math.floor(Math.random() * available.length)];
-        //    callNumber(num);
-        //    showNotification(`Time's up! Auto-selected ${num}`, 'info');
-        //}
-    }
-    
+
     // ════════════════════════════════════════════════════════════
     // DRAG & DROP
     // ════════════════════════════════════════════════════════════

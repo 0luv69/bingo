@@ -95,37 +95,37 @@ def generate_line_names(size):
     return names
 
 
-def check_completed_lines(board, called_numbers, finished_lines):
-    """
-    Check how many lines are completed on a board.
+# def check_completed_lines(board, called_numbers, finished_lines):
+#     """
+#     Check how many lines are completed on a board.
     
-    Args:
-        board: 2D list (5x5) - Player's board
-        called_numbers: List of integers - Numbers that have been called
+#     Args:
+#         board: 2D list (5x5) - Player's board
+#         called_numbers: List of integers - Numbers that have been called
     
-    Returns:
-        tuple: (count, completed_lines_info)
-    """
-    called_set = set(called_numbers)
-    completed_lines_info = []
-    updated_finished_lines = finished_lines.copy()
+#     Returns:
+#         tuple: (count, completed_lines_info)
+#     """
+#     called_set = set(called_numbers)
+#     completed_lines_info = []
+#     updated_finished_lines = finished_lines.copy()
     
-    for line_index, line in enumerate(WINNING_LINES):
-        if line_index in finished_lines:
-            continue  # Skip already finished lines
+#     for line_index, line in enumerate(WINNING_LINES):
+#         if line_index in finished_lines:
+#             continue  # Skip already finished lines
 
 
-        line_complete = all(board[row][col] in called_set for row, col in line)
+#         line_complete = all(board[row][col] in called_set for row, col in line)
         
-        if line_complete:
-            completed_lines_info.append({
-                'index': line_index,
-                'name': LINE_NAMES[line_index],
-                'positions': line
-            })
-            updated_finished_lines.append(line_index)
+#         if line_complete:
+#             completed_lines_info.append({
+#                 'index': line_index,
+#                 'name': LINE_NAMES[line_index],
+#                 'positions': line
+#             })
+#             updated_finished_lines.append(line_index)
     
-    return list(updated_finished_lines)
+#     return list(updated_finished_lines)
 
 def check_completed_lines(board, called_numbers, finished_lines, board_size=5):
     """
