@@ -57,22 +57,22 @@ class DisconnectionManager:
         return False
     
     @classmethod
-    def get_bot_timer(cls, room_code, player_id):
-        return cls.bot_timers.get(room_code, {}).get(player_id)
+    def get_bot_timer(cls, room_code, member_id):
+        return cls.bot_timers.get(room_code, {}).get(member_id)
     
     @classmethod
-    def set_bot_timer(cls, room_code, player_id, task):
+    def set_bot_timer(cls, room_code, member_id, task):
         if room_code not in cls.bot_timers:
             cls.bot_timers[room_code] = {}
-        cls.bot_timers[room_code][player_id] = task
+        cls.bot_timers[room_code][member_id] = task
 
     @classmethod
-    def cancel_bot_timer(cls, room_code, player_id):
+    def cancel_bot_timer(cls, room_code, member_id):
         if room_code in cls.bot_timers:
-            task = cls.bot_timers.get(room_code, {}).get(player_id)
+            task = cls.bot_timers.get(room_code, {}).get(member_id)
             if task:
                 task.cancel()
-                del cls.bot_timers[room_code][player_id]
+                del cls.bot_timers[room_code][member_id]
                 return True
         return False
     
@@ -212,6 +212,29 @@ class GameConsumer(AsyncWebsocketConsumer):
         DisconnectionManager.cancel_disconnection_timer(self.room_code, member.id)
         DisconnectionManager.clear_vote_kick(self.room_code, member.id)
         
+        if was_disconnected:
+            current_round = await self.get_current_round()
+            if current_round and current_round.status == 'playing':
+                # Disable bot control
+                await self.disable_bot_control(member.id)
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'player_reconnected_from_bot',
+                        'member_id': member.id,
+                        'member_name': member.display_name,
+                        'message': f'{member.display_name} reconnected and resumed control',
+                        'round_players': await self.get_round_players_data(),
+                    }
+                )
+                
+            elif current_round and current_round.status == 'setup':
+                # In setup phase, no special action needed on reconnection
+                pass
+            else:
+                # In lobby or finished phase, no special action needed on reconnection
+                pass
+
 
         await self.mark_member_connected(member.id, self.channel_name)
         
@@ -363,12 +386,16 @@ class GameConsumer(AsyncWebsocketConsumer):
             current_turn_id = await self.get_current_turn_id()
 
             if round_player and current_turn_id == round_player.id:
+                # Cancel the turn timer since player made a move
                 DisconnectionManager.cancel_turn_timer(self.room_code)
-                await self.schedule_bot_play(round_player.id)
+
+                # if its this player's turn, schedule bot to pick a number
+                delay = random.uniform(1, 3)
+                await self.start_turn_timer(delay, member_id, is_bot_call=True)
 
         elif current_round and current_round. status == 'setup':
             # SETUP PHASE: Bot marks player as ready (already handled by quick timer)
-            await self.bot_mark_player_ready(member_id)
+            await self.schedule_bot_ready(member_id)
         else:
             # LOBBY or SETUP PHASE: Start vote kick
             await self.initiate_vote_kick(member_id)
@@ -386,89 +413,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Disable bot control for a player."""
         await self.set_player_bot_controlled(member_id, False)
 
-
-    async def schedule_bot_play(self, round_player_id):
-        """Schedule bot to play after 1-3 seconds."""
-        DisconnectionManager.cancel_bot_timer(self.room_code, round_player_id)
-        
-        delay = random.uniform(1, 3)  # Random delay between 1 to 3 seconds
-        
-        async def bot_play():
-            try:
-                await asyncio.sleep(delay)
-                await self.execute_bot_play(round_player_id)
-            except asyncio.CancelledError:
-                pass
-        
-        task = asyncio.create_task(bot_play())
-        DisconnectionManager.set_bot_timer(self.room_code, round_player_id, task)
-
-
-
-    async def execute_bot_play(self, round_player_id):
-        """Execute bot's turn - pick random unmarked number."""
-        # Verify game state
-        current_round = await self.get_current_round()
-        if not current_round or current_round.status != 'playing':
-            return
-        
-        # Verify it's still this player's turn
-        current_turn_id = await self.get_current_turn_id()
-        if current_turn_id != round_player_id: 
-            return
-        
-        # Verify player is still bot-controlled
-        is_bot = await self.is_player_bot_controlled(round_player_id)
-        if not is_bot:
-            return
-        
-        # Get unmarked numbers
-        unmarked = await self.get_available_numbers(round_player_id)
-        if not unmarked:
-            return
-        
-        number = random.choice(unmarked)
-        
-        # Call the number
-        await self.add_called_number_atomic(number, round_player_id, is_bot=True)
-        
-        # Check for winners
-        winners = await self.check_winners(round_player_id)
-        
-        # Get next turn
-        room = await self.get_room()
-        next_player_data = await self.set_next_turn()
-        
-        # Get updated data
-        round_players = await self.get_round_players_data()
-        called_numbers = await self.get_called_numbers()
-        member_data = await self.get_player_member_info(round_player_id)
-        
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'number_called',
-                'number': number,
-                'called_by': {
-                    'id': round_player_id,
-                    'member_id': member_data['member_id'],
-                    'name': member_data['name'],
-                    'is_bot': True,
-                },
-                'called_numbers': called_numbers,
-                'next_turn': next_player_data,
-                'duration': room.settings_turn_duration,
-                'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
-                'round_players': round_players,
-                'show_score': room.settings_show_score,
-            }
-        )
-        
-        if winners:
-            await self.handle_game_won(winners)
-        elif next_player_data and next_player_data.get('is_bot_controlled'):
-            # Next player is also bot-controlled
-            await self.schedule_bot_play(next_player_data['id'])
     # ════════════════════════════════════════════════════════════════
     # LOBBY VOTE KICK
     # ════════════════════════════════════════════════════════════════
@@ -647,21 +591,21 @@ class GameConsumer(AsyncWebsocketConsumer):
     # GAME TURN TIMEOUT HANDLING
     # ════════════════════════════════════════════════════════════════
     
-    async def start_turn_timer(self, duration, current_member_id):
+    async def start_turn_timer(self, duration, current_member_id, is_bot_call = False):
         """Start a timer that auto-picks a number when turn expires."""
         
         async def on_turn_timeout():
             try:
                 # Wait for turn duration
                 await asyncio.sleep(duration)
-                await self.handle_turn_timeout(current_member_id)
+                await self.handle_turn_timeout(current_member_id, is_bot_call)
             except asyncio.CancelledError:
                 pass  # Timer was cancelled (player made a move)
         
         task = asyncio.create_task(on_turn_timeout())
         DisconnectionManager.set_turn_timer(self.room_code, task)
 
-    async def handle_turn_timeout(self, expected_member_id):
+    async def handle_turn_timeout(self, expected_member_id, is_bot_call = False):
         """Handle when a player's turn times out - auto-pick a number."""
         room = await self.get_room()
         current_round = await self.get_current_round()
@@ -709,6 +653,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'type': 'number_called',
                 'number':  number,
                 'is_auto_pick': is_auto_pick,
+                'is_bot_called': is_bot_call,
                 'called_numbers': called_numbers,
                 'next_turn': next_player_data,
                 'duration': room.settings_turn_duration,
@@ -723,7 +668,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_game_won(winners)
         else:
             # Start timer for next player
-            await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
+            if next_player_data.get('is_bot_controlled'):
+                # If next player is bot controlled, set a short delay
+                delay = random.uniform(2, 4)
+                await self.start_turn_timer(delay, next_player_data['member_id'], is_bot_call=True)
+            else:
+                await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
 
 
     # ════════════════════════════════════════════════════════════
@@ -916,7 +866,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_game_won(winners)
         else:
             # Start timer for next player
-            await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
+            if next_player_data.get('is_bot_controlled'):
+                # If next player is bot controlled, set a short delay
+                delay = random.uniform(2, 4)
+                await self.start_turn_timer(delay, next_player_data['member_id'], is_bot_call=True)
+            else:
+                await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
             ...
         
     
@@ -1115,6 +1070,25 @@ class GameConsumer(AsyncWebsocketConsumer):
             'round_players': event['round_players'],
         }))
 
+
+    async def player_bot_controlled(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_bot_controlled',
+            'member_id':  event['member_id'],
+            'member_name': event['member_name'],
+            'message': event['message'],
+            'round_players': event['round_players'],
+        }))
+
+    async def player_reconnected_from_bot(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_reconnected_from_bot',
+            'member_id': event['member_id'],
+            'member_name':  event['member_name'],
+            'message': event['message'],
+            'round_players': event['round_players'],
+        }))
+
     async def vote_kick_started(self, event):
         await self.send(text_data=json.dumps({
             'type': 'vote_kick_started',
@@ -1170,6 +1144,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'number': event['number'],
             'called_numbers': event['called_numbers'],
             'is_auto_pick': event['is_auto_pick'],
+            'is_bot_called': event.get('is_bot_called', False),
             'next_turn': event['next_turn'],
             'duration': event['duration'],
             #'deadline': event['deadline'],
@@ -1307,6 +1282,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'is_ready': p.is_ready,
                     'completed_lines': p.completed_lines,
                     'connection_status': p.connection_status,
+                    'is_bot_controlled': p.is_bot_controlled,
                     'user': None
                 }
                 if p.room_member.user:
@@ -1510,7 +1486,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         room = Room.objects.get(code=self.room_code)
         current_round: GameRound = room.get_current_round()
         
-        next_player = current_round.get_next_turn_player()
+        next_player: RoundPlayer = current_round.get_next_turn_player()
         if next_player:
             current_round.current_turn = next_player
             current_round.turn_deadline = timezone.now() + timedelta(seconds=room.settings_turn_duration)
@@ -1519,6 +1495,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'id': next_player.id,
                 'member_id': next_player.room_member.id,
                 'name': next_player.display_name,
+                'is_bot_controlled': next_player.is_bot_controlled,
             }
         return None
     

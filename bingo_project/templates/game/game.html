@@ -194,7 +194,9 @@
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
                         <div id="players-list" class="space-y-3">
                             {% for player in round_players %}
-                            <div class="player-item relative flex items-center justify-between p-3 rounded-xl {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
+                            <div class="player-item relative flex items-center justify-between p-3 rounded-xl 
+                            {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}
+                            bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
                                 <div class="flex items-center gap-2">
                                     {% if player.is_host %}
                                     <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
@@ -206,8 +208,11 @@
                                     <div class="turn-indicator"></div>
                                     {% endif %}
                                 </div>
-                                
-
+                                {% if player.is_bot_controlled %}
+                                <div class="absolute left-2 -top-[14px] border border-blue-500 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                                    🤖 Bot Controlled
+                                </div>
+                                {% endif %}
 
                                 {% if show_score %}
                                 <!-- BINGO Letters -->
@@ -390,6 +395,12 @@
                 //startTimer(data.duration);
                 showNotification('Game started!', 'success');
                 break;
+
+            case 'player_bot_controlled':
+                showNotification(data.message, 'info');
+                updatePlayersList(data.round_players, show_score=false);
+                break;
+            
             case 'number_called':
                 calledNumbers = data.called_numbers;
                 markNumber(data.number);
@@ -499,6 +510,12 @@
                         </div>
                     </div>
                     ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
+
+                    ${ p.is_bot_controlled ? `
+                    <div class="absolute left-2 -top-[14px] border border-blue-500 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                        🤖 Bot Controlled
+                    </div>
+                    ` : '' }
 
                     ${ (playing === false && p.is_ready) ? `
                     <div class="absolute right-2 -top-[14px] border border-emerald-500 inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">
