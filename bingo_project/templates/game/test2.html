@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+        <title>Game Settings</title>
+        <!-- Google Fonts -->
+        <link href="https://fonts.googleapis.com" rel="preconnect" />
+        <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap"
+            rel="stylesheet"
+        />
+        <!-- Material Symbols -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+            rel="stylesheet"
+        />
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+        <!-- Theme Config -->
+        <script id="tailwind-config">
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: "#258cf4",
+                            "primary-dark": "#1a6bc0",
+                            "background-light": "#f5f7f8",
+                            "background-dark": "#101922",
+                        },
+                        fontFamily: {
+                            display: ["Spline Sans", "sans-serif"],
+                            body: ["Noto Sans", "sans-serif"],
+                        },
+                        borderRadius: {
+                            DEFAULT: "0.5rem",
+                            lg: "1rem",
+                            xl: "1.5rem",
+                            full: "9999px",
+                        },
+                    },
+                },
+            };
+        </script>
+    </head>
+
+
+<div id="settings-modal" class="fixed inset-0 z-50  flex items-center justify-center p-4">
+    <!-- Blurred Background Overlay -->
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="OpenCloseSettings()"></div>
+    
+    <!-- Modal Container -->
+    <div class="relative z-20 w-full max-w-[640px] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-5 border-b border-[#dbe0e6]">
+            <h2 class="text-[#111418] text-xl font-bold leading-tight tracking-tight">Game Settings</h2>
+            <div class="flex items-center gap-2">
+                <button id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class=" flex items-center justify-center w-8 h-8 rounded-full text-[#60758a] hover:bg-[#f0f2f5] transition-colors">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16. 023 9.348h4.992v-. 001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </button>
+                <button onclick="OpenCloseSettings()" class="flex items-center justify-center w-8 h-8 rounded-full text-[#60758a] hover:bg-[#f0f2f5] transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Content Scroll Area -->
+        <div class="flex-1 overflow-y-auto max-h-[70vh] p-6 space-y-8">
+            
+            <!-- Timing Section -->
+            <section class="space-y-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-primary">schedule</span>
+                    <h3 class="text-[#111418] text-lg font-bold leading-tight">Timing</h3>
+                </div>
+                
+                <!-- Setup Duration Slider -->
+                <div class="@container">
+                    <div class="relative flex w-full flex-col items-start justify-between gap-3 @[480px]:flex-row @[480px]: items-center">
+                        <div class="flex w-full shrink-[3] items-center justify-between min-w-[140px]">
+                            <div class="flex items-center gap-1">
+                                <p class="text-[#111418] text-base font-medium leading-normal">Setup Time</p>
+                                <div class="tooltip-container inline-block">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Setup Time</strong><br>
+                                        Time players have to arrange their bingo board before the game starts.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="setup-duration-display" class="text-[#111418] text-sm font-normal leading-normal @[480px]:hidden">{{ room.settings_setup_duration }}s</p>
+                        </div>
+                        <div class="flex h-4 w-full items-center gap-4">
+                            <div class="relative flex h-1. 5 flex-1 rounded-full bg-[#e5e8eb] cursor-pointer group">
+                                <input type="range" id="setup-duration" min="15" max="120" value="{{ room. settings_setup_duration }}" 
+                                    class="absolute w-full h-full opacity-0 cursor-pointer z-10" 
+                                    oninput="updateSlider('setup-duration', 15, 120)">
+                                <div id="setup-duration-track" class="h-full rounded-full bg-primary relative" style="width: calc(({{ room.settings_setup_duration }} - 15) / (120 - 15) * 100%);">
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 size-5 rounded-full bg-white border-2 border-primary shadow-md group-hover:scale-110 transition-transform"></div>
+                                </div>
+                            </div>
+                            <p id="setup-duration-value" class="text-[#111418] text-sm font-bold leading-normal w-12 text-right hidden @[480px]:block">{{ room.settings_setup_duration }}s</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Turn Duration Slider -->
+                <div class="@container">
+                    <div class="relative flex w-full flex-col items-start justify-between gap-3 @[480px]:flex-row @[480px]:items-center">
+                        <div class="flex w-full shrink-[3] items-center justify-between min-w-[140px]">
+                            <div class="flex items-center gap-1">
+                                <p class="text-[#111418] text-base font-medium leading-normal">Turn Time</p>
+                                <div class="tooltip-container inline-block">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Turn Time</strong><br>
+                                        Time each player has to pick a number on their turn.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="turn-duration-display" class="text-[#111418] text-sm font-normal leading-normal @[480px]:hidden">{{ room.settings_turn_duration }}s</p>
+                        </div>
+                        <div class="flex h-4 w-full items-center gap-4">
+                            <div class="relative flex h-1.5 flex-1 rounded-full bg-[#e5e8eb] cursor-pointer group">
+                                <input type="range" id="turn-duration" min="10" max="60" value="{{ room.settings_turn_duration }}" 
+                                    class="absolute w-full h-full opacity-0 cursor-pointer z-10" 
+                                    oninput="updateSlider('turn-duration', 10, 60)">
+                                <div id="turn-duration-track" class="h-full rounded-full bg-primary relative" style="width:  calc(({{ room. settings_turn_duration }} - 10) / (60 - 10) * 100%);">
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 size-5 rounded-full bg-white border-2 border-primary shadow-md group-hover:scale-110 transition-transform"></div>
+                                </div>
+                            </div>
+                            <p id="turn-duration-value" class="text-[#111418] text-sm font-bold leading-normal w-12 text-right hidden @[480px]:block">{{ room.settings_turn_duration }}s</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grace Period Slider -->
+                <div class="@container">
+                    <div class="relative flex w-full flex-col items-start justify-between gap-3 @[480px]:flex-row @[480px]:items-center">
+                        <div class="flex w-full shrink-[3] items-center justify-between min-w-[140px]">
+                            <div class="flex items-center gap-1">
+                                <p class="text-[#111418] text-base font-medium leading-normal">Disconnect Grace</p>
+                                <div class="tooltip-container inline-block">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Disconnect Grace Period</strong><br>
+                                        Time to wait before taking action when a player disconnects.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="grace-period-display" class="text-[#111418] text-sm font-normal leading-normal @[480px]:hidden">{{ room.settings_grace_period }}s</p>
+                        </div>
+                        <div class="flex h-4 w-full items-center gap-4">
+                            <div class="relative flex h-1.5 flex-1 rounded-full bg-[#e5e8eb] cursor-pointer group">
+                                <input type="range" id="grace-period" min="5" max="60" value="{{ room. settings_grace_period }}" 
+                                    class="absolute w-full h-full opacity-0 cursor-pointer z-10" 
+                                    oninput="updateSlider('grace-period', 5, 60)">
+                                <div id="grace-period-track" class="h-full rounded-full bg-primary relative" style="width: calc(({{ room.settings_grace_period }} - 5) / (60 - 5) * 100%);">
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 size-5 rounded-full bg-white border-2 border-primary shadow-md group-hover:scale-110 transition-transform"></div>
+                                </div>
+                            </div>
+                            <p id="grace-period-value" class="text-[#111418] text-sm font-bold leading-normal w-12 text-right hidden @[480px]:block">{{ room.settings_grace_period }}s</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <hr class="border-[#e5e8eb]"/>
+            
+            <!-- Gameplay Section -->
+            <section class="space-y-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-primary">sports_esports</span>
+                    <h3 class="text-[#111418] text-lg font-bold leading-tight">Gameplay</h3>
+                </div>
+                
+                <!-- Max Players Slider -->
+                <div class="@container">
+                    <div class="relative flex w-full flex-col items-start justify-between gap-3 @[480px]:flex-row @[480px]:items-center">
+                        <div class="flex w-full shrink-[3] items-center justify-between min-w-[140px]">
+                            <div class="flex items-center gap-1">
+                                <p class="text-[#111418] text-base font-medium leading-normal">Max Players</p>
+                                <div class="tooltip-container inline-block">
+                                    <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h. 01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="tooltip-content">
+                                        <strong>Max Players</strong><br>
+                                        Maximum number of players allowed in this room.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="max-players-display" class="text-[#111418] text-sm font-normal leading-normal @[480px]:hidden">{{ room.settings_max_players }}</p>
+                        </div>
+                        <div class="flex h-4 w-full items-center gap-4">
+                            <div class="relative flex h-1.5 flex-1 rounded-full bg-[#e5e8eb] cursor-pointer group">
+                                <input type="range" id="max-players" min="2" max="15" value="{{ room. settings_max_players }}" 
+                                    class="absolute w-full h-full opacity-0 cursor-pointer z-10" 
+                                    oninput="updateSlider('max-players', 2, 15, false)">
+                                <div id="max-players-track" class="h-full rounded-full bg-primary relative" style="width: calc(({{ room.settings_max_players }} - 2) / (15 - 2) * 100%);">
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 size-5 rounded-full bg-white border-2 border-primary shadow-md group-hover:scale-110 transition-transform"></div>
+                                </div>
+                            </div>
+                            <p id="max-players-value" class="text-[#111418] text-sm font-bold leading-normal w-12 text-right hidden @[480px]:block">{{ room.settings_max_players }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <hr class="border-[#e5e8eb]"/>
+            
+            <!-- Display Section -->
+            <section class="space-y-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-primary">visibility</span>
+                    <h3 class="text-[#111418] text-lg font-bold leading-tight">Display</h3>
+                </div>
+                
+                <!-- Show Scores Toggle -->
+                <div class="flex items-center justify-between py-1">
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-1">
+                            <span class="text-[#111418] text-base font-medium">Show Scores</span>
+                            <div class="tooltip-container inline-block">
+                                <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <div class="tooltip-content">
+                                    <strong>Show Scores</strong><br>
+                                    Players can see how many lines others have completed. 
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[#60758a] text-sm">Display the leaderboard during the game</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="show-score" class="sr-only peer" {% if room. settings_show_score %}checked{% endif %} onclick="updateDisplay('show-score')">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after: translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after: top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+            </section>
+            
+        </div>
+        
+        <!-- Footer Actions -->
+        <div class="p-6 border-t border-[#dbe0e6] bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <button onclick="OpenCloseSettings()" class="px-6 py-2. 5 rounded-lg border border-[#dbe0e6] text-[#111418] font-medium hover:bg-[#e5e8eb] transition-colors focus:outline-none focus:ring-2 focus:ring-[#dbe0e6] focus:ring-offset-1">
+                Cancel
+            </button>
+            <button id="save-settings-btn" onclick="saveSettings()" class="px-8 py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark shadow-sm shadow-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Save Settings
+            </button>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+    // Update slider visual and display values
+    function updateSlider(id, min, max, showUnit = true) {
+        const input = document.getElementById(id);
+        const track = document.getElementById(id + '-track');
+        const displayMobile = document.getElementById(id + '-display');
+        const displayDesktop = document. getElementById(id + '-value');
+        
+        const value = input.value;
+        const percentage = ((value - min) / (max - min)) * 100;
+        
+        track.style.width = percentage + '%';
+        
+        const displayValue = showUnit ?  value + 's' : value;
+        if (displayMobile) displayMobile.textContent = displayValue;
+        if (displayDesktop) displayDesktop.textContent = displayValue;
+        
+        // Enable save button when changes are made
+        document.getElementById('save-settings-btn').disabled = false;
+        document.getElementById('reset-settings-btn').classList.remove('hidden');
+    }
+    
+    // Legacy updateDisplay function for compatibility
+    function updateDisplay(id) {
+        if (id === 'show-score') {
+            document.getElementById('save-settings-btn').disabled = false;
+            document. getElementById('reset-settings-btn').classList.remove('hidden');
+        }
+    }
+</script>

@@ -23,9 +23,6 @@ class DisconnectionManager:
     # {room_code: {member_id: asyncio.Task}}
     disconnection_timers = {}
     
-    # {room_code: {round_player_id: asyncio.Task}}
-    bot_timers = {}
-    
     # {room_code: {target_member_id: {'votes': {'kick': set(), 'keep': set()}, 'target_name': str}}}
     vote_kicks = {}
 
@@ -55,27 +52,7 @@ class DisconnectionManager:
                     del cls.disconnection_timers[room_code]
                 return True
         return False
-    
-    @classmethod
-    def get_bot_timer(cls, room_code, member_id):
-        return cls.bot_timers.get(room_code, {}).get(member_id)
-    
-    @classmethod
-    def set_bot_timer(cls, room_code, member_id, task):
-        if room_code not in cls.bot_timers:
-            cls.bot_timers[room_code] = {}
-        cls.bot_timers[room_code][member_id] = task
-
-    @classmethod
-    def cancel_bot_timer(cls, room_code, member_id):
-        if room_code in cls.bot_timers:
-            task = cls.bot_timers.get(room_code, {}).get(member_id)
-            if task:
-                task.cancel()
-                del cls.bot_timers[room_code][member_id]
-                return True
-        return False
-    
+       
     @classmethod
     def get_vote_kick(cls, room_code, member_id):
         return cls.vote_kicks.get(room_code, {}).get(member_id)
@@ -161,8 +138,6 @@ class DisconnectionManager:
         """Call when room is deleted/deactivated"""
         # Cancel all timers for this room
         for member_id, task in cls.disconnection_timers.pop(room_code, {}).items():
-            task.cancel()
-        for player_id, task in cls.bot_timers.pop(room_code, {}).items():
             task.cancel()
         cls.cancel_turn_timer(room_code)
         cls.vote_kicks.pop(room_code, None)
@@ -931,6 +906,12 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Handle player intentionally leaving."""
         member = await self.get_member()
         if not member:
+            await self.send_error('Member not found')
+            return
+        
+        gameround: GameRound = await self.get_current_round()
+        if gameround and gameround.status == 'playing':
+            await self.send_error('Cannot leave during active game')
             return
         
         member_name = member.display_name

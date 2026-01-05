@@ -323,30 +323,33 @@
 
 <!-- Host Settings -->
 {% if is_host or is_co_host %}
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50  hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[26rem] ">
-            
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-[640px] overflow-hidden ">
+       
             <!-- Header -->
-            <div class="px-4 py-4 border-b relative">
-                <div class="flex justify-between items-center">
-                    <h2 class="font-semibold text-lg text-slate-800">Game Settings</h2>
-                    <button id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors hidden">
+            <div class="flex items-center justify-between px-6 py-5 border-b border-[#dbe0e6]">
+                <h2 class="text-[#111418] text-xl font-bold leading-tight tracking-tight">Game Settings</h2>
+                <div class="flex items-center gap-2">
+                    <button id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class=" flex items-center justify-center w-8 h-8 rounded-full text-[#60758a] hover:bg-[#f0f2f5] transition-colors">
                         <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                         </svg>
                     </button>
-
-                    <button onclick="OpenCloseSettings()" class="absolute -top-2 -right-2 border border-red-700 p-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors">
+                    <button onclick="OpenCloseSettings()" class="flex items-center justify-center w-8 h-8 rounded-full text-[#60758a] hover:bg-[#f0f2f5] transition-colors" title="Close Settings">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
             </div>
-            
+
             <!-- Settings Content -->
             <div class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
-                
+                <button id="reset-settings-btn" title="Reset to Default settings" onclick="resetSettings()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors hidden">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </button>
                 <!-- Setup Duration -->
                 <div class="setting-card p-4 rounded-xl border border-slate-200">
                     <div class="flex items-center justify-between mb-2">
