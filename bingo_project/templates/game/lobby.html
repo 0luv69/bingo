@@ -412,7 +412,7 @@
             <!-- Settings Content -->
             <section class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
 
-                <div class = "p-4 rounded-lg border border-slate-200">
+                <div class = "p-4 rounded-lg border border-slate-200 bg-slate-50">
                     <div class="flex items-center gap-2 mb-2">
                         <svg class="w-6 h-6 text-[#111418]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -422,7 +422,7 @@
 
                     <div class="space-y-4">
                         <!-- Setup Duration -->
-                        <div class="setting-card p-4 rounded-xl border border-slate-200">
+                        <div class="setting-card p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Setup Time</label>
@@ -446,7 +446,7 @@
                         </div>
 
                         <!-- Turn Duration -->
-                        <div class="setting-card p-4 rounded-xl border border-slate-200">
+                        <div class="setting-card p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Turn Time</label>
@@ -470,7 +470,7 @@
                         </div>
 
                         <!-- Grace Period -->
-                        <div class="setting-card p-4 rounded-xl border border-slate-200">
+                        <div class="setting-card p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Disconnect Grace</label>
@@ -495,7 +495,7 @@
                     </div>
                 </div>
                 
-                <div class = "p-4 rounded-xl border border-slate-200">
+                <div class = "p-4 rounded-xl border border-slate-200 bg-slate-50">
                     <div class="flex items-center gap-2 mb-2">
                         <svg id='Game_Controller_24' width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/>
                             <g transform="matrix(0.71 0 0 0.71 12 12)" >
@@ -505,8 +505,85 @@
                         <h3 class="text-[#111418] text-lg font-bold leading-tight">Gameplay</h3>
                     </div>
                     <div class="space-y-4">
+                        <!-- Board size -->
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-1.5">
+                                    <label class="text-sm font-semibold text-slate-700">Board Size</label>
+                                    <div class="tooltip-container inline-block ml-1">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Board Size</strong><br>
+                                            Size of the bingo board (e.g., 5x5 = upto 15 players, 7x7 = upto 40 players).
+                                        </div>
+                                    </div>
+                                </div>
+                                <span id="board-size-display" class="text-base text-slate-800">{{ room.settings_board_size }}x{{ room.settings_board_size }}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" checked />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 5x5 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 6x6 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 7x7 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 8x8 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 9x9 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 10x10 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                
+                            </div>
+                        </div>
+
+
                         <!-- Max Players -->
-                        <div class="setting-card p-4 rounded-xl border border-slate-200">
+                        <div class="setting-card p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Max Players</label>
@@ -531,7 +608,7 @@
 
 
                         <!-- Show Score Toggle -->
-                        <div class="setting-card p-4 rounded-xl border border-slate-200">
+                        <div class="setting-card p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Show Scores</label>
@@ -592,7 +669,7 @@
 
             <!-- Settings Content -->
             <section class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
-                <div class = "p-4 rounded-lg border border-slate-200">
+                <div class = "p-4 rounded-lg border border-slate-200 bg-slate-50">
                     <div class="flex items-center gap-2 mb-2">
                         <svg class="w-6 h-6 text-[#111418]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -602,7 +679,7 @@
 
                     <div class="space-y-4">
                         <!-- Setup Duration -->
-                        <div class= " p-4 rounded-xl border border-slate-200">
+                        <div class= " p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Setup Time</label>
@@ -627,7 +704,7 @@
                         </div>
 
                         <!-- Turn Duration -->
-                        <div class=" p-4 rounded-xl border border-slate-200">
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Turn Time</label>
@@ -651,7 +728,7 @@
                         </div>
 
                         <!-- Grace Period -->
-                        <div class=" p-4 rounded-xl border border-slate-200">
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Disconnect Grace</label>
@@ -677,7 +754,7 @@
                 </div>
 
                 <!-- Settings Content -->
-                <div class = "p-4 rounded-lg border border-slate-200">
+                <div class = "p-4 rounded-lg border border-slate-200 bg-slate-50">
                     <div class="flex items-center gap-2 mb-2">
                         <svg id='Game_Controller_24' width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/>
                             <g transform="matrix(0.71 0 0 0.71 12 12)" >
@@ -688,8 +765,85 @@
                     </div>
 
                     <div class="space-y-4">
+                        <!-- Board size -->
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-1.5">
+                                    <label class="text-sm font-semibold text-slate-700">Board Size</label>
+                                    <div class="tooltip-container inline-block ml-1">
+                                        <svg class="w-4 h-4 text-slate-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div class="tooltip-content">
+                                            <strong>Board Size</strong><br>
+                                            Size of the bingo board (e.g., 5x5 = upto 15 players, 7x7 = upto 40 players).
+                                        </div>
+                                    </div>
+                                </div>
+                                <span id="board-size-display" class="text-base text-slate-800">{{ room.settings_board_size }}x{{ room.settings_board_size }}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" checked />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 5x5 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 6x6 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 7x7 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 8x8 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 9x9 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <label class="group relative cursor-pointer">
+                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" />
+                                    <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 10x10 </div>
+                                    <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
+                                        <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                
+                            </div>
+                        </div>
+
+
                         <!-- Max Players -->
-                        <div class=" p-4 rounded-xl border border-slate-200">
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Max Players</label>
@@ -713,7 +867,7 @@
                         </div>
                     
                         <!-- Show Score Toggle -->
-                        <div class=" p-4 rounded-xl border border-slate-200">
+                        <div class=" p-4 rounded-xl border border-slate-200 bg-white">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-1.5">
                                     <label class="text-sm font-semibold text-slate-700">Show Scores</label>

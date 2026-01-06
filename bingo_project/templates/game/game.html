@@ -115,8 +115,9 @@
         <div class="max-w-5xl mx-auto">
             <div class="grid lg:grid-cols-3 gap-6">
                 
-                <!-- Board Column -->
+                <!-- Left Column -->
                 <div class="lg:col-span-2">
+                    <!-- Board  -->
                     <div class="card p-6">
                         
                         <!-- BINGO Progress -->
@@ -128,7 +129,7 @@
                             <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
                         </div>
                         
-                        <!-- 5x5 Board -->
+                        <!--Dynamic Board -->
                         <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-xs mx-auto select-none no-callout">
                             {% for row in current_player.board %}
                                 {% for number in row %}
@@ -187,8 +188,10 @@
                     </div>
                 </div>
                 
-                <!-- Players Column -->
+
+                <!-- Right Column -->
                 <div class="space-y-4">
+
                     <!-- Players List -->
                     <div class="card p-5">
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
@@ -229,7 +232,7 @@
 
                                         <!-- Bot Indicator -->
                                         {% if player.is_bot_controlled %}
-                                            <div class="inline-flex items-center justify-center relative w-8 h-8" title="Bot Controlled">
+                                            <div class="absolute -top-3 -left-3 inline-flex items-center justify-center w-8 h-8" title="Bot Controlled">
                                                 <!-- Rotating Dotted Border -->
                                                 <div class="absolute inset-0 rounded-full border-2 border-dotted border-blue-500 animate-[spin_4s_linear_infinite]"></div>
                                                 
@@ -258,6 +261,21 @@
                             {% endfor %}
                         </div>
                     </div>
+
+
+                    <!-- Game Actions Btns-->
+                    {% if current_round.status == 'finished' %}
+
+                    <div class="space-y-3 card p-6">
+                        <h2 class="font-semibold text-slate-900 mb-4">Actions Button</h2>
+                        <form method="POST" action="{% url 'leave_room' room.code %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-secondary w-full !text-red-500 hover:!bg-red-50">Leave Game</button>
+                        </form>
+                        <button onclick="startNewRound()" class="btn-primary w-full">Play Again</button>
+                    {% endif %}
+                    </div>
+
 
                     <!-- Round History Card -->
                     {% if round_history %}
@@ -296,15 +314,9 @@
                     </div>
                     {% endif %}
                     
-                 
-                    {% if current_round.status == 'finished' %}
-                    <form method="POST" action="{% url 'leave_room' room.code %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn-secondary w-full !text-red-500 hover:!bg-red-50">Leave Game</button>
-                    </form>
-
-                    <button onclick="startNewRound()" class="btn-primary w-full">Play Again</button>
-                    {% endif %}
+                    
+                
+                  
                 </div>
             </div>
         </div>
@@ -420,7 +432,7 @@
 
             case 'player_bot_controlled':
                 showNotification(data.message, 'info');
-                updatePlayersList(data.round_players, show_score=false, playing = true);
+                updatePlayersList(data.round_players, show_score=data.show_score, playing = true);
                 break;
             
             case 'number_called':
@@ -535,7 +547,7 @@
                     ${show_score ? `<div class="flex gap-1">${bingoLetters}</div>` : ''}
 
                     ${ p.is_bot_controlled ? `
-                    <div class="inline-flex items-center justify-center relative w-8 h-8" title="Bot Controlled">
+                    <div class="absolute -top-3 -left-3 inline-flex items-center justify-center w-8 h-8" title="Bot Controlled">
                         <!-- Rotating Dotted Border -->
                         <div class="absolute inset-0 rounded-full border-2 border-dotted border-blue-500 animate-[spin_4s_linear_infinite]"></div>
                         

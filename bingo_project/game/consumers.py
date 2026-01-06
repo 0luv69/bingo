@@ -339,11 +339,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not member or member.connection_status != 'disconnected':
             return
         
-        current_round = await self.get_current_round()
+        current_round: GameRound = await self.get_current_round()
         
         if current_round and current_round.status == 'playing':
             # GAME PHASE: Enable bot control
             await self.enable_bot_control(member_id)
+            
+            show_score = current_round.room.settings_show_score
             
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -352,6 +354,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'member_id': member_id,
                     'member_name': member.display_name,
                     'message': f'{member.display_name} is now controlled by bot',
+                    'show_score': show_score,
                     'round_players': await self.get_round_players_data(),
                 }
             )
@@ -946,16 +949,16 @@ class GameConsumer(AsyncWebsocketConsumer):
        
     async def handle_new_round(self, data):
         """Host starts a new round (after game finished)."""
-        current_round = await self.get_current_round()
+        current_round: GameRound = await self.get_current_round()
         if current_round and current_round.status != 'finished':
             await self.send_error('Current round not finished')
             return
         
         bot_players = await self.get_bot_players()
-        print("Bot players:", bot_players)
+        grace_time = current_round.room.settings_grace_period
         if bot_players:
             for bot in bot_players:
-                await self.start_disconnection_timer(bot['member_id'], 10)
+                await self.start_disconnection_timer(bot['member_id'], grace_time)
         
         # Create new round
         new_round = await self.create_new_round()
@@ -1000,7 +1003,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'show_score': show_score,
                 }
             )
-
+        # Start turn timer for first player
         await self.start_turn_timer(room.settings_turn_duration, first_player['member_id'])
     
     # ════════════════════════════════════════════════════════════
@@ -1064,6 +1067,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'member_id':  event['member_id'],
             'member_name': event['member_name'],
             'message': event['message'],
+            'show_score': event['show_score'],
             'round_players': event['round_players'],
         }))
 
