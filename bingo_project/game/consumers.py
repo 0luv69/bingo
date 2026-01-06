@@ -951,6 +951,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_error('Current round not finished')
             return
         
+        bot_players = await self.get_bot_players()
+        print("Bot players:", bot_players)
+        if bot_players:
+            for bot in bot_players:
+                await self.start_disconnection_timer(bot['member_id'], 10)
+        
         # Create new round
         new_round = await self.create_new_round()
         
@@ -1348,6 +1354,21 @@ class GameConsumer(AsyncWebsocketConsumer):
             return RoundPlayer.objects.filter(id=round_player_id, is_bot_controlled=True).exists()
         except:
             return False
+        
+    @database_sync_to_async
+    def get_bot_players(self):
+        try:
+            room = Room.objects.get(code=self.room_code)
+            current_round = room.get_current_round()
+            if not current_round:
+                return []
+            bot_players = current_round.players.filter(is_bot_controlled=True)
+            return [{
+                'id': p.id,
+                'member_id': p.room_member.id,
+            } for p in bot_players]
+        except:
+            return []
     
 
     @database_sync_to_async
