@@ -282,9 +282,9 @@ def get_or_create_round_player(game_round, room_member):
     existing = game_round.players.filter(room_member=room_member).first()
     if existing:
         return existing, False
-    
+    board_size = game_round.room.settings_board_size
     player = game_round.players.create(
         room_member=room_member,
-        board=RoundPlayer.generate_board()
+        board=RoundPlayer.generate_board(board_size)
     )
     return player, True

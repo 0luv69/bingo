@@ -267,13 +267,14 @@ def join_room_direct_view(request, room_code):
         
         # Add to current round if waiting
         current_round = room.get_current_round()
+        board_size = room.settings_board_size
         if current_round and current_round.status == 'waiting': 
             existing_round_player = current_round.players.filter(room_member=member).first()
             if not existing_round_player: 
                 RoundPlayer.objects.create(
                     game_round=current_round,
                     room_member=member,
-                    board=RoundPlayer.generate_board()
+                    board=RoundPlayer.generate_board(board_size)
                 )
         
         request.session['current_room_code'] = room.code
