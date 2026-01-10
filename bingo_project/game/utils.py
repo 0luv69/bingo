@@ -275,7 +275,6 @@ def get_or_create_room_member(room, display_name, user=None, session_key=None, i
 def get_or_create_round_player(game_round, room_member):
     """
     Get existing round player or create new one with generated board.
-    
     Returns:
         tuple: (RoundPlayer, created:  bool)
     """
