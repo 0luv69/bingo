@@ -131,7 +131,8 @@ def check_completed_lines(board, called_numbers, finished_lines, board_size=5):
     """
     Check how many lines are completed on a board.
     
-    Args:
+    Args: 
+    
         board: 2D list (NxN) - Player's board
         called_numbers: List of integers - Numbers that have been called
         finished_lines: List of already completed line indices
