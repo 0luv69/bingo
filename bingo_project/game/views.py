@@ -425,7 +425,7 @@ def game_view(request, room_code):
     
     
     # Get current round
-    current_round = room.get_current_round()
+    current_round: GameRound = room.get_current_round()
     
     if not current_round or current_round.status == 'waiting':
         return redirect('lobby', room_code=room.code)

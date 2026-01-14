@@ -200,6 +200,10 @@ def validate_board(board, expected_size=5):
     """
     Validate that board is a proper NxN grid with numbers 1 to N². 
     """
+    print(board, expected_size, "afdasdfsdfasdf")
+    print(type(board))
+    print(len(board))
+    
     if not isinstance(board, list) or len(board) != expected_size:
         return False
     

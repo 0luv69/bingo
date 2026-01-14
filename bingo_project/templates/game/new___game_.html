@@ -172,11 +172,11 @@
                             class="grid gap-2 max-w-xs mx-auto select-none no-callout"
                             style="grid-template-columns: repeat({{ room.settings_board_size }}, 1fr);">
                             {% for row in current_player.board %}
-                                {% for number in row %}
-                                <div class="board-cell select-none no-callout {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" 
-                                    data-number="{{ number }}" 
+                                {% for cell_number in row %}
+                                <div class="board-cell select-none no-callout {% if cell_number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" 
+                                    data-number="{{ cell_number }}" 
                                     draggable="true">
-                                    {{ number }}
+                                    {{ cell_number }}
                                 </div>
                                 {% endfor %}
                             {% endfor %}
@@ -713,7 +713,7 @@
         const cells = document.querySelectorAll('.board-cell');
         boardData = [];
         let row = [];
-        
+        console.log('Updating board data...', boardSize);
         cells.forEach((cell, i) => {
             row.push(parseInt(cell.dataset.number));
             if ((i + 1) % boardSize === 0) {  // Use boardSize instead of hardcoded 5
@@ -721,6 +721,8 @@
                 row = [];
             }
         });
+
+        console.log('New board data:', boardData);
         
         sendMessage('update_board', { board: boardData });
     }

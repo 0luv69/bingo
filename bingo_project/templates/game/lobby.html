@@ -668,7 +668,7 @@
             </div>
 
             <!-- Settings Content -->
-            <section class="p-4 space-y-2 max-h-[60vh] relative overflow-auto">
+            <section class="p-4 space-y-2 max-h-[60vh] relative overflow-auto cursor-not-allowed" title="Only Host and Co-Hosts can modify game settings. You can only view.">
                 <div class = "p-4 rounded-lg border border-slate-200 bg-slate-50">
                     <div class="flex items-center gap-2 mb-2">
                         <svg class="w-6 h-6 text-[#111418]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -783,8 +783,8 @@
                                 <span id="board-size-display" class="text-base text-slate-800">{{ room.settings_board_size }}x{{ room.settings_board_size }}</span>
                             </div>
                             <div class="grid grid-cols-3 gap-3">
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" checked />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" disabled checked/>
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 5x5 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -792,8 +792,8 @@
                                         </svg>
                                     </div>
                                 </label>
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" disabled />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 6x6 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -801,8 +801,8 @@
                                         </svg>
                                     </div>
                                 </label>
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" disabled />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 7x7 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -810,8 +810,8 @@
                                         </svg>
                                     </div>
                                 </label>
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" disabled />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 8x8 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -819,8 +819,8 @@
                                         </svg>
                                     </div>
                                 </label>
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" disabled />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 9x9 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -828,8 +828,8 @@
                                         </svg>
                                     </div>
                                 </label>
-                                <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" />
+                                <label class="group relative cursor-not-allowed">
+                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" disabled />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 10x10 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -881,7 +881,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
+                                <label class="relative inline-flex items-center cursor-not-allowed">
                                     <input type="checkbox" id="show-score" class="sr-only peer" {% if room.settings_show_score %}checked{% endif %} disabled>
                                     <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-sky-500 shadow-inner"></div>
                                 </label>

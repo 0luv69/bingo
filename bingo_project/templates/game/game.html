@@ -130,11 +130,12 @@
                         </div>
                         
                         <!--Dynamic Board -->
-                        <div id="bingo-board" class="grid grid-cols-5 gap-2 max-w-xs mx-auto select-none no-callout">
+                        <div id="bingo-board" class="grid gap-2 max-w-xs mx-auto select-none no-callout"  
+                            style="grid-template-columns: repeat({{ room.settings_board_size }}, 1fr);">
                             {% for row in current_player.board %}
-                                {% for number in row %}
-                                <div class="board-cell select-none no-callout {% if number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" data-number="{{ number }}" draggable="true">
-                                    {{ number }}
+                                {% for cell_number in row %}
+                                <div class="board-cell select-none no-callout {% if cell_number in called_numbers %}board-cell-marked{% else %}board-cell-default{% endif %}" data-number="{{ cell_number }}" draggable="true">
+                                    {{ cell_number }}
                                 </div>
                                 {% endfor %}
                             {% endfor %}
@@ -351,6 +352,7 @@
     // ════════════════════════════════════════════════════════════
     
     const roomCode = "{{ room.code }}";
+    const boardSize = {{ room.settings_board_size }};
     const currentPlayerId = {{ current_player.id }};
     const currentMemberId = {{ current_member.id }};
     const isHost = {{ is_host|yesno:"true,false" }};
@@ -676,7 +678,7 @@
         
         cells.forEach((cell, i) => {
             row.push(parseInt(cell.dataset.number));
-            if ((i + 1) % 5 === 0) {
+            if ((i + 1) % boardSize === 0) {
                 boardData.push(row);
                 row = [];
             }
@@ -688,7 +690,7 @@
     function shuffleBoard() {
         if (roomStatus !== 'setup' || isReady) return;
         
-        const numbers = Array.from({length: 25}, (_, i) => i + 1);
+        const numbers = Array.from({length: boardSize * boardSize}, (_, i) => i + 1);
         for (let i = numbers.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
