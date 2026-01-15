@@ -1537,6 +1537,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             room.settings_grace_period = max(5, min(60, int(settings['grace_period'])))
         if 'show_score' in settings:
             room.settings_show_score = bool(settings['show_score'])
+        if 'board_size' in settings:
+            room.settings_board_size = max(5, min(10, int(settings['board_size'])))
 
         room.save()
         return {
@@ -1545,6 +1547,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'max_players': room.settings_max_players,
             'grace_period': room.settings_grace_period,
             'show_score': room.settings_show_score,
+            'board_size': room.settings_board_size,
         }
     
     @database_sync_to_async

@@ -524,7 +524,7 @@
                             </div>
                             <div class="grid grid-cols-3 gap-3">
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" checked />
+                                    <input class="peer sr-only board-size"  value="5" name="board-size" type="radio" {% if room.settings_board_size == 5 %}checked{% endif %} oninput="updateDisplay('board-size')" />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 5x5 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -533,7 +533,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" />
+                                    <input class="peer sr-only board-size"  value="6" name="board-size" type="radio" {% if room.settings_board_size == 6 %}checked{% endif %} oninput="updateDisplay('board-size')" />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 6x6 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -542,7 +542,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" />
+                                    <input class="peer sr-only board-size"  value="7" name="board-size" type="radio" {% if room.settings_board_size == 7 %}checked{% endif %} oninput="updateDisplay('board-size')" />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 7x7 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -551,7 +551,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" />
+                                    <input class="peer sr-only board-size"  value="8" name="board-size" type="radio" {% if room.settings_board_size == 8 %}checked{% endif %} oninput="updateDisplay('board-size')"     />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 8x8 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -560,7 +560,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" />
+                                    <input class="peer sr-only board-size"   value="9" name="board-size" type="radio" {% if room.settings_board_size == 9 %}checked{% endif %} oninput="updateDisplay('board-size')" />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 9x9 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -569,7 +569,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-pointer">
-                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" />
+                                    <input class="peer sr-only board-size" value="10"  name="board-size" type="radio" {% if room.settings_board_size == 10 %}checked{% endif %} oninput="updateDisplay('board-size')" />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 10x10 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -784,7 +784,7 @@
                             </div>
                             <div class="grid grid-cols-3 gap-3">
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-5" name="board-size" type="radio" disabled checked/>
+                                    <input class="peer sr-only board-size"  value="5"  name="board-size" type="radio" disabled {% if room.settings_board_size == 5 %}checked{% endif %}/>
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 5x5 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -793,7 +793,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-6" name="board-size" type="radio" disabled />
+                                    <input class="peer sr-only board-size"  value="6" name="board-size" type="radio" disabled {% if room.settings_board_size == 6 %}checked{% endif %} />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 6x6 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -802,7 +802,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-7" name="board-size" type="radio" disabled />
+                                    <input class="peer sr-only board-size"  value="7" name="board-size" type="radio" disabled {% if room.settings_board_size == 7 %}checked{% endif %} />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 7x7 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -811,7 +811,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-8" name="board-size" type="radio" disabled />
+                                    <input class="peer sr-only board-size"  value="8" name="board-size" type="radio" disabled {% if room.settings_board_size == 8 %}checked{% endif %} />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 8x8 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -820,7 +820,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-9" name="board-size" type="radio" disabled />
+                                    <input class="peer sr-only board-size"  value="9" name="board-size" type="radio" disabled {% if room.settings_board_size == 9 %}checked{% endif %} />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 9x9 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -829,7 +829,7 @@
                                     </div>
                                 </label>
                                 <label class="group relative cursor-not-allowed">
-                                    <input class="peer sr-only board-size" id="board-size-10" name="board-size" type="radio" disabled />
+                                    <input class="peer sr-only board-size"  value="10" name="board-size" type="radio" disabled {% if room.settings_board_size == 10 %}checked{% endif %} />
                                     <div class="flex items-center justify-center rounded-xl border border-[#dbe0e6] h-11 text-[#111418] text-sm font-medium transition-all peer-checked:border-blue-800 peer-checked:bg-blue-50 peer-checked:text-blue-800 hover:bg-gray-50"> 10x10 </div>
                                     <div class="absolute -top-2 -right-2 hidden peer-checked:block text-green-600">
                                         <svg fill="#f0fdf4" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -1541,6 +1541,7 @@
         document.getElementById('max-players').value = 8;
         document.getElementById('grace-period').value = 15;
         document.getElementById('show-score').checked = false;
+        document.querySelector('input[name="board-size"][value="5"]').checked = true;
         
         updateDisplay('setup-duration');
         updateDisplay('turn-duration');
@@ -1554,13 +1555,19 @@
     }
 
     function updateDisplay(settingId, btn_change = true) {
-        if (settingId != 'show-score') {
+        if (settingId === 'show-score') {
+            const checkbox = document.getElementById('show-score');
+            checkbox.value = checkbox.checked ? 'true' : 'false';
+        } else if (settingId === 'board-size') {
+            const input = document.querySelector('input[name="board-size"]:checked');
+            const display = document.getElementById(`${settingId}-display`);
+            display.textContent = `${input.value}x${input.value}`;
+        }
+        else {
             const input = document.getElementById(settingId);
             const display = document.getElementById(`${settingId}-display`);
             display.textContent = `${input.value}${settingId.includes('duration') || settingId === 'grace-period' ? 's' : ''}`;
-        } else {
-            const checkbox = document.getElementById('show-score');
-            checkbox.value = checkbox.checked ? 'true' : 'false';
+            
         }
         
         if (btn_change) {
@@ -1577,7 +1584,9 @@
             turn_duration: parseInt(document.getElementById('turn-duration').value),
             max_players: parseInt(document.getElementById('max-players').value),
             grace_period: parseInt(document.getElementById('grace-period').value),
-            show_score: document.getElementById('show-score').value === 'true'
+            show_score: document.getElementById('show-score').value === 'true',
+            board_size: document.querySelector('input[name="board-size"]:checked').value
+
         };
         setting_btn = document.getElementById('save-settings-btn')
         setting_btn.disabled = true;
@@ -1597,11 +1606,14 @@
             document.getElementById('max-players').value = data.max_players;
             document.getElementById('grace-period').value = data.grace_period;
             document.getElementById('show-score').checked = data.show_score;
+            document.querySelector(`input[name="board-size"][value="${data.board_size}"]`).checked = true;
 
             updateDisplay('setup-duration', false);
             updateDisplay('turn-duration', false);
             updateDisplay('max-players', false);
             updateDisplay('grace-period', false);
+            updateDisplay('show-score', false);
+            updateDisplay('board-size', false);
         }
     }
 
