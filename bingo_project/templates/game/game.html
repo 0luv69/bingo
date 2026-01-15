@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static game_filters%}
 {% block title %}Bingo - {{ room.code }}{% endblock %}
 
 {% block extra_css %}
@@ -121,12 +121,18 @@
                     <div class="card p-6">
                         
                         <!-- BINGO Progress -->
-                        <div class="flex items-center justify-center gap-2 mb-6">
+                        <div class="flex items-center gap-2 justify-center mb-6">
                             <div id="letter-B" class="bingo-letter {% if current_player.completed_lines >= 1 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">B</div>
                             <div id="letter-I" class="bingo-letter {% if current_player.completed_lines >= 2 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">I</div>
                             <div id="letter-N" class="bingo-letter {% if current_player.completed_lines >= 3 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">N</div>
                             <div id="letter-G" class="bingo-letter {% if current_player.completed_lines >= 4 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">G</div>
                             <div id="letter-O" class="bingo-letter {% if current_player.completed_lines >= 5 %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">O</div>
+                            {% if room.settings_board_size > 5 %}
+                                <!-- Progress display for larger boards -->
+                                {% for i in board_size_range %}
+                                <div id="letter-{{i}}" class="bingo-letter {% if current_player.completed_lines >= i %}bingo-letter-active{% else %}bingo-letter-inactive{% endif %}">{{ i }}</div>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                         
                         <!--Dynamic Board -->
@@ -198,16 +204,15 @@
                         <h3 class="font-semibold text-slate-900 mb-4">Players</h3>
                         <div id="players-list" class="space-y-3">
                             {% for player in round_players %}
-                                <div class="player-item relative flex items-center justify-between p-3 rounded-xl h-12
-                                    {% if player.id == current_player.id %}bg-rose-500 text-white {% else %}
-                                    bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
+                                <div class="player-item relative {% if room.settings_board_size > 5 %}flex-col h-16 {% else %}flex h-12{% endif %} items-center justify-between p-3 rounded-xl
+                                    {% if player.id == current_player.id %}bg-rose-500 text-white {% else %} bg-slate-100 text-slate-700{% endif %}" data-player-id="{{ player.id }}">
                                         <div class="flex items-center gap-2">
                                             {% if player.is_host %}
                                             <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
                                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                             </svg>
                                             {% endif %}
-                                            <span class="text-base font-medium ">
+                                            <span class="text-sm font-medium ">
                                                 {{ player.display_name }}{% if player.id == current_player.id %}<span class="text-[10px]"> (You)</span>{% endif %}
                                             </span> 
 
@@ -223,10 +228,16 @@
                                         </div>
                                         {% if show_score %}
                                             <!-- BINGO Letters -->
-                                            <div class="flex gap-0.5">
+                                            <div class="flex gap-0.5  ">
                                                 {% for letter in "BINGO" %}
                                                 <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if forloop.counter <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ letter }}</span>
                                                 {% endfor %}
+                                                <!--    Extra letters   -->
+                                                {% if room.settings_board_size > 5 %}
+                                                    {% for i in board_size_range %}
+                                                    <span class="w-4 h-4 text-xs font-bold rounded-full flex items-center justify-center {% if i <= player.completed_lines %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-400{% endif %}">{{ i}}</span>
+                                                    {% endfor %}
+                                                {% endif %}
                                             </div>
                                         {% endif %}
 
@@ -520,7 +531,13 @@
             const isMe = p.id === currentPlayerId;
             let bingoLetters = '';       
             if (show_score){
-                bingoLetters = ['B', 'I', 'N', 'G', 'O'].map((letter, index) => 
+                Progress_letters = ['B', 'I', 'N', 'G', 'O'];
+                if (boardSize > 5) {
+                    for (let i = 6; i <= boardSize; i++) {
+                        Progress_letters.push(i.toString());
+                    }
+                }
+                bingoLetters = Progress_letters.map((letter, index) => 
                     `<span class="w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center ${index < p.completed_lines ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}">${letter}</span>`
                 ).join('');
             }
@@ -531,7 +548,7 @@
                 updateMyBingoLetters();
             }
             return `
-                <div class="player-item relative flex items-center justify-between p-3 rounded-xl h-12 ${isMe ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'}" data-player-id="${p.id}">
+                <div class="player-item relative ${boardSize > 5 ? 'flex-col h-16' : 'flex h-12'} items-center justify-between p-3 rounded-xl  ${isMe ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'}" data-player-id="${p.id}">
                     <div class="flex items-center gap-2">
                         ${p.is_host ? crownSvg : ''}
                         <span class="text-sm font-medium ">${p.name}${isMe ? '<span class="text-[10px]"> (You)</span>' : ''}</span>

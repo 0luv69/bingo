@@ -473,7 +473,7 @@ def game_view(request, room_code):
         'round_history': round_history,
         'show_login':  False,
         # Add these for dynamic board
-        'board_size_range': range(1, room.settings_board_size + 1),  # [1, 2, 3, 4, 5, ...]
+        'board_size_range': range(6, room.settings_board_size + 1),  # For board sizes 5 to N
         'show_score': room.settings_show_score,
     }
     
