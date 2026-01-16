@@ -13,7 +13,7 @@ class RoomAdmin(admin. ModelAdmin):
     
     fieldsets = (
         ('Room Info', {'fields': ('code', 'visibility_type', 'created_by', 'is_active', 'created_at')}),
-        ('Settings', {'fields': ('settings_setup_duration', 'settings_turn_duration', 'settings_max_players', 'settings_board_size')}),
+        ('Settings', {'fields': ('settings_setup_duration', 'settings_turn_duration', 'settings_max_players', 'settings_board_size', 'settings_show_score')}),
     )
     
     def members_count(self, obj):
@@ -29,7 +29,7 @@ class RoomAdmin(admin. ModelAdmin):
     def rounds_count(self, obj):
         return obj.rounds.count()
     rounds_count.short_description = 'Rounds'
-    
+
     def is_active_badge(self, obj):
         if obj.is_active:
             return mark_safe('<span style="color: #10b981;">● Active</span>')

@@ -1405,6 +1405,13 @@ class GameConsumer(AsyncWebsocketConsumer):
             current_round.turn_deadline = timezone.now() + timedelta(seconds=duration)
             current_round.started_at = timezone.now()
             current_round.save()
+        
+        board_size = room.settings_board_size
+        for player in current_round.players.all():
+            player:RoundPlayer
+            board = player.generate_board(board_size)
+            player.board = board
+            player.save(update_fields=['board'])
     
     @database_sync_to_async
     def mark_player_ready(self, player_id):
