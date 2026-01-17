@@ -423,7 +423,6 @@ def game_view(request, room_code):
         messages.error(request, 'You have been removed from this room. Please contact the host to rejoin.')
         return redirect('home')
     
-    
     # Get current round
     current_round: GameRound = room.get_current_round()
     
