@@ -184,7 +184,7 @@ def determine_winners(game_round, calling_player):
         updated_finished_lines = check_completed_lines(
             player.board, 
             called_numbers, 
-            player. finished_lines,
+            player.finished_lines,
             board_size
         )
         player.finished_lines = updated_finished_lines

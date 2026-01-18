@@ -80,7 +80,6 @@ class DisconnectionManager:
         if voter_id in vote_data['votes']['kick'] or voter_id in vote_data['votes']['keep']:
             return False, "Can't vote more than once."
         # Remove previous vote from this voter
-        vote_data['votes']['kick'].discard(voter_id)
         vote_data['votes']['keep'].discard(voter_id)
         
         # Add new vote
@@ -115,7 +114,7 @@ class DisconnectionManager:
     @classmethod
     def get_turn_timer(cls, room_code):
         """Get the current turn timer for a room."""
-        return cls.turn_timers. get(room_code)
+        return cls.turn_timers.get(room_code)
     
     @classmethod
     def set_turn_timer(cls, room_code, task):
@@ -127,7 +126,7 @@ class DisconnectionManager:
     @classmethod
     def cancel_turn_timer(cls, room_code):
         """Cancel the turn timer for a room."""
-        task = cls.turn_timers. pop(room_code, None)
+        task = cls.turn_timers.pop(room_code, None)
         if task:
             task.cancel()
             return True
@@ -371,7 +370,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 delay = random.uniform(1, 3)
                 await self.start_turn_timer(delay, member_id, is_bot_call=True)
 
-        elif current_round and current_round. status == 'setup':
+        elif current_round and current_round.status == 'setup':
             # SETUP PHASE: Bot marks player as ready (already handled by quick timer)
             await self.schedule_bot_ready(member_id)
         else:
@@ -654,6 +653,11 @@ class GameConsumer(AsyncWebsocketConsumer):
                 await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
 
 
+    async def schedule_bot_ready(self, member_id):
+        """Schedule bot to mark player as ready during setup phase."""
+
+        
+
     # ════════════════════════════════════════════════════════════
     # MESSAGE HANDLERS
     # ════════════════════════════════════════════════════════════
@@ -882,7 +886,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_kick_player(self, data):
         """Host kicks a player."""
         member = await self.get_member()
-        if not member or not member.is_host:
+        if not member or (not member.is_host and not member.is_co_host):
             await self.send_error('Only host can kick players')
             return
         
@@ -1227,6 +1231,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             return room.get_current_round()
         except Room.DoesNotExist:
             return None
+        except Exception as e:
+            return None
     
     @database_sync_to_async
     def get_round_player(self, member_id):
@@ -1346,7 +1352,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     def set_player_bot_controlled(self, member_id, value):
         try:
             room = Room.objects.get(code=self.room_code)
-            current_round = room.get_current_round()
+            current_round: GameRound = room.get_current_round()
             if current_round:
                 current_round.players.filter(room_member_id=member_id).update(is_bot_controlled=value)
         except:
@@ -1363,7 +1369,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     def get_bot_players(self):
         try:
             room = Room.objects.get(code=self.room_code)
-            current_round = room.get_current_round()
+            current_round: GameRound = room.get_current_round()
             if not current_round:
                 return []
             bot_players = current_round.players.filter(is_bot_controlled=True)
@@ -1379,7 +1385,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     def leave_room_db(self, member_id):
         """Remove member from room.  Returns new host name if host changed."""
         try:
-            member = RoomMember.objects. get(id=member_id, room__code=self.room_code)
+            member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
             new_host_member = member.leave_room()
 
             # Check if room is empty AFTER leaving
@@ -1390,7 +1396,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 member.room.save()
 
             if new_host_member:
-                return (new_host_member. display_name, new_host_member.id, should_cleanup)
+                return (new_host_member.display_name, new_host_member.id, should_cleanup)
             return (None, None, should_cleanup)
         except:
             return None, None, False
@@ -1621,7 +1627,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         try:
             room = Room.objects.get(code=self.room_code)
             room.is_active = False
-            room. save(update_fields=['is_active'])
+            room.save(update_fields=['is_active'])
         except:
             pass
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from game. views import (
+from game.views import (
     home_view,
     create_room_view,
     join_room_view,

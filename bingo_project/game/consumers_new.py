@@ -341,6 +341,40 @@ class GameConsumer(AsyncWebsocketConsumer):
     # BOT CONTROL
     # ════════════════════════════════════════════════════════════════
     
+    async def schedule_bot_ready(self, member_id):
+        """Schedule bot to mark player as ready during setup phase."""
+        async def bot_ready_action():
+            try:
+                await asyncio.sleep(2)  # Short delay before marking ready
+                await self.mark_player_ready_by_member_id(member_id)
+                
+                # Get updated data
+                round_players = await self.get_round_players_data()
+                ready_count = sum(1 for p in round_players if p['is_ready'])
+                total_count = len(round_players)
+                
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'player_ready_update',
+                        'member_id': member_id,
+                        'member_name': (await self.get_member_by_id(member_id)).display_name,
+                        'ready_count':  ready_count,
+                        'total_count': total_count,
+                        'round_players': round_players,
+                    }
+                )
+                
+                # Check if all ready
+                if ready_count == total_count:
+                    await self.transition_to_playing()
+            except asyncio.CancelledError:
+                pass  # Timer was cancelled (player reconnected)
+
+        asyncio.create_task(bot_ready_action())
+
+
+
     async def enable_bot_control(self, member_id):
         """Enable bot control for a player."""
         await self.set_player_bot_controlled(member_id, True)

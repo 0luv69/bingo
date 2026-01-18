@@ -364,6 +364,7 @@
     
     const roomCode = "{{ room.code }}";
     const boardSize = {{ room.settings_board_size }};
+    const totalNumbers = parseInt(boardSize * boardSize);
     const currentPlayerId = {{ current_player.id }};
     const currentMemberId = {{ current_member.id }};
     const isHost = {{ is_host|yesno:"true,false" }};
@@ -385,6 +386,8 @@
     let socket = null;
     let timerInterval = null;
     let draggedCell = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
     
     // ════════════════════════════════════════════════════════════
     // WEBSOCKET
@@ -392,12 +395,19 @@
     
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        socket = new WebSocket(`${protocol}//${window.location.host}/ws/room/${roomCode}/`);
-        
-        socket.onopen = () => updateConnectionStatus('connected');
-        socket.onclose = () => {
+        const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
+        socket = new WebSocket(wsUrl);
+        let shouldReconnect = true;
+
+        socket.onopen = function() {
+            console.log('WebSocket connected');
+            reconnectAttempts = 0;
+            updateConnectionStatus('connected');
+        };
+
+        socket.onclose = function() {
+            console.log('WebSocket disconnected');
             updateConnectionStatus('disconnected');
-            setTimeout(connectWebSocket, 2000);
         };
         socket.onerror = function(e) { 
             console.error('WebSocket error', e);
@@ -524,7 +534,7 @@
     
     function updateCalledNumbers() {
         const container = document.getElementById('called-numbers');
-        document.getElementById('called-count').textContent = `${calledNumbers.length}/25`;
+        document.getElementById('called-count').textContent = `${calledNumbers.length}/${totalNumbers}`;
         container.innerHTML = calledNumbers.map(n => 
             `<span class="w-7 h-7 flex items-center justify-center bg-amber-100 text-amber-700 rounded text-xs font-semibold">${n}</span>`
         ).join('') || '<span class="text-xs text-slate-400">No numbers called yet</span>';

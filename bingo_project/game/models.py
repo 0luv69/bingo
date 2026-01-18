@@ -153,7 +153,7 @@ class Room(models.Model):
         new_host = query.order_by('joined_at').first()
         if new_host:
             new_host.role = 'co-host'
-            new_host.save()
+            new_host.save(update_fields=['role'])
             return new_host
         
         return None
@@ -466,6 +466,9 @@ class RoundPlayer(models.Model):
     @staticmethod
     def generate_board(size= 5):
         """Generate random NxN board with numbers 1 to N²."""
+        if size < 5 or size > 10:
+            size = 5  # Default to 5 if invalid size
+
         total = size * size
         numbers = list(range(1, total + 1))
         random.shuffle(numbers)

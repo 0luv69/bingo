@@ -982,8 +982,8 @@
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/room/${roomCode}/`;
-        let shouldReconnect = true;
         socket = new WebSocket(wsUrl);
+        let shouldReconnect = true;
         
         socket.onopen = function() {
             console.log('WebSocket connected');
@@ -994,11 +994,7 @@
         socket.onclose = function() {
             console.log('WebSocket disconnected');
             updateConnectionStatus('disconnected');
-            if (!shouldReconnect) return;
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                setTimeout(connectWebSocket, 2000);
-            }
+            
         };
         
         socket.onerror = function(e) {
