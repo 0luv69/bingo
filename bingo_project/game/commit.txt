@@ -1,1 +1,0 @@
-dublicate line and extra space after . removed, in game Reconnection Loop solved,  
