@@ -23,7 +23,7 @@ def home_view(request):
     , visibility_type='public'
     ).annotate(
         player_count=Count('members', filter=models.Q(members__is_active=True))
-    ).order_by('-created_at')[:10]  # Show latest 10 rooms
+    ).order_by('-created_at')[:5]  # Show latest 10 rooms
     
     context = {
         'active_rooms': active_rooms,
@@ -53,6 +53,20 @@ def login_view(request):
     return render(request, 'login.html', {
         'next':  next_url,
     })
+
+def list_rooms(request):
+    """
+    List active public rooms.
+    """
+    
+    active_rooms = Room.objects.filter(
+        is_active=True
+    , visibility_type='public'
+    ).annotate(
+        player_count=Count('members', filter=models.Q(members__is_active=True))
+    ).order_by('-created_at')
+    
+    return render(request,'game/list-rooms.html', {'active_rooms': active_rooms})
 
 
 
@@ -566,6 +580,8 @@ def kick_player_view(request, room_code):
         'success': True,
         'kicked_name': kick_member.display_name
     })
+
+
 
 
 # API Endpoints

@@ -5,6 +5,7 @@ from game.views import (
     create_room_view,
     join_room_view,
     join_room_direct_view,
+    list_rooms,
     lobby_view,
     game_view,
     leave_room_view,
@@ -26,6 +27,7 @@ urlpatterns = [
     # Main pages
     path('', home_view, name='home'),
     path('create/', create_room_view, name='create_room'),
+    path('list-rooms/', list_rooms, name='list_rooms'),
     path('join/', join_room_view, name='join_room'),
     path('join/<str:room_code>/', join_room_direct_view, name='join_room_direct'),
 
