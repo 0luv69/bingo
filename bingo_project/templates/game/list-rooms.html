@@ -1,26 +1,255 @@
 {% extends 'base.html' %}
-{% load static game_filters%}
+{% load static game_filters %}
 {% block title %}Bingo - Room List {% endblock %}
 
-{% block content %} 
-  <!-- Active Rooms List -->
-    {% if active_rooms %}
-    <div class="mt-8 md:mt-12 max-w-3xl mx-auto px-4 sm:px-0">
-        <div class="flex items-center gap-2 mb-6">
-                        <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-            <h3 class="text-xl font-bold text-slate-900">Active Public Rooms</h3>
-        </div>
+{% block extra_css %}
+<style>
+    /* Filter panel animations */
+    .filter-panel {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+        opacity: 0;
+    }
+    .filter-panel.expanded {
+        max-height: 500px;
+        opacity: 1;
+    }
+    
+    /* Active filter badge */
+    .filter-badge {
+        animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    /* Pagination hover effects */
+    .pagination-btn {
+        transition: all 0.15s ease;
+    }
+    .pagination-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Room card hover */
+    .roomView-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .roomView-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
 
-        <div class="space-y-3">
+{% block content %}
+<div class="min-h-screen bg-slate-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        
+        <!-- HEADER -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Public Rooms</h1>
+                    <p class="text-sm text-slate-500">
+                        <span id="total-count">{{ total_count }}</span> active room{{ total_count|pluralize }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <a href="{% url 'home' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Back to Home
+                </a>
+            </div>
+        </div>
+        
+        <!-- SEARCH & FILTER BAR -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6">
+            <!-- Search Row -->
+            <div class="p-4 flex flex-col sm:flex-row gap-3">
+                <!-- Search Input -->
+                <form id="search-form" method="GET" class="flex-1 flex gap-2">
+                    <!-- Preserve other filters -->
+                    <input type="hidden" name="sort" value="{{ current_filters.sort }}">
+                    <input type="hidden" name="per_page" value="{{ current_filters.per_page }}">
+                    <input type="hidden" name="has_space" value="{{ current_filters.has_space }}">
+                    <input type="hidden" name="board_size" value="{{ current_filters.board_size }}">
+                    
+                    <div class="relative flex-1">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input 
+                            type="text" 
+                            name="search" 
+                            value="{{ current_filters.search }}"
+                            placeholder="Search by room code or host name..."
+                            class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
+                        >
+                    </div>
+                    <button type="submit" class="px-4 py-2.5 bg-accent-500 text-white font-semibold rounded-xl hover:bg-accent-600 transition-colors text-sm">
+                        Search
+                    </button>
+                </form>
+                
+                <!-- Filter Toggle Button -->
+                <button 
+                    onclick="toggleFilters()"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+                    id="filter-toggle-btn"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filters
+                    {% if has_active_filters %}
+                    <span class="w-2 h-2 bg-accent-500 rounded-full"></span>
+                    {% endif %}
+                </button>
+            </div>
+            
+            <!-- Expandable Filter Panel -->
+            <div id="filter-panel" class="filter-panel border-t border-slate-100">
+                <form id="filter-form" method="GET" class="p-4">
+                    <!-- Preserve search -->
+                    <input type="hidden" name="search" value="{{ current_filters.search }}">
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <!-- Sort By -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Sort By</label>
+                            <select name="sort" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                {% for value, label in sort_options %}
+                                <option value="{{ value }}" {% if current_filters.sort == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Board Size -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Board Size</label>
+                            <select name="board_size" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                <option value="">Any Size</option>
+                                {% for size, label in board_size_choices %}
+                                <option value="{{ size }}" {% if current_filters.board_size == size|stringformat:"d" %}selected{% endif %}>{{ size }}×{{ size }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Has Space -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Availability</label>
+                            <select name="has_space" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                <option value="">All Rooms</option>
+                                <option value="true" {% if current_filters.has_space == 'true' %}selected{% endif %}>Has Space</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Min Players -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Min Players</label>
+                            <select name="min_players" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                <option value="">Any</option>
+                                <option value="1" {% if current_filters.min_players == '1' %}selected{% endif %}>1+</option>
+                                <option value="2" {% if current_filters.min_players == '2' %}selected{% endif %}>2+</option>
+                                <option value="3" {% if current_filters.min_players == '3' %}selected{% endif %}>3+</option>
+                                <option value="5" {% if current_filters.min_players == '5' %}selected{% endif %}>5+</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Per Page -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Per Page</label>
+                            <select name="per_page" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                {% for option in per_page_options %}
+                                <option value="{{ option }}" {% if current_filters.per_page == option %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Clear Filters -->
+                        <div class="flex items-end">
+                            {% if has_active_filters %}
+                            <a href="{% url 'list_rooms' %}" class="w-full px-3 py-2 text-center border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+                                Clear All
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Active Filters Display -->
+            {% if has_active_filters %}
+            <div class="px-4 pb-4 flex flex-wrap gap-2">
+                {% if current_filters.search %}
+                <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-xs font-medium">
+                    Search: "{{ current_filters.search }}"
+                    <a href="?{% query_string search='' %}" class="hover:text-accent-900">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </a>
+                </span>
+                {% endif %}
+                
+                {% if current_filters.has_space == 'true' %}
+                <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                    Has Space
+                    <a href="?{% query_string has_space='' %}" class="hover:text-emerald-900">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </a>
+                </span>
+                {% endif %}
+                
+                {% if current_filters.board_size %}
+                <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                    {{ current_filters.board_size }}×{{ current_filters.board_size }} Board
+                    <a href="?{% query_string board_size='' %}" class="hover:text-blue-900">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </a>
+                </span>
+                {% endif %}
+                
+                {% if current_filters.min_players %}
+                <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                    {{ current_filters.min_players }}+ Players
+                    <a href="?{% query_string min_players='' %}" class="hover:text-purple-900">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </a>
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- ROOM LIST -->
+        {% if active_rooms %}
+        <div class="space-y-3 mb-8">
             {% for room in active_rooms %}
-            <div class="roomView-card group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer">
+            <div class="roomView-card group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer">
                 <div class="p-4 sm:p-5">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div class="flex items-center gap-4">
                             <!-- Room Icon/Avatar -->
-                            <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-sm">
+                            <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-sm">
                                 <span class="text-white font-bold text-sm uppercase">{{ room.code|slice:":2" }}</span>
                             </div>
                             
@@ -28,42 +257,69 @@
                                 <div class="flex flex-wrap items-center gap-2 mb-1">
                                     <span class="font-mono font-bold text-lg text-slate-900 tracking-wider">{{ room.code }}</span>
                                     
-                                    <!-- Player Count -->
-                                    <div class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <!-- Player Count Badge -->
+                                    <div class="flex items-center gap-1.5 px-2.5 py-1 {% if room.player_count >= room.settings_max_players %}bg-red-50 border-red-100{% else %}bg-emerald-50 border-emerald-100{% endif %} rounded-full border">
+                                        <svg class="w-3.5 h-3.5 {% if room.player_count >= room.settings_max_players %}text-red-600{% else %}text-emerald-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                         </svg>
-                                        <span class="text-xs font-bold text-emerald-700">
+                                        <span class="text-xs font-bold {% if room.player_count >= room.settings_max_players %}text-red-700{% else %}text-emerald-700{% endif %}">
                                             {{ room.player_count }}/{{ room.settings_max_players }}
                                         </span>
                                     </div>
 
+                                    <!-- Board Size Badge -->
+                                    <div class="flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-full border border-slate-200">
+                                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                        </svg>
+                                        <span class="text-xs font-bold text-slate-600">{{ room.settings_board_size }}×{{ room.settings_board_size }}</span>
+                                    </div>
+
                                     <!-- Current Round Badge -->
                                     {% with current_round=room.get_current_round %}
+                                    {% if current_round %}
                                     <div class="flex items-center gap-1 px-2.5 py-1 bg-orange-50 rounded-full border border-orange-100">
-                                        <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                        </svg>
-                                        <span class="text-xs font-bold text-orange-700">Round {% if current_round %}{{ current_round.round_number }}{% else %}0{% endif %}</span>
+                                        <span class="text-xs font-bold text-orange-700">R{{ current_round.round_number }}</span>
                                     </div>
+                                    {% endif %}
                                     {% endwith %}
                                 </div>
                                 
-                                <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Created {{ room.created_at|timesince }} ago
+                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                        {% if room.get_host %}{{ room.get_host.display_name }}{% else %}Unknown{% endif %}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span class="pl-1">{{ room.created_at|timesince }} ago</span>
+                                    <span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-                            <a href="/join/{{ room.code }}/" class="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-2 bg-gradient-to-br from-accent-500 to-accent-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm text-sm">
-                                Join Now
+                        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                            {% if room.player_count < room.settings_max_players %}
+                            <a href="/join/{{ room.code }}/" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-br from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-bold rounded-xl transition-all shadow-sm text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                                </svg>
+                                Join
                             </a>
+                            {% else %}
+                            <span class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-500 font-bold rounded-xl text-sm cursor-not-allowed">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                Full
+                            </span>
+                            {% endif %}
 
-                            <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all expand-icon-btn">
+                            <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all expand-icon-btn" >
                                 <svg class="w-5 h-5 transition-transform duration-300 expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
@@ -72,14 +328,15 @@
                     </div>
                 </div>
 
-                    <div class="expandable-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-slate-50/50">
+                <!-- Expandable Content (same as your original, keeping it) -->
+                <div class="expandable-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-slate-50/50">
                     <div class="p-4 sm:p-5 border-t border-slate-100">
-                        <!-- Added host name at the top of the expanded area -->
+                        <!-- Host Info -->
                         <div class="mb-4 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
                                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                     </svg>
                                 </div>
                                 <div>
@@ -96,65 +353,61 @@
                             </div>
                         </div>
 
-                        <!-- Settings and Players -->
-                        <div class="space-y-4">
-                            <!-- Setting Details -->
-                            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-50">
-                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
-                                    </svg>
-                                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Setting Details</h4>
+                        <!-- Settings Grid -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm mb-4">
+                            <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-50">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Game Settings</h4>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Turn Time</p>
+                                    <p class="text-sm font-bold text-slate-900">{{ room.settings_turn_duration }}s</p>
                                 </div>
-                                <div class="flex flex-wrap items-center gap-y-4 gap-x-8">
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Turn Duration</p>
-                                        <p class="text-sm font-bold text-slate-900">{{ room.settings_turn_duration }}s</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Setup Time</p>
-                                        <p class="text-sm font-bold text-slate-900">{{ room.settings_setup_duration }}s</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Grace Period</p>
-                                        <p class="text-sm font-bold text-slate-900">{{ room.settings_grace_period }}s</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Scoreboard</p>
-                                        <p class="text-sm font-bold text-slate-900">{% if room.settings_show_score %}Visible{% else %}Hidden{% endif %}</p>
-                                    </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Setup Time</p>
+                                    <p class="text-sm font-bold text-slate-900">{{ room.settings_setup_duration }}s</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Grace Period</p>
+                                    <p class="text-sm font-bold text-slate-900">{{ room.settings_grace_period }}s</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Scoreboard</p>
+                                    <p class="text-sm font-bold text-slate-900">{% if room.settings_show_score %}Visible{% else %}Hidden{% endif %}</p>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Section 2: Players List -->
-                            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                                <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-50">
-                                    <div class="flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                        </svg>
-                                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Player Directory</h4>
-                                    </div>
-                                    <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                        {{ room.get_active_members_count }}/{{ room.settings_max_players }}
-                                    </span>
+                        <!-- Players List -->
+                        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-50">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Players</h4>
                                 </div>
-                                
-                                <div class="flex flex-wrap gap-2.5">
-                                    {% for member in room.get_active_members %}
-                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-white hover:shadow-sm transition-all duration-200">
-                                        <span class="w-2 h-2 rounded-full {% if member.connection_status == 'connected' %}bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]{% else %}bg-slate-300{% endif %}"></span>
-                                        <span class="text-xs font-bold text-slate-800">{{ member.display_name }}</span>
-                                        {% if member.role == 'host' %}
-                                        <span class="text-[9px] font-black bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md uppercase tracking-tighter">HOST</span>
-                                        {% endif %}
-                                    </div>
-                                    {% empty %}
-                                    <div class="w-full py-4 text-center">
-                                        <p class="text-xs text-slate-400 italic">No players have joined this session yet.</p>
-                                    </div>
-                                    {% endfor %}
+                                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                    {{ room.get_active_members_count }}/{{ room.settings_max_players }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex flex-wrap gap-2">
+                                {% for member in room.get_active_members %}
+                                <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <span class="w-2 h-2 rounded-full {% if member.connection_status == 'connected' %}bg-emerald-500{% else %}bg-slate-300{% endif %}"></span>
+                                    <span class="text-xs font-bold text-slate-800">{{ member.display_name }}</span>
+                                    {% if member.role == 'host' %}
+                                    <span class="text-[9px] font-black bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md uppercase">HOST</span>
+                                    {% endif %}
                                 </div>
+                                {% empty %}
+                                <p class="text-xs text-slate-400 italic py-2">No players yet</p>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -162,22 +415,195 @@
             </div>
             {% endfor %}
         </div>
-    </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="mt-16 max-w-lg mx-auto px-4">
-        <div class="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-sm">
-            <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                <svg class="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+        
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGINATION -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        {% if page_obj.has_other_pages %}
+        <nav class="flex items-center justify-center gap-1 mb-10">
+            <!-- Previous Button -->
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&{% query_params %}" 
+               class="pagination-btn inline-flex items-center gap-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                 </svg>
+                Prev
+            </a>
+            {% else %}
+            <span class="pagination-btn inline-flex items-center gap-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Prev
+            </span>
+            {% endif %}
+            
+            <!-- Page Numbers -->
+            <div class="hidden sm:flex items-center gap-1">
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <span class="pagination-btn w-10 h-10 flex items-center justify-center bg-accent-500 text-white rounded-lg text-sm font-bold">
+                        {{ num }}
+                    </span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}&{% query_params %}" 
+                       class="pagination-btn w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        {{ num }}
+                    </a>
+                    {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                    <a href="?page={{ num }}&{% query_params %}" 
+                       class="pagination-btn w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        {{ num }}
+                    </a>
+                    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                    <span class="px-2 text-slate-400">...</span>
+                    {% endif %}
+                {% endfor %}
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-2">No Active Rooms</h3>
-            <p class="text-slate-500 mb-8 leading-relaxed text-sm">There aren't any games happening right now. Why not start your own and invite friends?</p>
-            <button onclick="document.getElementById('create_name')?.focus()" class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 btn-primary text-white font-bold rounded-2xl transition-all shadow-lg active:scale-95">
-                Create New Room
-            </button>
+            
+            <!-- Mobile Page Indicator -->
+            <span class="sm:hidden px-4 py-2 text-sm text-slate-600">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            <!-- Next Button -->
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&{% query_params %}" 
+               class="pagination-btn inline-flex items-center gap-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Next
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+            {% else %}
+            <span class="pagination-btn inline-flex items-center gap-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+                Next
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </span>
+            {% endif %}
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- EMPTY STATE -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="max-w-lg mx-auto">
+            <div class="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-sm">
+                <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                    {% if has_active_filters %}
+                    <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    {% else %}
+                    <svg class="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0Z"/>
+                    </svg>
+                    {% endif %}
+                </div>
+                
+                {% if has_active_filters %}
+                <h3 class="text-xl font-bold text-slate-900 mb-2">No Matching Rooms</h3>
+                <p class="text-slate-500 mb-6 leading-relaxed text-sm">No rooms match your current filters. Try adjusting your search criteria.</p>
+                <a href="{% url 'list_rooms' %}" class="inline-flex items-center justify-center px-6 py-3 btn-secondary text-slate-700 font-bold rounded-xl transition-all">
+                    Clear Filters
+                </a>
+                {% else %}
+                <h3 class="text-xl font-bold text-slate-900 mb-2">No Active Rooms</h3>
+                <p class="text-slate-500 mb-6 leading-relaxed text-sm">There aren't any games happening right now. Why not start your own?</p>
+                <a href="{% url 'home' %}" class="inline-flex items-center justify-center px-8 py-3 btn-primary text-white font-bold rounded-xl transition-all shadow-lg">
+                    Create New Room
+                </a>
+                {% endif %}
+            </div>
         </div>
+        {% endif %}
+        
     </div>
-    {% endif %}
-{% endblock%}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ═══════════════════════════════════════════════════════════════
+    // FILTER PANEL TOGGLE
+    // ═══════════════════════════════════════════════════════════════
+    function toggleFilters() {
+        const panel = document.getElementById('filter-panel');
+        const btn = document.getElementById('filter-toggle-btn');
+        
+        panel.classList.toggle('expanded');
+        
+        // Update button state
+        if (panel.classList.contains('expanded')) {
+            btn.classList.add('bg-slate-100');
+        } else {
+            btn.classList.remove('bg-slate-100');
+        }
+    }
+    
+    // Auto-expand if filters are active
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if has_active_filters %}
+        document.getElementById('filter-panel').classList.add('expanded');
+        {% endif %}
+    });
+    
+    // ═══════════════════════════════════════════════════════════════
+    // EXPANDABLE ROOM CARDS
+    // ═══════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomCards = document.querySelectorAll('.roomView-card');
+        
+        roomCards.forEach(card => {
+            // Click anywhere on card (except links/buttons)
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('a') || e.target.closest('button:not(.expand-icon-btn)')) return;
+                
+                const content = this.querySelector('.expandable-content');
+                const icon = this.querySelector('.expand-icon');
+                const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+                
+                // Close all other cards
+                document.querySelectorAll('.roomView-card').forEach(otherCard => {
+                    if (otherCard !== this) {
+                        const otherContent = otherCard.querySelector('.expandable-content');
+                        const otherIcon = otherCard.querySelector('.expand-icon');
+                        otherContent.style.maxHeight = '0px';
+                        otherIcon.style.transform = 'rotate(0deg)';
+                    }
+                });
+                
+                // Toggle current card
+                if (!isExpanded) {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    content.style.maxHeight = '0px';
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+    });
+    
+    // ══════════════════════════���════════════════════════════════════
+    // KEYBOARD SHORTCUTS
+    // ═══════════════════════════════════════════════════════════════
+    document.addEventListener('keydown', function(e) {
+        // Press '/' to focus search
+        if (e.key === '/' && !e.target.matches('input, textarea')) {
+            e.preventDefault();
+            document.querySelector('input[name="search"]').focus();
+        }
+        
+        // Press 'f' to toggle filters
+        if (e.key === 'f' && !e.target.matches('input, textarea')) {
+            e.preventDefault();
+            toggleFilters();
+        }
+    });
+</script>
+{% endblock %}

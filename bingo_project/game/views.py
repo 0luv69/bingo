@@ -9,6 +9,8 @@ from allauth.socialaccount.models import SocialLogin, SocialAccount
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.db import models
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Count, Q
 
 User = get_user_model()
 LENGTH_NAME = 30
@@ -54,19 +56,151 @@ def login_view(request):
         'next':  next_url,
     })
 
+# def list_rooms(request):
+#     """
+#     List active public rooms.
+#     """
+    
+#     active_rooms = Room.objects.filter(
+#         is_active=True
+#     , visibility_type='public'
+#     ).annotate(
+#         player_count=Count('members', filter=models.Q(members__is_active=True))
+#     ).order_by('-created_at')
+    
+#     return render(request,'game/list-rooms.html', {'active_rooms': active_rooms})
+
+
 def list_rooms(request):
     """
-    List active public rooms.
+    List active public rooms with filtering, sorting, and pagination.
     """
     
-    active_rooms = Room.objects.filter(
-        is_active=True
-    , visibility_type='public'
+    # Base queryset
+    rooms = Room.objects.filter(
+        is_active=True,
+        visibility_type='public'
     ).annotate(
-        player_count=Count('members', filter=models.Q(members__is_active=True))
-    ).order_by('-created_at')
+        player_count=Count('members', filter=Q(members__is_active=True))
+    )
     
-    return render(request,'game/list-rooms.html', {'active_rooms': active_rooms})
+    # ═══════════════════════════════════════════════════════════════
+    # SEARCH
+    # ═══════════════════════════════════════════════════════════════
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        rooms = rooms.filter(
+            Q(code__icontains=search_query) |
+            Q(members__display_name__icontains=search_query, members__role='host', members__is_active=True)
+        ).distinct()
+    
+    # ═══════════════════════════════════════════════════════════════
+    # FILTERS
+    # ═══════════════════════════════════════════════════════════════
+    
+    # Filter: Has available space
+    has_space = request.GET.get('has_space', '')
+    if has_space == 'true':
+        rooms = rooms.filter(player_count__lt=models.F('settings_max_players'))
+    
+    # Filter: Board size
+    board_size = request.GET.get('board_size', '')
+    if board_size and board_size.isdigit():
+        rooms = rooms.filter(settings_board_size=int(board_size))
+    
+    # Filter: Minimum players (room has activity)
+    min_players = request.GET.get('min_players', '')
+    if min_players and min_players.isdigit():
+        rooms = rooms.filter(player_count__gte=int(min_players))
+    
+    # Filter: Maximum players (not too crowded)
+    max_players = request.GET.get('max_players', '')
+    if max_players and max_players.isdigit():
+        rooms = rooms.filter(player_count__lte=int(max_players))
+    
+    # Filter: Game status (waiting, playing, etc.)
+    status = request.GET.get('status', '')
+    if status:
+        # This requires a subquery or annotation for current round status
+        rooms = rooms.filter(rounds__status=status).distinct()
+    
+    # ═══════════════════════════════════════════════════════════════
+    # SORTING
+    # ═══════════════════════════════════════════════════════════════
+    sort_by = request.GET.get('sort', 'newest')
+    
+    sort_options = {
+        'newest': '-created_at',
+        'oldest': 'created_at',
+        'most_players': '-player_count',
+        'least_players': 'player_count',
+        'board_size_asc': 'settings_board_size',
+        'board_size_desc': '-settings_board_size',
+    }
+    
+    order_field = sort_options.get(sort_by, '-created_at')
+    rooms = rooms.order_by(order_field)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # PAGINATION
+    # ═══════════════════════════════════════════════════════════════
+    total_count = rooms.count()
+    per_page = int(request.GET.get('per_page', 12))
+    per_page = min(max(per_page, 6), 30)  # Clamp between 6 and 30
+    
+    paginator = Paginator(rooms, per_page)
+    page = request.GET.get('page', 1)
+    
+    try:
+        active_rooms = paginator.page(page)
+    except PageNotAnInteger:
+        active_rooms = paginator.page(1)
+    except EmptyPage:
+        active_rooms = paginator.page(paginator.num_pages)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # CONTEXT
+    # ═══════════════════════════════════════════════════════════════
+    
+    # Build current filters dict for template
+    current_filters = {
+        'search': search_query,
+        'has_space': has_space,
+        'board_size': board_size,
+        'min_players': min_players,
+        'max_players': max_players,
+        'status': status,
+        'sort': sort_by,
+        'per_page': per_page,
+    }
+    
+    # Check if any filters are active
+    has_active_filters = any([
+        search_query, has_space, board_size, min_players, max_players, status
+    ])
+    
+    context = {
+        'active_rooms': active_rooms,
+        'total_count': total_count,
+        'current_filters': current_filters,
+        'has_active_filters': has_active_filters,
+        'page_obj': active_rooms,  # For pagination template
+        'paginator': paginator,
+        
+        # For filter dropdowns
+        'board_size_choices': Room.BOARD_SIZE_CHOICES,
+        'sort_options': [
+            ('newest', 'Newest First'),
+            ('oldest', 'Oldest First'),
+            ('most_players', 'Most Players'),
+            ('least_players', 'Least Players'),
+            ('board_size_desc', 'Largest Board'),
+            ('board_size_asc', 'Smallest Board'),
+        ],
+        'per_page_options': [6, 12, 18, 24, 30],
+    }
+    
+    return render(request, 'game/list-rooms.html', context)
 
 
 
