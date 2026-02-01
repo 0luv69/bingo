@@ -157,6 +157,18 @@ def list_rooms(request):
         active_rooms = paginator.page(1)
     except EmptyPage:
         active_rooms = paginator.page(paginator.num_pages)
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # AUTO-REFRESH SETTING
+    # ═══════════════════════════════════════════════════════════════
+    per_refresh = request.GET.get('per_refresh', '0')  # Default: off (0)
+    try:
+        per_refresh = int(per_refresh)
+        if per_refresh != 0:
+            per_refresh = min(max(per_refresh, 5), 120)
+    except (ValueError, TypeError):
+        per_refresh = 0  # Default to 0 seconds if invalid
     
     # ═══════════════════════════════════════════════════════════════
     # CONTEXT
@@ -172,6 +184,7 @@ def list_rooms(request):
         'status': status,
         'sort': sort_by,
         'per_page': per_page,
+        'per_refresh': per_refresh,
     }
     
     # Check if any filters are active
@@ -198,6 +211,14 @@ def list_rooms(request):
             ('board_size_asc', 'Smallest Board'),
         ],
         'per_page_options': [6, 12, 18, 24, 30],
+        'per_refresh_options': [
+            (0, 'Off'),
+            (10, '10s'),
+            (15, '15s'),
+            (30, '30s'),
+            (45, '45s'),
+            (60, '60s'),
+        ],
     }
     
     return render(request, 'game/list-rooms.html', context)

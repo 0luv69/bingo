@@ -23,11 +23,10 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
 
 
-    
     # Main pages
     path('', home_view, name='home'),
     path('create/', create_room_view, name='create_room'),
-    path('list-rooms/', list_rooms, name='list_rooms'),
+    path('rooms/', list_rooms, name='list_rooms'),
     path('join/', join_room_view, name='join_room'),
     path('join/<str:room_code>/', join_room_direct_view, name='join_room_direct'),
 

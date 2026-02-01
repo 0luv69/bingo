@@ -45,6 +45,21 @@
 {% endblock %}
 
 {% block content %}
+
+<!-- Auto-Refresh Progress Bar (only shown when refresh is enabled) -->
+{% if current_filters.per_refresh > 0 %}
+<div class="fixed top-0 left-0 right-0 z-50 h-1 bg-black/10">
+    <div id="refresh-progress-bar" 
+         class="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+         style="width: 100%">
+    </div>
+</div>
+
+
+{% endif %}
+
+
+
 <div class="min-h-screen bg-slate-50">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         
@@ -75,7 +90,7 @@
         </div>
         
         <!-- SEARCH & FILTER BAR -->
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6">
+        <div class="bg-white border relative border-slate-200 rounded-2xl shadow-sm mb-6">
             <!-- Search Row -->
             <div class="p-4 flex flex-col sm:flex-row gap-3">
                 <!-- Search Input -->
@@ -177,6 +192,23 @@
                                 {% endfor %}
                             </select>
                         </div>
+
+                        <!-- Auto Refresh -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Auto Refresh
+                                </span>
+                            </label>
+                            <select name="per_refresh" onchange="this.form.submit()" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500">
+                                {% for value, label in per_refresh_options %}
+                                <option value="{{ value }}" {% if current_filters.per_refresh == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         
                         <!-- Clear Filters -->
                         <div class="flex items-end">
@@ -186,6 +218,28 @@
                             </a>
                             {% endif %}
                         </div>
+                    </div>
+
+                      <!-- Keyboard shortcuts hint -->
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap gap-4 text-xs text-slate-400">
+                        <span class="flex items-center gap-1">
+                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">/</kbd>
+                            Search
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">F</kbd>
+                            Toggle Filters
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">R</kbd>
+                            Refresh
+                        </span>
+                        {% if current_filters.per_refresh > 0 %}
+                        <span class="flex items-center gap-1">
+                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">Space</kbd>
+                            Pause/Resume
+                        </span>
+                        {% endif %}
                     </div>
                 </form>
             </div>
@@ -238,6 +292,32 @@
                 {% endif %}
             </div>
             {% endif %}
+
+            <!-- Refresh Indicator Badge -->
+            <div id="refresh-indicator" 
+                class="absolute -bottom-7 -right-3 z-40 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-lg text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl">
+                <div id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-slate-600">Refresh in</span>
+                <span id="refresh-countdown" class="font-mono text-sm text-emerald-600 min-w-[28px] text-center">{{ current_filters.per_refresh }}</span>
+                <div class="flex items-center gap-1 ml-1 border-l border-slate-200 pl-2">
+                    <button onclick="toggleRefreshPause()" id="pause-btn" title="Pause auto-refresh"
+                            class="p-1 rounded-md hover:bg-slate-100 transition-colors">
+                        <svg id="pause-icon" class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <svg id="play-icon" class="w-4 h-4 text-slate-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <button onclick="refreshNow()" title="Refresh now"
+                            class="p-1 rounded-md hover:bg-slate-100 transition-colors">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- ROOM LIST -->
@@ -528,6 +608,192 @@
 
 {% block scripts %}
 <script>
+// ═════════════════════════════════════════════════��═════════════
+    // AUTO-REFRESH SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+    
+    const REFRESH_INTERVAL = {{ current_filters.per_refresh|default:0 }};
+    let refreshTimeRemaining = REFRESH_INTERVAL;
+    let progressInterval = null;
+    let isPaused = false;
+    let isUserInteracting = false;
+    
+    function initAutoRefresh() {
+        if (REFRESH_INTERVAL <= 0) return;
+        
+        refreshTimeRemaining = REFRESH_INTERVAL;
+        updateRefreshDisplay();
+        startRefreshTimer();
+        
+        // Pause when user is interacting with expandable cards
+        document.querySelectorAll('.roomView-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                isUserInteracting = true;
+                pauseRefreshTimer(true);
+            });
+            card.addEventListener('mouseleave', () => {
+                isUserInteracting = false;
+                if (!isPaused) resumeRefreshTimer();
+            });
+        });
+        
+        // Pause when filter panel is open
+        const filterPanel = document.getElementById('filter-panel');
+        if (filterPanel) {
+            const observer = new MutationObserver(() => {
+                if (filterPanel.classList.contains('expanded')) {
+                    isUserInteracting = true;
+                    pauseRefreshTimer(true);
+                } else {
+                    isUserInteracting = false;
+                    if (!isPaused) resumeRefreshTimer();
+                }
+            });
+            observer.observe(filterPanel, { attributes: true, attributeFilter: ['class'] });
+        }
+        
+        // Pause when tab is not visible
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                pauseRefreshTimer(true);
+            } else if (!isPaused && !isUserInteracting) {
+                resumeRefreshTimer();
+            }
+        });
+        
+        // Pause when user is typing in search
+        const searchInput = document.querySelector('input[name="search"]');
+        if (searchInput) {
+            searchInput.addEventListener('focus', () => {
+                isUserInteracting = true;
+                pauseRefreshTimer(true);
+            });
+            searchInput.addEventListener('blur', () => {
+                isUserInteracting = false;
+                if (!isPaused) resumeRefreshTimer();
+            });
+        }
+    }
+    
+    function startRefreshTimer() {
+        if (progressInterval) clearInterval(progressInterval);
+        
+        progressInterval = setInterval(() => {
+            refreshTimeRemaining -= 0.1;
+            updateRefreshDisplay();
+            
+            if (refreshTimeRemaining <= 0) {
+                refreshNow();
+            }
+        }, 100);
+    }
+    
+    function pauseRefreshTimer(isAutoPause = false) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        
+        const indicator = document.getElementById('refresh-indicator');
+        const progressBar = document.getElementById('refresh-progress-bar');
+        const statusDot = document.getElementById('status-dot');
+        const countdown = document.getElementById('refresh-countdown');
+        const pauseIcon = document.getElementById('pause-icon');
+        const playIcon = document.getElementById('play-icon');
+        
+        // Change colors to amber (paused state)
+        if (indicator) indicator.classList.add('paused');
+        if (progressBar) {
+            progressBar.classList.remove('from-emerald-500', 'to-emerald-600', 'shadow-[0_0_10px_rgba(16,185,129,0.5)]');
+            progressBar.classList.add('from-amber-500', 'to-amber-600', 'shadow-[0_0_10px_rgba(245,158,11,0.5)]');
+        }
+        if (statusDot) {
+            statusDot.classList.remove('bg-emerald-500', 'animate-pulse');
+            statusDot.classList.add('bg-amber-500');
+        }
+        if (countdown) {
+            countdown.classList.remove('text-emerald-600');
+            countdown.classList.add('text-amber-600');
+        }
+        
+        if (!isAutoPause) {
+            if (pauseIcon) pauseIcon.classList.add('hidden');
+            if (playIcon) playIcon.classList.remove('hidden');
+        }
+    }
+    
+    function resumeRefreshTimer() {
+        const indicator = document.getElementById('refresh-indicator');
+        const progressBar = document.getElementById('refresh-progress-bar');
+        const statusDot = document.getElementById('status-dot');
+        const countdown = document.getElementById('refresh-countdown');
+        const pauseIcon = document.getElementById('pause-icon');
+        const playIcon = document.getElementById('play-icon');
+        
+        // Change colors back to emerald (active state)
+        if (indicator) indicator.classList.remove('paused');
+        if (progressBar) {
+            progressBar.classList.remove('from-amber-500', 'to-amber-600', 'shadow-[0_0_10px_rgba(245,158,11,0.5)]');
+            progressBar.classList.add('from-emerald-500', 'to-emerald-600', 'shadow-[0_0_10px_rgba(16,185,129,0.5)]');
+        }
+        if (statusDot) {
+            statusDot.classList.remove('bg-amber-500');
+            statusDot.classList.add('bg-emerald-500', 'animate-pulse');
+        }
+        if (countdown) {
+            countdown.classList.remove('text-amber-600');
+            countdown.classList.add('text-emerald-600');
+        }
+        if (pauseIcon) pauseIcon.classList.remove('hidden');
+        if (playIcon) playIcon.classList.add('hidden');
+        
+        startRefreshTimer();
+    }
+    
+    function toggleRefreshPause() {
+        isPaused = !isPaused;
+        
+        if (isPaused) {
+            pauseRefreshTimer(false);
+        } else {
+            resumeRefreshTimer();
+        }
+    }
+    
+    function updateRefreshDisplay() {
+        const countdown = document.getElementById('refresh-countdown');
+        const progressBar = document.getElementById('refresh-progress-bar');
+        
+        if (countdown) {
+            countdown.textContent = Math.max(0, Math.ceil(refreshTimeRemaining));
+        }
+        
+        if (progressBar) {
+            const percentage = (refreshTimeRemaining / REFRESH_INTERVAL) * 100;
+            progressBar.style.width = `${Math.max(0, percentage)}%`;
+        }
+    }
+    
+    function refreshNow() {
+        if (progressInterval) clearInterval(progressInterval);
+        
+        const progressBar = document.getElementById('refresh-progress-bar');
+        const countdown = document.getElementById('refresh-countdown');
+        
+        if (progressBar) {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('from-emerald-500', 'to-emerald-600', 'from-amber-500', 'to-amber-600');
+            progressBar.classList.add('from-blue-500', 'to-blue-600');
+        }
+        
+        if (countdown) {
+            countdown.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+        }
+        
+        location.reload();
+    }
+
+
     // ═══════════════════════════════════════════════════════════════
     // FILTER PANEL TOGGLE
     // ═══════════════════════════════════════════════════════════════
