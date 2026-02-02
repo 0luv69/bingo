@@ -831,6 +831,10 @@ select {
   bottom: -0.25rem;
 }
 
+.-bottom-8 {
+  bottom: -2rem;
+}
+
 .-left-1 {
   left: -0.25rem;
 }
@@ -849,6 +853,10 @@ select {
 
 .-right-2 {
   right: -0.5rem;
+}
+
+.-right-3 {
+  right: -0.75rem;
 }
 
 .-top-1 {
@@ -951,10 +959,6 @@ select {
   right: 5rem;
 }
 
-.right-3 {
-  right: 0.75rem;
-}
-
 .right-4 {
   right: 1rem;
 }
@@ -983,10 +987,6 @@ select {
   top: 6rem;
 }
 
-.top-3 {
-  top: 0.75rem;
-}
-
 .top-40 {
   top: 10rem;
 }
@@ -999,32 +999,16 @@ select {
   top: 2px;
 }
 
-.-right-3 {
-  right: -0.75rem;
+.-bottom-5 {
+  bottom: -1.25rem;
 }
 
-.-top-6 {
-  top: -1.5rem;
+.-bottom-9 {
+  bottom: -2.25rem;
 }
 
-.-top-10 {
-  top: -2.5rem;
-}
-
-.-top-8 {
-  top: -2rem;
-}
-
-.-bottom-8 {
-  bottom: -2rem;
-}
-
-.-bottom-6 {
-  bottom: -1.5rem;
-}
-
-.-bottom-7 {
-  bottom: -1.75rem;
+.-bottom-4 {
+  bottom: -1rem;
 }
 
 .z-0 {
@@ -1400,6 +1384,18 @@ select {
   min-width: 28px;
 }
 
+.min-w-\[24px\] {
+  min-width: 24px;
+}
+
+.min-w-\[20px\] {
+  min-width: 20px;
+}
+
+.min-w-\[15px\] {
+  min-width: 15px;
+}
+
 .max-w-2xl {
   max-width: 42rem;
 }
@@ -1613,6 +1609,10 @@ select {
 
 .gap-6 {
   gap: 1.5rem;
+}
+
+.gap-0 {
+  gap: 0px;
 }
 
 .gap-x-8 {
@@ -2185,6 +2185,12 @@ select {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.from-blue-500 {
+  --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
 .from-emerald-500 {
   --tw-gradient-from: #10b981 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(16 185 129 / 0) var(--tw-gradient-to-position);
@@ -2245,12 +2251,6 @@ select {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
-.from-blue-500 {
-  --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
 .via-emerald-500 {
   --tw-gradient-to: rgb(16 185 129 / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), #10b981 var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -2258,6 +2258,14 @@ select {
 
 .to-accent-600 {
   --tw-gradient-to: #0284c7 var(--tw-gradient-to-position);
+}
+
+.to-amber-600 {
+  --tw-gradient-to: #d97706 var(--tw-gradient-to-position);
+}
+
+.to-blue-600 {
+  --tw-gradient-to: #2563eb var(--tw-gradient-to-position);
 }
 
 .to-emerald-600 {
@@ -2298,14 +2306,6 @@ select {
 
 .to-white {
   --tw-gradient-to: #fff var(--tw-gradient-to-position);
-}
-
-.to-amber-600 {
-  --tw-gradient-to: #d97706 var(--tw-gradient-to-position);
-}
-
-.to-blue-600 {
-  --tw-gradient-to: #2563eb var(--tw-gradient-to-position);
 }
 
 .bg-clip-text {
@@ -2357,6 +2357,14 @@ select {
 
 .p-8 {
   padding: 2rem;
+}
+
+.p-\[2px\] {
+  padding: 2px;
+}
+
+.p-\[1px\] {
+  padding: 1px;
 }
 
 .px-1 {
@@ -2913,6 +2921,12 @@ select {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-\[0_0_10px_rgba\(245\2c 158\2c 11\2c 0\.5\)\] {
+  --tw-shadow: 0 0 10px rgba(245,158,11,0.5);
+  --tw-shadow-colored: 0 0 10px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .shadow-\[0_0_15px_rgba\(16\2c 185\2c 129\2c 0\.5\)\] {
   --tw-shadow: 0 0 15px rgba(16,185,129,0.5);
   --tw-shadow-colored: 0 0 15px var(--tw-shadow-color);
@@ -2946,12 +2960,6 @@ select {
 .shadow-sm {
   --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-
-.shadow-\[0_0_10px_rgba\(245\2c 158\2c 11\2c 0\.5\)\] {
-  --tw-shadow: 0 0 10px rgba(245,158,11,0.5);
-  --tw-shadow-colored: 0 0 10px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
