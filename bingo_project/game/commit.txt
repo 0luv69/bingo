@@ -1,6 +1,2 @@
-dublicate line and extra space after . removed, in game Reconnection Loop solved, Called numbers count ui, kick allow to co-host, generate Board size validation, Exception handling
- 
-
-
-
- ..
+1, continue to fix from claude 
+2, in home page check if user has created the room if so then give a side popup
