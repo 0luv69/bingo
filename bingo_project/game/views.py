@@ -16,6 +16,8 @@ User = get_user_model()
 LENGTH_NAME = 30
 
 
+
+
 def home_view(request):
     """
     Landing page - Create or Join a room.
@@ -25,7 +27,9 @@ def home_view(request):
     , visibility_type='public'
     ).annotate(
         player_count=Count('members', filter=models.Q(members__is_active=True))
-    ).order_by('-created_at')[:5]  # Show latest 10 rooms
+    ).order_by('-created_at')[:5]  # Show latest 5 rooms
+
+
     
     context = {
         'active_rooms': active_rooms,
@@ -162,7 +166,7 @@ def list_rooms(request):
     # ═══════════════════════════════════════════════════════════════
     # AUTO-REFRESH SETTING
     # ═══════════════════════════════════════════════════════════════
-    per_refresh = request.GET.get('per_refresh', '0')  # Default: off (0)
+    per_refresh = request.GET.get('per_refresh', '15')  # Default: off (0)
     try:
         per_refresh = int(per_refresh)
         if per_refresh != 0:

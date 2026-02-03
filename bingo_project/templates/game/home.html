@@ -490,7 +490,7 @@
                                         </div>
                                         <div>
                                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Host</p>
-                                            <p class="text-sm font-bold text-slate-900">{% if room.get_host %}{{ room.get_host.display_name }}{% else %}Unknown{% endif %}</p>
+                                            <p class="text-sm font-bold text-slate-900">{{ room.get_host.display_name|default:"Unknown" }}  <span class="text-[10px] text-slate-500">({{ room.get_host.user.username|default:"Guest" }})</span></p>
                                         </div>
                                     </div>
                                     <div class="text-right">

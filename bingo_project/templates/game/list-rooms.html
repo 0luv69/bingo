@@ -46,62 +46,18 @@
 
 {% block content %}
 
-<!-- Active Filters Display -->
-<div class="px-4 pb-4 flex flex-wrap gap-2">
-    <!-- Auto-Refresh Progress Bar (only shown when refresh is enabled) -->
-    {% if current_filters.per_refresh > 0 %}
-    <div class="fixed top-0 left-0 right-0 z-50 h-1 bg-black/10">
-        <div id="refresh-progress-bar" 
-            class="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-            style="width: 100%">
-        </div>
-    </div>
-    {% endif %}
 
-    {% if current_filters.search %}
-    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-xs font-medium">
-        Search: "{{ current_filters.search }}"
-        <a href="?{% query_string search='' %}" class="hover:text-accent-900">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </a>
-    </span>
-    {% endif %}
-    
-    {% if current_filters.has_space == 'true' %}
-    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
-        Has Space
-        <a href="?{% query_string has_space='' %}" class="hover:text-emerald-900">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </a>
-    </span>
-    {% endif %}
-    
-    {% if current_filters.board_size %}
-    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-        {{ current_filters.board_size }}×{{ current_filters.board_size }} Board
-        <a href="?{% query_string board_size='' %}" class="hover:text-blue-900">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </a>
-    </span>
-    {% endif %}
-    
-    {% if current_filters.min_players %}
-    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
-        {{ current_filters.min_players }}+ Players
-        <a href="?{% query_string min_players='' %}" class="hover:text-purple-900">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </a>
-    </span>
-    {% endif %}
+<!-- Auto-Refresh Progress Bar (only shown when refresh is enabled) -->
+{% if current_filters.per_refresh > 0 %}
+<div class="fixed top-0 left-0 right-0 z-50 h-1 bg-black/10">
+    <div id="refresh-progress-bar" 
+        class="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+        style="width: 100%">
+    </div>
 </div>
+{% endif %}
+
+
 
 
 
@@ -275,28 +231,74 @@
                             <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">F</kbd>
                             Toggle Filters
                         </span>
-                        <span class="flex items-center gap-1">
-                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">R</kbd>
-                            Refresh
-                        </span>
+                        
                         {% if current_filters.per_refresh > 0 %}
                         <span class="flex items-center gap-1">
-                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">Space</kbd>
+                            <kbd class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">ALT + Space</kbd>
                             Pause/Resume
                         </span>
                         {% endif %}
                     </div>
+
                 </form>
+                <!-- Active Filters Display -->
+                <div class="px-4 pb-4 flex flex-wrap gap-2">
+                    {% if current_filters.search %}
+                    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-xs font-medium">
+                        Search: "{{ current_filters.search }}"
+                        <a href="?{% query_string search='' %}" class="hover:text-accent-900">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </a>
+                    </span>
+                    {% endif %}
+                    
+                    {% if current_filters.has_space == 'true' %}
+                    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                        Has Space
+                        <a href="?{% query_string has_space='' %}" class="hover:text-emerald-900">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </a>
+                    </span>
+                    {% endif %}
+                    
+                    {% if current_filters.board_size %}
+                    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                        {{ current_filters.board_size }}×{{ current_filters.board_size }} Board
+                        <a href="?{% query_string board_size='' %}" class="hover:text-blue-900">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </a>
+                    </span>
+                    {% endif %}
+                    
+                    {% if current_filters.min_players %}
+                    <span class="filter-badge inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                        {{ current_filters.min_players }}+ Players
+                        <a href="?{% query_string min_players='' %}" class="hover:text-purple-900">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </a>
+                    </span>
+                    {% endif %}
+                </div>
             </div>
             
             <!-- Refresh Indicator Badge -->
             <div id="refresh-indicator" 
                 class="absolute -bottom-4 -right-3 z-40 flex items-center gap-2 px-3 p-[1px] bg-white border border-slate-200 rounded-xl shadow-lg text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl">
-                <div id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span class="text-slate-600">Refresh in</span>
-                <span id="refresh-countdown" class="font-mono text-sm text-emerald-600 min-w-[20px] text-center">{{ current_filters.per_refresh }}</span>
-                <div class="flex items-center gap-1 ml-1 border-l border-slate-200 pl-1">
-                    <button onclick="toggleRefreshPause()" id="pause-btn" title="Pause auto-refresh"
+                <div class="flex items-center gap-1 hide-on-zero">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-slate-600">Refresh in</span>
+                    <span id="refresh-countdown" class="font-mono text-sm text-emerald-600 min-w-[20px] text-center">{{ current_filters.per_refresh }}</span>
+                </div>
+                <div class="flex items-center gap-1 pause-refresh-btns">
+                    <button onclick="toggleRefreshPause()" class="hide-on-zero" id="pause-btn" title="Pause auto-refresh"
                             class="p-1 rounded-md hover:bg-slate-100 transition-colors">
                         <svg id="pause-icon" class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -419,7 +421,7 @@
                                 </div>
                                 <div>
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Host</p>
-                                    <p class="text-sm font-bold text-slate-900">{% if room.get_host %}{{ room.get_host.display_name }}{% else %}Unknown{% endif %}</p>
+                                    <p class="text-sm font-bold text-slate-900">{{ room.get_host.display_name|default:"Unknown" }}  <span class="text-[10px] text-slate-500">({{ room.get_host.user.username|default:"Guest" }})</span></p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -606,7 +608,7 @@
 
 {% block scripts %}
 <script>
-// ═════════════════════════════════════════════════��═════════════
+    // ═════════════════════════════════════════════════��═════════════
     // AUTO-REFRESH SYSTEM
     // ═══════════════════════════════════════════════════════════════
     
@@ -617,12 +619,22 @@
     let isUserInteracting = false;
     
     function initAutoRefresh() {
-        if (REFRESH_INTERVAL <= 0) return;
+        // hide hide-on-zero elements if interval is 0
+        if(refreshTimeRemaining <= 0) {
+            document.querySelectorAll('.hide-on-zero').forEach(el => el.classList.add('hidden'));
+            document.querySelector('.pause-refresh-btns').classList.remove('border-slate-200', 'pl-1', 'ml-1', 'border-l')
+            return;
+        } else {
+            document.querySelectorAll('.hide-on-zero').forEach(el => el.classList.remove('hidden'));
+            document.querySelector('.pause-refresh-btns').classList.add('border-slate-200', 'pl-1', 'ml-1', 'border-l')
+        }
+        
         
         refreshTimeRemaining = REFRESH_INTERVAL;
         updateRefreshDisplay();
         startRefreshTimer();
-        
+
+    
         // Pause when user is interacting with expandable cards
         document.querySelectorAll('.roomView-card').forEach(card => {
             card.addEventListener('mouseenter', () => {
@@ -792,6 +804,11 @@
     }
 
 
+    document.addEventListener('DOMContentLoaded', function() {
+        initAutoRefresh();
+    });
+
+
     // ═══════════════════════════════════════════════════════════════
     // FILTER PANEL TOGGLE
     // ═══════════════════════════════════════════════════════════════
@@ -830,6 +847,8 @@
                 const content = this.querySelector('.expandable-content');
                 const icon = this.querySelector('.expand-icon');
                 const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+
+                                
                 
                 // Close all other cards
                 document.querySelectorAll('.roomView-card').forEach(otherCard => {
