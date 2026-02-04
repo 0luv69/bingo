@@ -224,6 +224,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             }
         )
 
+
+
+
+        
+
     async def disconnect(self, close_code):
 
         # Removing if member_id is not set for this consumer
@@ -371,8 +376,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 await self.start_turn_timer(delay, member_id, is_bot_call=True)
 
         elif current_round and current_round.status == 'setup':
-            # SETUP PHASE: Bot marks player as ready (already handled by quick timer)
-            await self.schedule_bot_ready(member_id)
+            # SETUP PHASE: Do nothing - setup timer will auto-ready everyone when it ends
+            pass
         else:
             # LOBBY or SETUP PHASE: Start vote kick
             await self.initiate_vote_kick(member_id)
@@ -651,11 +656,6 @@ class GameConsumer(AsyncWebsocketConsumer):
                 await self.start_turn_timer(delay, next_player_data['member_id'], is_bot_call=True)
             else:
                 await self.start_turn_timer(room.settings_turn_duration, next_player_data['member_id'])
-
-
-    async def schedule_bot_ready(self, member_id):
-        """Schedule bot to mark player as ready during setup phase."""
-
         
 
     # ════════════════════════════════════════════════════════════
