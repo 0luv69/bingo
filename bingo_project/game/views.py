@@ -7,7 +7,6 @@ from .utils import get_room_member, get_or_create_round_player, get_or_create_ro
 from django.contrib.auth import login
 from allauth.socialaccount.models import SocialLogin, SocialAccount
 from django.contrib.auth import get_user_model
-from django.db.models import Count
 from django.db import models
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Count, Q
@@ -26,7 +25,7 @@ def home_view(request):
         is_active=True
     , visibility_type='public'
     ).annotate(
-        player_count=Count('members', filter=models.Q(members__is_active=True))
+        player_count=Count('members', filter=Q(members__is_active=True))
     ).order_by('-created_at')[:5]  # Show latest 5 rooms
 
 
@@ -59,20 +58,6 @@ def login_view(request):
     return render(request, 'login.html', {
         'next':  next_url,
     })
-
-# def list_rooms(request):
-#     """
-#     List active public rooms.
-#     """
-    
-#     active_rooms = Room.objects.filter(
-#         is_active=True
-#     , visibility_type='public'
-#     ).annotate(
-#         player_count=Count('members', filter=models.Q(members__is_active=True))
-#     ).order_by('-created_at')
-    
-#     return render(request,'game/list-rooms.html', {'active_rooms': active_rooms})
 
 
 def list_rooms(request):

@@ -7,7 +7,10 @@ Contains:
 - Winner determination
 """
 
-from .models import RoundPlayer
+from .models import Room, RoundPlayer
+from django.db.models import Count, Q
+
+
 
 # ============================================
 # PRE-COMPUTED WINNING LINES (Constant)
@@ -293,5 +296,23 @@ def get_or_create_round_player(game_round, room_member):
 
 
 
+def get_active_rooms(no_filter=False, length=10, order_by='created_at', ):
+    if no_filter:
+        rooms = Room.objects.filter(
+            is_active=True,
+            visibility_type='public'
+        ).annotate(
+            player_count=Count('members', filter=Q(members__is_active=True))
+        )
+    else:
+        rooms = Room.objects.filter(
+            is_active=True,
+            visibility_type='public',
+            members__is_active=True
+        ).annotate(
+            player_count=Count('members', filter=Q(members__is_active=True))
+        ).order_by(order_by)[:length]
+
+    ...
 
     
