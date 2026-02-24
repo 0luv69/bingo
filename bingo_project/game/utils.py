@@ -302,7 +302,7 @@ def get_active_rooms(no_filter=False, length=10, order_by='created_at', ):
             is_active=True,
             visibility_type='public'
         ).annotate(
-            player_count=Count('members', filter=Q(members__is_active=True))
+            player_count=Count('members', filter=Q(members__is_active=True, members__connection_status='connected'))
         )
     else:
         rooms = Room.objects.filter(
@@ -310,9 +310,9 @@ def get_active_rooms(no_filter=False, length=10, order_by='created_at', ):
             visibility_type='public',
             members__is_active=True
         ).annotate(
-            player_count=Count('members', filter=Q(members__is_active=True))
+            player_count=Count('members', filter=Q(members__is_active=True, members__connection_status='connected'))
         ).order_by(order_by)[:length]
-
-    ...
+    
+    return rooms
 
     

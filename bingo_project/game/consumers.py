@@ -225,10 +225,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
 
-
-
-        
-
     async def disconnect(self, close_code):
 
         # Removing if member_id is not set for this consumer

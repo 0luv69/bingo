@@ -25,8 +25,8 @@ def home_view(request):
         is_active=True
     , visibility_type='public'
     ).annotate(
-        player_count=Count('members', filter=Q(members__is_active=True))
-    ).order_by('-created_at')[:5]  # Show latest 5 rooms
+        player_count=Count('members', filter=Q(members__is_active=True, members__connection_status='connected'))
+    ).filter(player_count__gt=0).order_by('-created_at')[:5]  # Show latest 5 rooms
 
 
     
@@ -70,9 +70,11 @@ def list_rooms(request):
         is_active=True,
         visibility_type='public'
     ).annotate(
-        player_count=Count('members', filter=Q(members__is_active=True))
+        player_count=Count('members', filter=Q(members__is_active=True, members__connection_status='connected'))
+    ).filter(
+        player_count__gt=0   # ✅ Exclude empty rooms
     )
-    
+
     # ═══════════════════════════════════════════════════════════════
     # SEARCH
     # ═══════════════════════════════════════════════════════════════
@@ -80,9 +82,10 @@ def list_rooms(request):
     if search_query:
         rooms = rooms.filter(
             Q(code__icontains=search_query) |
-            Q(members__display_name__icontains=search_query, members__role='host', members__is_active=True)
+            Q(members__display_name__icontains=search_query, members__role='host', members__is_active=True, members__connection_status='connected')
         ).distinct()
     
+    print("Rooms count after search filter:", rooms.count())
     # ═══════════════════════════════════════════════════════════════
     # FILTERS
     # ═══════════════════════════════════════════════════════════════

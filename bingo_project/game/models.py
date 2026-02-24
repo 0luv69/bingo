@@ -103,6 +103,10 @@ class Room(models.Model):
         """Get count of active members."""
         return self.get_active_members().count()
     
+    def get_active_connected_members(self):
+        """Get active members who are currently connected (not disconnected)."""
+        return self.get_active_members().filter(connection_status='connected')
+    
     def get_host(self):
         """Get current host of the room."""
         host = self.members.filter(is_active=True, role='host').first()
