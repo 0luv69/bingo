@@ -14,9 +14,6 @@ from django.db.models import Count, Q
 User = get_user_model()
 LENGTH_NAME = 30
 
-
-
-
 def home_view(request):
     """
     Landing page - Create or Join a room.
