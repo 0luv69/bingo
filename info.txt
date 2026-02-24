@@ -1,0 +1,56 @@
+Ok i have a idea of, and have code, below is the info:
+🎯 BINGO WEB APP - Multiplayer Real-time Game
+Project Overview
+A real-time multiplayer Bingo web application where players can create/join rooms, arrange their boards, and play turn-based Bingo with WebSocket-powered live updates.
+
+GitHub Repository: @0luv69/bingo
+
+🛠️ TECH STACK
+Layer	Technology
+Backend	Django 4.x + Django Channels (WebSockets)
+Server	Daphne ASGI
+Database	SQLite
+Frontend	Tailwind CSS + Vanilla JavaScript
+Real-time	InMemoryChannelLayer (Redis-free deployment)
+Auth	Django Allauth (Google & GitHub OAuth)
+
+ Game play explained: 
+
+Create / Join Room
+The host creates a room (public or private) and receives a 6-character room code. This code, link, or QR can be shared with others. Players join the room and are registered as room members with roles such as host, co-host, or player. In lobby they can leave, or when disconnected other can vote kick after grace period.
+
+Setup Phase
+Each player receives an N×N board (configurable from 5×5 up to 10×10). Players arrange the numbers on their board using drag and drop. Once finished, they click the “Ready” button. If a player does not respond within the allowed time, the system automatically marks them all as ready.
+
+Playing Phase
+The game proceeds in turns. On each turn, the current player selects an unmarked number. If the player does not act within the time limit, the backend automatically selects a random number. The chosen number is marked on all players’ boards. After each number is called, the system checks for completed lines. And the player has no function as leave while playing when disconnected (by closing the tab) they will be turned as bot and game continues.
+
+Win Condition
+The first player to complete the required number of lines (equal to the board size) wins the game. If multiple players complete the condition at the same time, the caller gets priority. Ties are possible among non-calling players. Eg: if p1 calls a number and p2 + p3 has winning condition then it becomes tie. and if p1 calls the winning conditions is for p1+ p2, caller gets priority and he/she wins
+
+Post-Game
+A winner modal is displayed showing the final scores. Players can choose “Play Again” to start a new round in the same room. The room remains active and persists across multiple rounds.
+
+can you plz study the code first then I will ask for the update and you help me.
+my plan of update are to make first viable product:
+
+
+1) make the current code base reliable and working well, all the backend logic make it strong
+
+Ok, I have 2 demand one is for always where you dont ask for git commit access another is just for now you first study the code and find any errors or any vurnabilities or problem, issues and all. ok
+
+also forget about the simple securty key allowed host and other since i am in developing phase just see the logic on views, consumer, utils, js and other 
+
+First we will only focus on fixing current code then we will move on the update plan we have 
+
+Current Setup (Development):
+
+InMemoryChannelLayer (single process only)
+SQLite database
+Daphne ASGI server
+For Production:
+
+Switch to Redis channel layer for multi-process support
+Use PostgreSQL for database
+Configure proper SECRET_KEY, DEBUG=False, ALLOWED_HOSTS
+Consider adding rate limiting
