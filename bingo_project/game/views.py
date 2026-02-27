@@ -630,7 +630,7 @@ def game_view(request, room_code):
         'round_history': round_history,
         'show_login':  False,
         # Add these for dynamic board
-        'board_size_range': range(6, room.settings_board_size + 1),  # For board sizes 5 to N
+        'board_size_range': range(5, room.settings_board_size + 1),  # For board sizes 5 to N
         'show_score': room.settings_show_score,
     }
     
@@ -642,7 +642,7 @@ def leave_room_view(request, room_code):
     Leave the current room.
     Handles host transfer if needed.
     """
-    messages.info(request, 'You left the room.')
+    messages.info(request, 'You left the room. check 1231213')
     return redirect('home')
 
 

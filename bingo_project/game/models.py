@@ -61,7 +61,7 @@ class Room(models.Model):
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
     settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
     settings_grace_period = models.IntegerField(default=15, help_text="Seconds of grace period")
-    settings_board_size = models.IntegerField(  choices=BOARD_SIZE_CHOICES,   default=6,  help_text="Board dimension (5-10)")
+    settings_board_size = models.IntegerField(choices=BOARD_SIZE_CHOICES, default=6,  help_text="Board dimension (5-10)")
 
 
     class Meta:
@@ -133,6 +133,7 @@ class Room(models.Model):
     def get_available_members_count(self):
         return self.get_available_members().count()
     
+    
     def can_join(self):
         """Check if new players can join this room."""
         if not self.is_active:
@@ -142,9 +143,8 @@ class Room(models.Model):
         if current_round and current_round.status not in ['waiting', 'finished']:
             return False, "Game in progress, please wait"
         
-        if self.get_active_members_count() >= self.settings_max_players:
+        if self.get_available_members_count() >= self.settings_max_players:
             return False, "Room is full"
-
         return True, "OK"
     
     def transfer_host(self, exclude_member=None):
@@ -271,7 +271,7 @@ class RoomMember(models.Model):
             return self.room.transfer_host(exclude_member=self)
         
         # Check if room should be deactivated
-        if self.room.get_active_members_count() == 0:
+        if self.room.get_available_members_count() == 0:
             self.room.is_active = False
             self.room.save()
         return None
