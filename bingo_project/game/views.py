@@ -363,7 +363,6 @@ def join_room_view(request):
     messages.success(request, f'Joined room {room.code}!')
     return redirect('lobby', room_code=room.code)
 
-
 def join_room_direct_view(request, room_code):
     """Direct join page via link/QR code."""
     room_code = room_code.upper()
@@ -576,7 +575,7 @@ def lobby_view2(request, room_code):
         'round_history': round_history,
     }
     
-    return render(request, 'game/new.html', context)
+    return render(request, 'game/oldlobby.html', context)
 
 
 def game_view(request, room_code):
@@ -730,6 +729,10 @@ def kick_player_view(request, room_code):
         return JsonResponse({'error': 'Cannot kick the host'}, status=400)
     
     # Kick the player
+    kick_member.kicked_count += 1
+    kick_member.connection_status = 'kicked'
+    if kick_member.kicked_count >= 3:
+        kick_member.connection_status = 'banned'
     kick_member.is_active = False
     kick_member.save()
     
@@ -739,14 +742,11 @@ def kick_player_view(request, room_code):
     
     return JsonResponse({
         'success': True,
-        'kicked_name': kick_member.display_name
+        'kicked_name': kick_member.display_name,
+        'kicked_status': kick_member.connection_status,
     })
 
-
-
-
 # API Endpoints
-
 def room_status_api(request, room_code):
     """
     API:  Get current room status.
