@@ -1545,7 +1545,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         if 'grace_period' in settings:
             room.settings_grace_period = max(5, min(60, int(settings['grace_period'])))
         if 'show_score' in settings:
-            print(bool(settings['show_score']), settings['show_score'])
             room.settings_show_score = bool(settings['show_score'])
         if 'board_size' in settings:
             room.settings_board_size = max(5, min(10, int(settings['board_size'])))

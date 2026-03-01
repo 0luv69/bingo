@@ -302,27 +302,36 @@ def join_room_view(request):
         messages.error(request, f'Room {room_code} not found.')
         return redirect('home')
     
-    # Check if player name already exists in this room (case-insensitive)
-    if room.members.filter(display_name__iexact=player_name, is_active=True, connection_status='connected').exists():
-        messages.error(request, f'"{player_name}" Name already taken. Choose another.')
-        return redirect('home')
-
     # Check if can join
     can_join, reason = room.can_join()
     if not can_join: 
         messages.error(request, reason)
         return redirect('home')
-    
+       
     # Ensure session exists
     if not request.session.session_key:
         request.session.create()
+        created_new = True
+    else:
+        created_new = False
     
     # Get or create room member
     user = request.user if request.user.is_authenticated else None
     session_key = request.session.session_key if not user else None
+    name_conflict = room.members.filter(display_name__iexact=player_name, is_active=True)
     
     # Check if already a member
     existing_member = get_room_member(room, user, session_key)
+
+    if existing_member and not created_new:
+        name_conflict = name_conflict.exclude(id=existing_member.id)
+
+    # check name conflict
+    if name_conflict.exists():
+        reason = f'"{player_name}" Name already taken in room "{room.code}". Choose another.'
+        messages.error(request, reason)
+        return redirect('home')
+
     if existing_member:
         member = existing_member
         if member.connection_status == 'banned':
@@ -382,25 +391,33 @@ def join_room_direct_view(request, room_code):
             messages.error(request, f'Name must be {LENGTH_NAME} characters or less.')
             return render(request, 'join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
         
-        # Check if player name already exists in this room (case-insensitive)
-        if room.members.filter(display_name__iexact=player_name, is_active=True, connection_status='connected').exists():
-            reason = f'"{player_name}" Name already taken.Choose another.'
-            messages.error(request, reason)
-            return render(request, 'game/join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
-        
         # Ensure session
         if not request.session.session_key:
             request.session.create()
+            created_new = True
+        else:
+            created_new = False
         
         user = request.user if request.user.is_authenticated else None
         session_key = request.session.session_key if not user else None
+        name_conflict = room.members.filter(display_name__iexact=player_name, is_active=True )
+
+
         
         # Try to find existing member (including inactive/kicked ones)
-        existing_member = None
-        if user:
-            existing_member = RoomMember.objects.filter(room=room, user=user).first()
-        elif session_key:
-            existing_member = RoomMember.objects.filter(room=room, session_key=session_key).first()
+        existing_member = get_room_member(room, user, session_key)
+    
+        # If existing member found, exclude from name conflict check (allowing rejoin with same name)
+        if existing_member and not created_new:
+                name_conflict = name_conflict.exclude(id=existing_member.id)
+
+
+        # Check name conflict
+        if name_conflict.exists():
+            reason = f'"{player_name}" Name already taken in room {room.code}. Choose another.'
+            messages.error(request, reason)
+            return render(request, 'game/join_direct.html', {'room': room, 'can_join': can_join, 'reason': reason})
+        
         
         if existing_member: 
             member = existing_member
