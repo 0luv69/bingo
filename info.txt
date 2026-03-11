@@ -1,56 +1,169 @@
-Ok i have a idea of, and have code, below is the info:
-🎯 BINGO WEB APP - Multiplayer Real-time Game
+🎯 BINGO WEB APP — Multiplayer Real-time Game (Django + Channels)
+
 Project Overview
 A real-time multiplayer Bingo web application where players can create/join rooms, arrange their boards, and play turn-based Bingo with WebSocket-powered live updates.
 
 GitHub Repository: @0luv69/bingo
 
 🛠️ TECH STACK
-Layer	Technology
-Backend	Django 4.x + Django Channels (WebSockets)
-Server	Daphne ASGI
-Database	SQLite
-Frontend	Tailwind CSS + Vanilla JavaScript
-Real-time	InMemoryChannelLayer (Redis-free deployment)
-Auth	Django Allauth (Google & GitHub OAuth)
+Layer        Technology
+Backend      Django 4.x + Django Channels (WebSockets)
+Server       Daphne ASGI
+Database     SQLite (dev)
+Frontend     Tailwind CSS + Vanilla JavaScript
+Real-time    InMemoryChannelLayer (Redis-free single process in dev)
+Auth         Django Allauth (Google & GitHub OAuth)
 
- Game play explained: 
+──────────────────────────────────────────────────────────────────────────────
+IMPORTANT DEV RULES / REQUESTS
+- Analyze the main branch codebase.
+- Do NOT ask me for Git commit/push permissions (repo is public and readable).
+- Focus on reliability + correctness of backend logic first (views, consumers, utils, models, JS).
+- Ignore production hardening for now (SECRET_KEY/ALLOWED_HOSTS/etc.) unless it affects logic stability.
 
-Create / Join Room
-The host creates a room (public or private) and receives a 6-character room code. This code, link, or QR can be shared with others. Players join the room and are registered as room members with roles such as host, co-host, or player. In lobby they can leave, or when disconnected other can vote kick after grace period.
+──────────────────────────────────────────────────────────────────────────────
+CORE GAME FLOW (CURRENT BEHAVIOR)
 
-Setup Phase
-Each player receives an N×N board (configurable from 5×5 up to 10×10). Players arrange the numbers on their board using drag and drop. Once finished, they click the “Ready” button. If a player does not respond within the allowed time, the system automatically marks them all as ready.
+1) Create / Join Room
+- Host creates a room (public or private) and receives a 6-character room code.
+- Room can be shared via code, link, or QR.
+- Players join the room and become RoomMembers with roles:
+  - host
+  - co-host (same permissions as host; mainly for display/labeling)
+  - player
 
-Playing Phase
-The game proceeds in turns. On each turn, the current player selects an unmarked number. If the player does not act within the time limit, the backend automatically selects a random number. The chosen number is marked on all players’ boards. After each number is called, the system checks for completed lines. And the player has no function as leave while playing when disconnected (by closing the tab) they will be turned as bot and game continues.
+Identity / membership
+- A RoomMember represents a player’s membership in a Room and survives multiple rounds.
+- Player identity is tracked by:
+  - authenticated User (if logged in), OR
+  - anonymous session_key (Django session) for guests
+- The session stores:
+  - current_room_code
+  - current_member_id
+- WebSocket consumer reads current_member_id from the session cookie.
 
-Win Condition
-The first player to complete the required number of lines (equal to the board size) wins the game. If multiple players complete the condition at the same time, the caller gets priority. Ties are possible among non-calling players. Eg: if p1 calls a number and p2 + p3 has winning condition then it becomes tie. and if p1 calls the winning conditions is for p1+ p2, caller gets priority and he/she wins
+Display name uniqueness
+- Display names must be unique per room for active/connected members.
+- Rejoin is allowed for the same identity (same user or same session_key) using the same name.
+- Name collisions are blocked only when another *different* member is using that name.
 
-Post-Game
-A winner modal is displayed showing the final scores. Players can choose “Play Again” to start a new round in the same room. The room remains active and persists across multiple rounds.
+2) Lobby / Disconnection Rules
+- In the lobby, a player can leave the room.
+- If a player disconnects unexpectedly:
+  - they become connection_status = "disconnected"
+  - a grace period starts
+  - after grace period:
+    - in lobby/setup: other connected players may vote kick (kick or keep)
+    - in playing: the disconnected player becomes bot-controlled so the game continues
 
-can you plz study the code first then I will ask for the update and you help me.
-my plan of update are to make first viable product:
+3) Setup Phase (Backend-authoritative)
+- Board size is N×N (configurable: 5×5 to 10×10).
+- Backend starts setup phase and sets a server deadline.
+- Players arrange board (drag/drop) and click “Ready”.
+- If not all players ready by setup deadline:
+  - backend auto-marks all players ready
+  - backend transitions to playing phase
+- Frontend timers are display-only; backend enforces timing.
 
+4) Playing Phase (Backend-authoritative)
+- Turn-based gameplay:
+  - current player selects an unmarked number.
+  - backend validates it’s their turn and number is allowed.
+- If the current player does not act before the turn deadline:
+  - backend auto-selects a random available number and calls it.
+- When a player disconnects during playing:
+  - after grace period they are bot-controlled
+  - if it is their turn, backend schedules bot play (auto-call a number)
+- Leaving is not allowed as a normal action during playing; disconnect triggers bot behavior.
 
-1) make the current code base reliable and working well, all the backend logic make it strong
+5) Win Condition
+- Required completed lines = board size (e.g., 5 lines for 5×5).
+- Winner detection runs after each called number.
+- Caller priority rule:
+  - If multiple players achieve win simultaneously:
+    - if the caller is among winners, caller gets priority and wins.
+    - otherwise ties can occur among non-calling winners (e.g., p2+p3 tie).
 
-Ok, I have 2 demand one is for always where you dont ask for git commit access another is just for now you first study the code and find any errors or any vurnabilities or problem, issues and all. ok
+6) Post-Game
+- Winner modal shows final results.
+- “Play Again” starts a new round in the same room.
+- Room persists across multiple rounds while it remains active.
 
-also forget about the simple securty key allowed host and other since i am in developing phase just see the logic on views, consumer, utils, js and other 
+─────────────────────────────────────────────────────���────────────────────────
+MEMBER STATUS RULES (IMPORTANT)
 
-First we will only focus on fixing current code then we will move on the update plan we have 
+RoomMember has fields like:
+- is_active (bool)
+- connection_status (string) with values like:
+  - connected
+  - disconnected
+  - left
+  - kicked
+  - banned
 
-Current Setup (Development):
+Meaning:
+- connected: actively online in room
+- disconnected: temporarily offline (grace period applies; may become bot-controlled or vote-kicked)
+- left: intentionally left; can rejoin later
+- kicked: removed temporarily (counts toward ban threshold); can rejoin until banned
+- banned: permanently removed; cannot rejoin
 
-InMemoryChannelLayer (single process only)
-SQLite database
-Daphne ASGI server
-For Production:
+Kick escalation:
+- kicked_count increments on kicks
+- if kicked_count >= 3 → connection_status becomes "banned" and rejoin is blocked
 
-Switch to Redis channel layer for multi-process support
-Use PostgreSQL for database
-Configure proper SECRET_KEY, DEBUG=False, ALLOWED_HOSTS
-Consider adding rate limiting
+Leave vs Kick:
+- Leave means “player opted out” (left) and is allowed to rejoin.
+- Kick means “removed by host/admin action” and counts toward a future ban.
+- Vote-kick result can be treated like “left” (by current design choice).
+
+Active vs Available members (room capacity & cleanup)
+- “Active” refers to is_active=True (can include left if you keep it active for rejoin logic).
+- “Available” refers to members who should count toward room being currently occupied (typically connected/disconnected).
+- Room cleanup / room-empty checks use “available” count (not just is_active).
+- Room-full checks also use “available” count.
+
+──────────────────────────────────────────────────────────────────────────────
+CURRENT SETUP (DEVELOPMENT)
+- InMemoryChannelLayer (single process only)
+- SQLite database
+- Daphne ASGI server
+
+PRODUCTION DIRECTION (LATER)
+- Redis channel layer for multi-process support
+- PostgreSQL
+- Proper SECRET_KEY, DEBUG=False, ALLOWED_HOSTS
+- Rate limiting
+
+──────────────────────────────────────────────────────────────────────────────
+WHAT I WANT NOW (CURRENT PHASE)
+Goal: First viable product by making the current codebase reliable and correct.
+- Strengthen backend logic, prevent bad states, fix bugs/race conditions.
+- Focus on views, consumers, models, utils, and critical JS logic.
+
+──────────────────────────────────────────────────────────────────────────────
+FUTURE PLANS (WORK ONLY AFTER CURRENT CODEBASE IS STABLE)
+
+1) Mid-game Rejoin
+- Allow a player who was already in the room/round (left or disconnected) to rejoin even when the game is in progress.
+- Rejoin should work via direct join link / normal join, restoring their membership and round participation.
+
+2) User Profile Page
+- Add a profile page for logged-in users.
+- Considering adding features like streaks and other stats.
+
+3) Auto-Opponent Bot (Human-like)
+- Add a simple bot that can join automatically when a new player visits and no opponent is found.
+- Bot should use human-feeling names and play like a normal player under the hood.
+
+──────────────────────────────────────────────────────────────────────────────
+ANALYSIS INSTRUCTIONS FOR YOU (ASSISTANT)
+- Study the full Django/Channels system and point out:
+  - logic bugs
+  - bad states
+  - inconsistencies between views and consumers
+  - timer/turn issues
+  - identity / rejoin edge cases
+  - any vulnerabilities affecting game logic (not production hardening yet)
+- Provide fixes in small, safe steps.
+- Do not request write permissions; only propose changes and explain them here. and if there is cahnges to make name the file name and line number to update from to end, and i will update with the new code given by you here.

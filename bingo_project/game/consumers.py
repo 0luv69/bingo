@@ -1055,18 +1055,28 @@ class GameConsumer(AsyncWebsocketConsumer):
         first_player = await self.start_playing_phase()
 
         show_score = room.settings_show_score
-        
-        if first_player:
+
+        if not first_player:
+            # No players to start with -> keep state safe
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'game_started',
-                    'current_turn': first_player,
-                    'duration': room.settings_turn_duration,
-                    'round_players': await self.get_round_players_data(),
-                    'show_score': show_score,
+                    'type': 'error',
+                    'message': 'Cannot start playing: no players available in this round.',
                 }
             )
+            return
+        
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'game_started',
+                'current_turn': first_player,
+                'duration': room.settings_turn_duration,
+                'round_players': await self.get_round_players_data(),
+                'show_score': show_score,
+            }
+        )
         # Start turn timer for first player
         await self.start_turn_timer(room.settings_turn_duration, first_player['member_id'])
     
@@ -1453,6 +1463,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         """Remove member from room.  Returns new host name if host changed."""
         try:
             member = RoomMember.objects.get(id=member_id, room__code=self.room_code)
+            
+            # Always cancel timers/vote state for this member
+            DisconnectionManager.cancel_disconnection_timer(self.room_code, member.id)
+            DisconnectionManager.clear_vote_kick(self.room_code, member.id)
+            
             new_host_member = member.leave_room()
 
             # Check if room is empty AFTER leaving
@@ -1479,12 +1494,14 @@ class GameConsumer(AsyncWebsocketConsumer):
             current_round.started_at = timezone.now()
             current_round.save()
         
-        board_size = room.settings_board_size
-        for player in current_round.players.all():
-            player:RoundPlayer
-            board = player.generate_board(board_size)
-            player.board = board
-            player.save(update_fields=['board'])
+            board_size = room.settings_board_size
+            for player in current_round.players.all():
+                player:RoundPlayer
+                board = player.generate_board(board_size)
+                player.board = board
+                player.save(update_fields=['board'])
+        else:
+            print("No active round found when starting setup phase")
     
     @database_sync_to_async
     def mark_player_ready(self, player_id):
