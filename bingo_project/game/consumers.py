@@ -625,6 +625,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         # Auto-pick a number
         available_numbers = await self.get_available_numbers(current_round)
+        if not available_numbers: print("No available numbers to auto-pick") ; return
         number = random.choice(available_numbers)
 
         if not isinstance(number, int) or number < 1 or number > max_number:
@@ -660,7 +661,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'called_numbers': called_numbers,
                 'next_turn': next_player_data,
                 'duration': room.settings_turn_duration,
-                #'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
+                # 'deadline': (timezone.now() + timedelta(seconds=room.settings_turn_duration)).isoformat(),
                 'round_players': round_players,
                 'show_score': show_score,
             }

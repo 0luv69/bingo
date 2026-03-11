@@ -655,8 +655,8 @@
     
     function handleTimerEnd() {
         if (roomStatus === 'setup' && ! isReady) {
-            setReady();
-            showNotification("Time's up! Auto-marked ready.", 'info');
+            document.getElementById("timer").textContent = "0s";
+            showNotification("Time expired. Waiting for server...", "info");
         }
     }
 
