@@ -333,7 +333,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not room:
             return
         
-        active_count = await self.get_active_members_count()
+        active_count = room.get_available_members_count()
         if active_count == 0:
             await self.deactivate_room()
             DisconnectionManager.cleanup_room(self.room_code)
