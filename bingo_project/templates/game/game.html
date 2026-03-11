@@ -424,12 +424,15 @@
                 socket.close();
                 return;
             }
-            handleMessage(data);}
+            handleMessage(data);
+        }
     }
     
     function sendMessage(type, payload = {}) {
         if (socket?.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type, ...payload }));
+        }else{
+            console.warn('WebSocket not connected. Message not sent:', { type, ...payload });
         }
     }
     
@@ -751,6 +754,7 @@
         if (isReady) return;
         isReady = true;
         sendMessage('player_ready');
+        showNotification('You are ready! Waiting for others...', 'warning');
         
         document.getElementById('ready-section').classList.add('hidden');
         document.getElementById('ready-confirmed').classList.remove('hidden');
@@ -952,6 +956,7 @@
         initDragDrop();
         
         if (remainingSeconds > 0) startTimer(remainingSeconds);
+        
         if (roomStatus === 'playing') updateBoardInteractivity();
         if (isReady) document.querySelectorAll('.board-cell').forEach(c => c.draggable = false);
     });

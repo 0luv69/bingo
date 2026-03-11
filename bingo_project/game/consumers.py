@@ -29,6 +29,9 @@ class DisconnectionManager:
     #  Turn timers {room_code: asyncio.Task}
     turn_timers = {}
 
+    # Setup timers {room_code: asyncio.Task}
+    setup_timers = {}
+
 
     @classmethod
     def get_disconnection_timer(cls, room_code, member_id):
@@ -111,6 +114,27 @@ class DisconnectionManager:
             return True
         return False
 
+
+    @classmethod
+    def get_setup_timer(cls, room_code):
+        """Get the current setup timer for a room."""
+        return cls.setup_timers.get(room_code)
+
+    @classmethod
+    def set_setup_timer(cls, room_code, task):
+        cls.cancel_setup_timer(room_code)
+        cls.setup_timers[room_code] = task
+
+    @classmethod
+    def cancel_setup_timer(cls, room_code):
+        task = cls.setup_timers.pop(room_code, None)
+        if task:
+            task.cancel()
+            return True
+        return False
+
+
+
     @classmethod
     def get_turn_timer(cls, room_code):
         """Get the current turn timer for a room."""
@@ -138,6 +162,7 @@ class DisconnectionManager:
         # Cancel all timers for this room
         for member_id, task in cls.disconnection_timers.pop(room_code, {}).items():
             task.cancel()
+        cls.cancel_setup_timer(room_code)
         cls.cancel_turn_timer(room_code)
         cls.vote_kicks.pop(room_code, None)
 
@@ -680,6 +705,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         # Start setup phase
         setup_duration = room.settings_setup_duration
         await self.start_setup_phase(setup_duration)
+
+        # Start backend setup timer to auto-transition to playing phase
+        await self.start_setup_timer(setup_duration)
         
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -693,6 +721,41 @@ class GameConsumer(AsyncWebsocketConsumer):
             }
         )
     
+    async def start_setup_timer(self, duration):
+        """Start backend setup timer and auto-ready when expired."""
+        async def on_setup_timeout():
+            try:
+                await asyncio.sleep(duration)
+                await self.handle_setup_timeout()
+            except asyncio.CancelledError:
+                pass
+
+        task = asyncio.create_task(on_setup_timeout())
+        DisconnectionManager.set_setup_timer(self.room_code, task)
+
+    async def handle_setup_timeout(self):
+        """Auto-ready all players and start game when setup time expires."""
+        current_round = await self.get_current_round()
+        if not current_round or current_round.status != 'setup':
+            return
+
+        await self.mark_all_players_ready()
+        round_players = await self.get_round_players_data()
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'player_ready_update',
+                'member_id': None,
+                'member_name': 'System',
+                'ready_count': len(round_players),
+                'total_count': len(round_players),
+                'round_players': round_players,
+            }
+        )
+
+        await self.transition_to_playing()
+
     async def handle_player_ready(self, data):
         """Player marks themselves as ready."""
         member = await self.get_member()
@@ -1342,7 +1405,14 @@ class GameConsumer(AsyncWebsocketConsumer):
             member.mark_disconnected()
         except:
             pass
-
+    @database_sync_to_async
+    def mark_all_players_ready(self):
+        room = Room.objects.get(code=self.room_code)
+        current_round: GameRound = room.get_current_round()
+        if current_round:
+            current_round.players.update(is_ready=True)
+            return True
+        return False
 
     @database_sync_to_async
     def set_player_bot_controlled(self, member_id, value):

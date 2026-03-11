@@ -56,7 +56,6 @@ def login_view(request):
         'next':  next_url,
     })
 
-
 def list_rooms(request):
     """
     List active public rooms with filtering, sorting, and pagination.
@@ -213,7 +212,7 @@ def list_rooms(request):
     return render(request, 'game/list-rooms.html', context)
 
 
-
+# Phase 1: Basic room creation and joining
 def create_room_view(request):
     """
     Create a new room and join as host.
@@ -269,7 +268,6 @@ def create_room_view(request):
     
     messages.success(request, f'Room {room.code} created!  Share this code with friends.')
     return redirect('lobby', room_code=room.code)
-
 
 def join_room_view(request):
     """
@@ -464,6 +462,7 @@ def join_room_direct_view(request, room_code):
     })
 
 
+# Phase 2: Lobby and Game views
 def lobby_view(request, room_code):
     """
     Waiting room before game starts.
@@ -605,7 +604,6 @@ def leave_room_view(request, room_code):
     messages.info(request, 'You left the room. check 1231213')
     return redirect('home')
 
-
 def room_settings_view(request, room_code):
     """
     Update room settings (host only).
@@ -640,7 +638,6 @@ def room_settings_view(request, room_code):
         return JsonResponse({'success': True})
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid settings'}, status=400)
-
 
 def kick_player_view(request, room_code):
     """

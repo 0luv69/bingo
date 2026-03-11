@@ -61,7 +61,7 @@ class Room(models.Model):
     settings_max_players = models.IntegerField(default=8, help_text="Maximum players allowed (2-15)")
     settings_show_score = models.BooleanField(default=False, help_text="Whether to show bingo score to players of others")
     settings_grace_period = models.IntegerField(default=15, help_text="Seconds of grace period")
-    settings_board_size = models.IntegerField(choices=BOARD_SIZE_CHOICES, default=6,  help_text="Board dimension (5-10)")
+    settings_board_size = models.IntegerField(choices=BOARD_SIZE_CHOICES, default=5,  help_text="Board dimension (5-10)")
 
 
     class Meta:
