@@ -163,8 +163,6 @@ class Room(models.Model):
         return None
 
   
-
-  
 class RoomMember(models.Model):
     """
     Represents a person's membership in a room.

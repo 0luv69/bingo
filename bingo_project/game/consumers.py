@@ -1517,6 +1517,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         current_round: GameRound = room.get_current_round()
         if not current_round:
             return None
+        if current_round.status != 'setup': return None
         
         current_round.status = 'playing'
         first_player: RoundPlayer = current_round.get_next_turn_player()

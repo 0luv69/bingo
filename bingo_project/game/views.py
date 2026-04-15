@@ -15,6 +15,8 @@ User = get_user_model()
 LENGTH_NAME = 30
 
 
+
+
 def home_view(request):
     """
     Landing page - Create or Join a room.
@@ -617,8 +619,8 @@ def room_settings_view(request, room_code):
     member_id = request.session.get('current_member_id')
     member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
     
-    if not member or not member.is_host:
-        return JsonResponse({'error': 'Only host can change settings'}, status=403)
+    if not member or not member.is_host or not member.is_co_host:
+        return JsonResponse({'error': 'Only host or co-host can change settings'}, status=403)
     
     # Update settings
     try:
