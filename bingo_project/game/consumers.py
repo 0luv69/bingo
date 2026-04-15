@@ -1263,7 +1263,12 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not self.member_id:
             return None
         try:
-            return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True, connection_status__in=['connected', 'disconnected', 'left', 'kicked'])
+            return RoomMember.objects.get(
+                id=self.member_id,
+                room__code=self.room_code,
+                is_active=True,
+                connection_status__in=['connected', 'disconnected']
+            )
         except RoomMember.DoesNotExist:
             return None
 

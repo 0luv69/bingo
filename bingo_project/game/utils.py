@@ -8,7 +8,7 @@ Contains:
 """
 
 from .models import Room, RoundPlayer
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max
 
 
 
@@ -286,9 +286,11 @@ def get_or_create_round_player(game_round, room_member):
     if existing:
         return existing, False
     board_size = game_round.room.settings_board_size
+    next_order = (game_round.players.aggregate(Max('turn_order'))['turn_order__max'] or 0) + 1
     player = game_round.players.create(
         room_member=room_member,
-        board=RoundPlayer.generate_board(board_size)
+        board=RoundPlayer.generate_board(board_size),
+        turn_order=next_order
     )
     return player, True
 

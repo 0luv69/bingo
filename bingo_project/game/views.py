@@ -260,7 +260,8 @@ def create_room_view(request):
     RoundPlayer.objects.create(
         game_round=game_round,
         room_member=member,
-        board=RoundPlayer.generate_board(board_size)
+        board=RoundPlayer.generate_board(board_size),
+        turn_order=1
     )
     
     # Store in session
@@ -444,10 +445,12 @@ def join_room_direct_view(request, room_code):
         if current_round and current_round.status == 'waiting': 
             existing_round_player = current_round.players.filter(room_member=member).first()
             if not existing_round_player: 
+                next_order = (current_round.players.aggregate(models.Max('turn_order'))['turn_order__max'] or 0) + 1
                 RoundPlayer.objects.create(
                     game_round=current_round,
                     room_member=member,
-                    board=RoundPlayer.generate_board(board_size)
+                    board=RoundPlayer.generate_board(board_size),
+                    turn_order=next_order
                 )
         
         request.session['current_room_code'] = room.code
@@ -617,26 +620,49 @@ def room_settings_view(request, room_code):
     member_id = request.session.get('current_member_id')
     member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
     
-    if not member or not member.is_host:
-        return JsonResponse({'error': 'Only host can change settings'}, status=403)
+    if not member or (not member.is_host and not member.is_co_host):
+        return JsonResponse({'error': 'Only host or co-host can change settings'}, status=403)
+
+    current_round = room.get_current_round()
+    if current_round and current_round.status not in ['waiting', 'finished']:
+        return JsonResponse({'error': 'Cannot change settings during game'}, status=400)
     
     # Update settings
     try:
         setup_duration = int(request.POST.get('setup_duration', 60))
         turn_duration = int(request.POST.get('turn_duration', 30))
         max_players = int(request.POST.get('max_players', 6))
+        grace_period = int(request.POST.get('grace_period', room.settings_grace_period))
+        board_size = int(request.POST.get('board_size', room.settings_board_size))
+        show_score = request.POST.get('show_score')
         
         # Validate
         setup_duration = max(15, min(120, setup_duration))
         turn_duration = max(10, min(90, turn_duration))
         max_players = max(2, min(15, max_players))
+        grace_period = max(5, min(60, grace_period))
+        board_size = max(5, min(10, board_size))
         
         room.settings_setup_duration = setup_duration
         room.settings_turn_duration = turn_duration
         room.settings_max_players = max_players
+        room.settings_grace_period = grace_period
+        room.settings_board_size = board_size
+        if show_score is not None:
+            room.settings_show_score = str(show_score).lower() in ['1', 'true', 'yes', 'on']
         room.save()
         
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'settings': {
+                'setup_duration': room.settings_setup_duration,
+                'turn_duration': room.settings_turn_duration,
+                'max_players': room.settings_max_players,
+                'grace_period': room.settings_grace_period,
+                'show_score': room.settings_show_score,
+                'board_size': room.settings_board_size,
+            }
+        })
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid settings'}, status=400)
 
@@ -652,8 +678,8 @@ def kick_player_view(request, room_code):
     member_id = request.session.get('current_member_id')
     member = RoomMember.objects.filter(id=member_id, room=room, is_active=True).first()
     
-    if not member or not member.is_host:
-        return JsonResponse({'error': 'Only host can kick players'}, status=403)
+    if not member or (not member.is_host and not member.is_co_host):
+        return JsonResponse({'error': 'Only host or co-host can kick players'}, status=403)
     
     # Check room is in lobby state
     current_round = room.get_current_round()
