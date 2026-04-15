@@ -1263,7 +1263,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not self.member_id:
             return None
         try:
-            return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True, connection_status__in=['connected', 'disconnected', 'left', 'kicked'])
+            return RoomMember.objects.get(id=self.member_id, room__code=self.room_code, is_active=True, connection_status__in=['connected', 'disconnected'])
         except RoomMember.DoesNotExist:
             return None
 
@@ -1518,7 +1518,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not current_round:
             return None
         if current_round.status != 'setup': return None
-        
+
         current_round.status = 'playing'
         first_player: RoundPlayer = current_round.get_next_turn_player()
         if first_player:

@@ -156,6 +156,10 @@ FUTURE PLANS (WORK ONLY AFTER CURRENT CODEBASE IS STABLE)
 - Add a simple bot that can join automatically when a new player visits and no opponent is found.
 - Bot should use human-feeling names and play like a normal player under the hood.
 
+
+and points to remeber:
+ anyone can trigger new_round, after the game ends its features, since they are just being redirected to lobby page, so its fine
+
 ──────────────────────────────────────────────────────────────────────────────
 ANALYSIS INSTRUCTIONS FOR YOU (ASSISTANT)
 - Study the full Django/Channels system and point out:
