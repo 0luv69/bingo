@@ -743,6 +743,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.mark_all_players_ready()
         round_players = await self.get_round_players_data()
 
+
+
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
