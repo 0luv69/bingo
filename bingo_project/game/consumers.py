@@ -13,7 +13,7 @@ from django.db import transaction
 VOTE_GRACE_ADDITIONAL_SECONDS = 5
 BOT_TAKEOVER_DELAY = 4 
 
-
+ 
 class DisconnectionManager:
     """
     Manages disconnection timers and vote kicks across all rooms.
